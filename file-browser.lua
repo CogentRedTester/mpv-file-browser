@@ -7,7 +7,12 @@ local o = {
     --root directories
     root = "~/",
 
-    ass_body = "{\\q2\\fs30}"
+    num_entries = 20,
+
+    --ass tags
+    ass_body = "{\\q2\\fs30}",
+    ass_folder = "{\\c&Hfce788>&}",
+    ass_file = "{\\c&Hffffff>&}"
 }
 
 opt.read_options(o, 'file_browser')
@@ -76,11 +81,17 @@ function update_ass()
         if i == state.selected then
             ov.data = ov.data.."> "
         end
+        if v.type == 'dir' then
+            ov.data = ov.data..o.ass_folder
+        end
+
         if state.root then
             ov.data = ov.data..v.label.."\\N"
         else
             ov.data = ov.data..v.name.."\\N"
         end
+
+        if v.type == "dir" then ov.data=ov.data..o.ass_file end
     end
     ov:update()
 end
