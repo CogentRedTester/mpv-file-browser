@@ -5,7 +5,7 @@ local opt = require 'mp.options'
 
 local o = {
     --root directories
-    roots = "~/",
+    root = "~/",
 
     ass_body = "{\\q2\\fs30}"
 }
@@ -16,14 +16,14 @@ local ov = mp.create_osd_overlay('ass-events')
 ov.hidden = true
 local list = {}
 local cache = {}
-local cursor_pos = {}
 local state = {
     directory = nil,
     selected = 1,
     multiple = false,
-    root = false
+    root = false,
+    prev_directory = nil
 }
-local roots = nil
+local root = nil
 local keybinds = {
     {'ENTER', 'open', function() open_file('replace') end, {}},
     {'Shift+ENTER', 'append_playlist', function() open_file('append') end, {}},
@@ -37,13 +37,12 @@ local keybinds = {
 }
 
 --splits the string into a table on the semicolons
-function setup_roots()
-    roots = {}
-    for str in string.gmatch(o.roots, "([^;]+)") do
+function setup_root()
+    root = {}
+    for str in string.gmatch(o.root, "([^;]+)") do
         path = mp.command_native({'expand-path', str})
-        roots[#roots+1] = {name = path, type = 'dir', label = str}
+        root[#root+1] = {name = path, type = 'dir', label = str}
     end
-    update_cursor()
 end
 
 function goto_current_dir()
@@ -53,21 +52,20 @@ function goto_current_dir()
 
     --splits the directory and filename apart
     state.directory = utils.split_path(exact_path)
+    state.selected = 1
     cache = {}
-    cursor_pos[state.directory] = 1
-    update_cursor()
     update_list()
     update_ass()
 end
 
 function goto_root()
-    if roots == nil then setup_roots() end
-    msg.verbose('loading roots')
-    list = roots
+    if root == nil then setup_root() end
+    msg.verbose('loading root')
+    state.selected = 1
+    list = root
     state.root = true
     state.directory = ""
     cache = {}
-    update_cursor()
     update_ass()
 end
 
@@ -89,6 +87,7 @@ end
 
 function update_list(reload)
     msg.verbose('loading contents of ' .. state.directory)
+    state.selected = 1
 
     --loads the current directry from the cache to save loading time
     --there will be a way to forcibly reload the current directory at some point
@@ -104,24 +103,29 @@ function update_list(reload)
     local t = mp.get_time()
     list = utils.readdir(state.directory, 'dirs')
 
+    --if we can't access the filesystem for the specified directory then we go to root page
+    --this is cuased by either:
+    --  a network file being streamed
+    --  the user navigating above / on linux or the current drive root on windows
     if list == nil then
         goto_root()
-        if state.selected > #list then state.selected = 1 end
         return
     end
 
     state.root = false
     for i,item in ipairs(list) do
+        if (state.prev_directory == item) then
+            state.selected = i
+        end
         list[i] = {name = item, type = 'dir'}
     end
+    state.prev_directory = ""
 
     --array concatenation taken from https://stackoverflow.com/a/15278426
     local list2 = utils.readdir(state.directory, 'files')
     for i = 1,#list2 do
         list[#list+1] = {name = list2[i], type = 'file'}
     end
-
-    if state.selected > #list then state.selected = 1 end
     msg.debug('load time: ' ..mp.get_time() - t)
 
     --saves the latest directory at the top of the stack
@@ -147,16 +151,6 @@ function scroll_up()
     update_ass()
 end
 
-function update_cursor()
-    local cursor = cursor_pos[state.directory]
-    if cursor == nil then
-        state.selected = 1
-        cursor_pos[state.directory] = 1
-        cursor = 1
-    end
-    state.selected = cursor
-end
-
 function up_dir()
     local dir = state.directory:reverse()
     local index = dir:find("[/\\]")
@@ -166,22 +160,21 @@ function up_dir()
         index = dir:find("[/\\]")
     end
 
-    cursor_pos[state.directory] = state.selected
     if index == nil then
         state.directory = ""
     else
-        state.directory = dir:reverse():sub(1, 0-index)
+        state.prev_directory = dir:sub(1, index-1):reverse()
+        msg.debug('saving previous directory name ' .. state.prev_directory)
+        state.directory = dir:sub(index):reverse()
     end
 
     cache[#cache] = nil
-    update_cursor()
     update()
 end
 
 function down_dir()
     if list[state.selected].type ~= 'dir' then return end
 
-    cursor_pos[state.directory] = state.selected
     local last_char = state.directory:sub(-1)
     if state.root or last_char == '\\' or last_char == '/' then
         state.directory = state.directory..list[state.selected].name
@@ -194,13 +187,12 @@ function down_dir()
         state.directory = state.directory..'/'
     end
 
-    update_cursor()
     update()
 end
 
 function open_browser()
     for _,v in ipairs(keybinds) do
-        mp.add_forced_key_binding(v[1], v[2], v[3], v[4])
+        mp.add_forced_key_binding(v[1], 'dynamic/'..v[2], v[3], v[4])
     end
 
     if state.directory == nil then
