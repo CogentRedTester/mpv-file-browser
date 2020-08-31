@@ -31,16 +31,18 @@ local keybinds = {
     {'LEFT', 'up_dir', function() up_dir() end, {}},
     {'DOWN', 'scroll_down', function() scroll_down() end, {repeatable = true}},
     {'UP', 'scroll_up', function() scroll_up() end, {repeatable = true}},
-    {'HOME', 'pwd', function() goto_current_dir() end, {}}
+    {'HOME', 'pwd', function() goto_current_dir() end, {}},
+    {'Shift+HOME', 'root', function() goto_root() end, {}}
 }
 
 --splits the string into a table on the semicolons
 function setup_roots()
     roots = {}
     for str in string.gmatch(o.roots, "([^;]+)") do
-        str = mp.command_native({'expand-path', str})
-        roots[#roots+1] = {name = str, type = 'dir'}
+        path = mp.command_native({'expand-path', str})
+        roots[#roots+1] = {name = path, type = 'dir', label = str}
     end
+    update_cursor()
 end
 
 function goto_current_dir()
@@ -51,7 +53,17 @@ function goto_current_dir()
     --splits the directory and filename apart
     state.directory = utils.split_path(exact_path)
     cursor_pos[state.directory] = 1
+    update_cursor()
     update_list()
+    update_ass()
+end
+
+function goto_root()
+    if roots == nil then setup_roots() end
+    list = roots
+    state.root = true
+    state.directory = ""
+    update_cursor()
     update_ass()
 end
 
@@ -62,7 +74,11 @@ function update_ass()
         if i == state.selected then
             ov.data = ov.data.."> "
         end
-        ov.data = ov.data..v.name.."\\N"
+        if state.root then
+            ov.data = ov.data..v.label.."\\N"
+        else
+            ov.data = ov.data..v.name.."\\N"
+        end
     end
     ov:update()
 end
@@ -73,9 +89,7 @@ function update_list()
     list = utils.readdir(state.directory, 'dirs')
 
     if list == nil then
-        if roots == nil then setup_roots() end
-        list = roots
-        state.root = true
+        goto_root()
         return
     end
 
@@ -149,9 +163,9 @@ function down_dir()
     cursor_pos[state.directory] = state.selected
     local last_char = state.directory:sub(-1)
     if state.root or last_char == '\\' or last_char == '/' then
-        state.directory = state.directory..list[state.selected].name
+        state.directory = state.directory..list[state.selected].name..'/'
     else
-        state.directory = state.directory..'/'..list[state.selected].name
+        state.directory = state.directory..'/'..list[state.selected].name..'/'
     end
     update_cursor()
     update()
@@ -180,7 +194,9 @@ end
 function open_file(flags)
     if state.selected > #list or state.selected < 1 then return end
     mp.commandv('loadfile', state.directory..'/'..list[state.selected].name, flags)
-    close_browser()
+    if flags == 'replace' then
+        close_browser()
+    end
 end
 
 mp.add_key_binding('MENU','browse-files', open_browser)
