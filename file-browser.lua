@@ -104,9 +104,11 @@ function update_list(reload)
     --there will be a way to forcibly reload the current directory at some point
     --the cache is in the form of a stack, items are taken off the stack when the dir moves up
     if not reload and #cache > 0 then
-        if cache[#cache].directory == state.directory then
+        local cache = cache[#cache]
+        if cache.directory == state.directory then
             msg.verbose('found directory in cache')
-            list = cache[#cache].table
+            list = cache.table
+            state.selected = cache.cursor
             return
         end
     end
@@ -198,6 +200,7 @@ function down_dir()
         state.directory = state.directory..'/'
     end
 
+    if #cache > 0 then cache[#cache].cursor = state.selected end
     update()
 end
 
