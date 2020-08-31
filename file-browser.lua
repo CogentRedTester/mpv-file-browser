@@ -15,6 +15,7 @@ opt.read_options(o, 'file_browser')
 local ov = mp.create_osd_overlay('ass-events')
 ov.hidden = true
 local list = {}
+local cache = {}
 local cursor_pos = {}
 local state = {
     directory = nil,
@@ -52,6 +53,7 @@ function goto_current_dir()
 
     --splits the directory and filename apart
     state.directory = utils.split_path(exact_path)
+    cache = {}
     cursor_pos[state.directory] = 1
     update_cursor()
     update_list()
@@ -60,9 +62,11 @@ end
 
 function goto_root()
     if roots == nil then setup_roots() end
+    msg.verbose('loading roots')
     list = roots
     state.root = true
     state.directory = ""
+    cache = {}
     update_cursor()
     update_ass()
 end
@@ -83,13 +87,26 @@ function update_ass()
     ov:update()
 end
 
-function update_list()
+function update_list(reload)
     msg.verbose('loading contents of ' .. state.directory)
+
+    --loads the current directry from the cache to save loading time
+    --there will be a way to forcibly reload the current directory at some point
+    --the cache is in the form of a stack, items are taken off the stack when the dir moves up
+    if not reload and #cache > 0 then
+        if cache[#cache].directory == state.directory then
+            msg.verbose('found directory in cache')
+            list = cache[#cache].table
+            return
+        end
+    end
+
     local t = mp.get_time()
     list = utils.readdir(state.directory, 'dirs')
 
     if list == nil then
         goto_root()
+        if state.selected > #list then state.selected = 1 end
         return
     end
 
@@ -104,8 +121,11 @@ function update_list()
         list[#list+1] = {name = list2[i], type = 'file'}
     end
 
-
+    if state.selected > #list then state.selected = 1 end
     msg.debug('load time: ' ..mp.get_time() - t)
+
+    --saves the latest directory at the top of the stack
+    cache[#cache+1] = {directory = state.directory, table = list}
 end
 
 function update()
@@ -153,6 +173,7 @@ function up_dir()
         state.directory = dir:reverse():sub(1, 0-index)
     end
 
+    cache[#cache] = nil
     update_cursor()
     update()
 end
@@ -163,10 +184,16 @@ function down_dir()
     cursor_pos[state.directory] = state.selected
     local last_char = state.directory:sub(-1)
     if state.root or last_char == '\\' or last_char == '/' then
-        state.directory = state.directory..list[state.selected].name..'/'
+        state.directory = state.directory..list[state.selected].name
     else
-        state.directory = state.directory..'/'..list[state.selected].name..'/'
+        state.directory = state.directory..'/'..list[state.selected].name
     end
+
+    last_char = state.directory:sub(-1)
+    if last_char ~= '\\' and last_char ~= '/' then
+        state.directory = state.directory..'/'
+    end
+
     update_cursor()
     update()
 end
@@ -199,4 +226,12 @@ function open_file(flags)
     end
 end
 
-mp.add_key_binding('MENU','browse-files', open_browser)
+function toggle_browser()
+    if ov.hidden then
+        open_browser()
+    else
+        close_browser()
+    end
+end
+
+mp.add_key_binding('MENU','browse-files', toggle_browser)
