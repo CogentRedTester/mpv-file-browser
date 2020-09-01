@@ -1,6 +1,6 @@
 # mpv-file-browser
 
-![cover](screenshots\front.png)
+![cover](screenshots/front.png)
 
 This script allows users to browse and open files and folders entirely from within mpv. The script uses nothing outside the mpv API, so should work identically on all platforms. The browser can move up and down directories, start playing files and folders, or add them to the queue.
 
