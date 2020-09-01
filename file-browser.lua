@@ -7,7 +7,7 @@ local o = {
     --root directories
     root = "~/",
 
-    num_entries = 20,
+    num_entries = 16,
 
     --ass tags
     ass_body = "{\\q2\\fs30}",
@@ -77,22 +77,47 @@ end
 function update_ass()
     ov.data = o.ass_body
 
-    for i,v in ipairs(list) do
-        if i == state.selected then
-            ov.data = ov.data.."> "
-        end
-        if v.type == 'dir' then
-            ov.data = ov.data..o.ass_folder
+    local start = 1
+    local finish = start+o.num_entries
+    local overflow = true
+
+    --handling cursor positioning
+    local mid = math.ceil(o.num_entries/2)
+    if state.selected+mid > finish then
+        local offset = state.selected - finish + mid
+
+        --if we've overshot the end of the list then undo some of the offset
+        if finish + offset > #list then
+            offset = offset - ((finish+offset) - #list)
+            overflow = false
         end
 
-        if state.root then
-            ov.data = ov.data..v.label.."\\N"
-        else
-            ov.data = ov.data..v.name.."\\N"
-        end
+        start = start + offset
+        finish = finish + offset
+    else
+        overflow = finish < #list
+    end
+
+    --making sure that we don't overstep the boundaries
+    if start < 1 then start = 1 end
+    if not overflow then finish = #list end
+
+    --adding a header to show there are items above in the list
+    if start > 1 then ov.data = ov.data..'...\\N' end
+
+    for i=start,finish do
+        local v = list[i]
+        if i == state.selected then ov.data = ov.data.."> " end
+
+        if v.type == 'dir' then ov.data = ov.data..o.ass_folder end
+
+        if state.root then ov.data = ov.data..v.label.."\\N"
+        else ov.data = ov.data..v.name.."\\N" end
 
         if v.type == "dir" then ov.data=ov.data..o.ass_file end
     end
+
+    if overflow then ov.data = ov.data..#list-finish..' items remaining' end
     ov:update()
 end
 
@@ -215,7 +240,7 @@ end
 
 function open_file(flags)
     if state.selected > #list or state.selected < 1 then return end
-    mp.commandv('loadfile', state.directory..'/'..list[state.selected].name, flags)
+    mp.commandv('loadfile', state.directory..list[state.selected].name, flags)
     if flags == 'replace' then
         close_browser()
     end
