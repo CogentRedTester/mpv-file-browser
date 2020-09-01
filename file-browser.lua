@@ -46,6 +46,9 @@ function setup_root()
     root = {}
     for str in string.gmatch(o.root, "([^;]+)") do
         path = mp.command_native({'expand-path', str})
+        local last_char = path:sub(-1)
+        if last_char ~= '\\' and last_char ~= '/' then path = path..'/' end
+
         root[#root+1] = {name = path, type = 'dir', label = str}
     end
 end
@@ -232,7 +235,7 @@ end
 
 function close_browser()
     for _,v in ipairs(keybinds) do
-        mp.remove_key_binding(v[2])
+        mp.remove_key_binding('dynamic/'..v[2])
     end
     ov.hidden = true
     ov:update()
