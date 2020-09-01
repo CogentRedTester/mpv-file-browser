@@ -81,6 +81,17 @@ function goto_root()
     msg.verbose('loading root')
     state.selected = 1
     list = root
+
+    --if moving to root from one of the connected locations,
+    --then select that location
+    for i,item in ipairs(list) do
+        if (state.prev_directory == item.name) then
+            state.selected = i
+            break
+        end
+    end
+    state.prev_directory = ""
+
     state.root = true
     state.directory = ""
     cache = {}
@@ -229,6 +240,7 @@ function up_dir()
     end
 
     if index == nil then
+        state.prev_directory = state.directory
         state.directory = ""
     else
         state.prev_directory = dir:sub(1, index-1):reverse()
