@@ -130,7 +130,7 @@ function update_list(reload)
         if (state.prev_directory == item) then
             state.selected = i
         end
-        list[i] = {name = item, type = 'dir'}
+        list[i] = {name = item..'/', type = 'dir'}
     end
     state.prev_directory = ""
 
@@ -188,18 +188,7 @@ end
 function down_dir()
     if list[state.selected].type ~= 'dir' then return end
 
-    local last_char = state.directory:sub(-1)
-    if state.root or last_char == '\\' or last_char == '/' then
-        state.directory = state.directory..list[state.selected].name
-    else
-        state.directory = state.directory..'/'..list[state.selected].name
-    end
-
-    last_char = state.directory:sub(-1)
-    if last_char ~= '\\' and last_char ~= '/' then
-        state.directory = state.directory..'/'
-    end
-
+    state.directory = state.directory..list[state.selected].name
     if #cache > 0 then cache[#cache].cursor = state.selected end
     update()
 end
