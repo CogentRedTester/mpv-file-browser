@@ -7,12 +7,12 @@ local o = {
     --root directories
     root = "~/",
 
-    num_entries = 16,
+    --number of entries to show on the screen at once
+    num_entries = 18,
 
     --ass tags
     ass_header = "{\\q2\\fs35\\c&00ccff&}",
-    ass_body = "{\\q2\\fs18}",
-    ass_white = "{\\c&Hffffff&}",
+    ass_body = "{\\q2\\fs25\\c&Hffffff&}",
     ass_selected = "{\\c&Hfce788&}",
     ass_playing = "{\\c&H33ff66&}",
     ass_footerheader = "{\\c&00ccff&\\b500\\fs16}"
@@ -88,7 +88,7 @@ function goto_root()
 end
 
 function print_ass_header()
-    ov.data = o.ass_header..state.directory..'\\N ---------------------------------------------------- \\N'..o.ass_white
+    ov.data = o.ass_header..state.directory..'\\N ---------------------------------------------------- \\N'
 end
 
 function update_ass()
@@ -128,7 +128,7 @@ function update_ass()
     if not overflow then finish = #list end
 
     --adding a header to show there are items above in the list
-    if start > 1 then ov.data = ov.data..o.ass_footerheader..(start-1)..' items above\\N\\N'..o.ass_white end
+    if start > 1 then ov.data = ov.data..o.ass_footerheader..(start-1)..' items above\\N\\N' end
 
     local current_dir = state.directory == state.current_file.directory
 
@@ -143,8 +143,6 @@ function update_ass()
 
         if state.root then ov.data = ov.data..v.label.."\\N"
         else ov.data = ov.data..v.name.."\\N" end
-
-        if i == state.selected or playing_file then ov.data = ov.data..o.ass_white end
     end
 
     if overflow then ov.data = ov.data..'\\N'..o.ass_footerheader..#list-finish..' items remaining' end
