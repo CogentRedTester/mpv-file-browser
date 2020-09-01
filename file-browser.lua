@@ -10,11 +10,12 @@ local o = {
     num_entries = 16,
 
     --ass tags
-    ass_body = "{\\q2\\fs30}",
+    ass_header = "{\\q2\\fs35\\c&00ccff&}",
+    ass_body = "{\\q2\\fs18}",
     ass_white = "{\\c&Hffffff&}",
     ass_selected = "{\\c&Hfce788&}",
     ass_playing = "{\\c&H33ff66&}",
-    ass_footerheader = "{\\c&00ccff&\\b500\\fs20}"
+    ass_footerheader = "{\\c&00ccff&\\b500\\fs16}"
 }
 
 opt.read_options(o, 'file_browser')
@@ -86,8 +87,20 @@ function goto_root()
     update_ass()
 end
 
+function print_ass_header()
+    ov.data = o.ass_header..state.directory..'\\N ---------------------------------------------------- \\N'..o.ass_white
+end
+
 function update_ass()
-    ov.data = o.ass_body
+    print_ass_header()
+    ov.data = ov.data..o.ass_body
+
+    --check for an empty directory
+    if #list == 0 then
+        ov.data = ov.data.."empty directory"
+        ov:update()
+        return
+    end
 
     local start = 1
     local finish = start+o.num_entries
@@ -188,6 +201,8 @@ function update_list(reload)
 end
 
 function update()
+    print_ass_header()
+    ov:update()
     update_list()
     update_ass()
 end
