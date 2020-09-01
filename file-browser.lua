@@ -11,8 +11,10 @@ local o = {
 
     --ass tags
     ass_body = "{\\q2\\fs30}",
-    ass_folder = "{\\c&Hfce788>&}",
-    ass_file = "{\\c&Hffffff>&}"
+    ass_white = "{\\c&Hffffff>&}",
+    ass_selected = "{\\c&Hfce788>&}",
+    ass_playing = "{}",
+    ass_footerheader = "{\\c&00ccff>&\\b500\\fs20}"
 }
 
 opt.read_options(o, 'file_browser')
@@ -106,21 +108,22 @@ function update_ass()
     if not overflow then finish = #list end
 
     --adding a header to show there are items above in the list
-    if start > 1 then ov.data = ov.data..'...\\N' end
+    if start > 1 then ov.data = ov.data..o.ass_footerheader..(start-1)..' items above\\N\\N'..o.ass_white end
 
     for i=start,finish do
         local v = list[i]
-        if i == state.selected then ov.data = ov.data.."> " end
+        ov.data = ov.data..o.ass_body
+        if i == state.selected then ov.data = ov.data..o.ass_selected end
 
-        if v.type == 'dir' then ov.data = ov.data..o.ass_folder end
+        if v.type == 'dir' then ov.data = ov.data..[[📁 ]] end
 
         if state.root then ov.data = ov.data..v.label.."\\N"
         else ov.data = ov.data..v.name.."\\N" end
 
-        if v.type == "dir" then ov.data=ov.data..o.ass_file end
+        if i == state.selected then ov.data = ov.data..o.ass_white end
     end
 
-    if overflow then ov.data = ov.data..#list-finish..' items remaining' end
+    if overflow then ov.data = ov.data..'\\N'..o.ass_footerheader..#list-finish..' items remaining' end
     ov:update()
 end
 
