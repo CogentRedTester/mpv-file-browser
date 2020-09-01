@@ -11,10 +11,10 @@ local o = {
 
     --ass tags
     ass_body = "{\\q2\\fs30}",
-    ass_white = "{\\c&Hffffff>&}",
-    ass_selected = "{\\c&Hfce788>&}",
-    ass_playing = "{}",
-    ass_footerheader = "{\\c&00ccff>&\\b500\\fs20}"
+    ass_white = "{\\c&Hffffff&}",
+    ass_selected = "{\\c&Hfce788&}",
+    ass_playing = "{\\c&H33ff66&}",
+    ass_footerheader = "{\\c&00ccff&\\b500\\fs20}"
 }
 
 opt.read_options(o, 'file_browser')
@@ -28,7 +28,11 @@ local state = {
     selected = 1,
     multiple = false,
     root = false,
-    prev_directory = nil
+    prev_directory = nil,
+    current_file = {
+        directory = nil,
+        name = nil
+    }
 }
 local root = nil
 local keybinds = {
@@ -55,13 +59,16 @@ function setup_root()
     end
 end
 
-function goto_current_dir()
+function update_current_directory(_, filepath)
     local workingDirectory = mp.get_property('working-directory', '')
-    local filepath = mp.get_property('path', '')
+    if filepath == nil then filepath = "" end
     local exact_path = utils.join_path(workingDirectory, filepath)
+    state.current_file.directory, state.current_file.name = utils.split_path(exact_path)
+end
 
+function goto_current_dir()
     --splits the directory and filename apart
-    state.directory = utils.split_path(exact_path)
+    state.directory = state.current_file.directory
     state.selected = 1
     cache = {}
     update_list()
@@ -110,9 +117,13 @@ function update_ass()
     --adding a header to show there are items above in the list
     if start > 1 then ov.data = ov.data..o.ass_footerheader..(start-1)..' items above\\N\\N'..o.ass_white end
 
+    local current_dir = state.directory == state.current_file.directory
+
     for i=start,finish do
         local v = list[i]
+        local playing_file = current_dir and v.name == state.current_file.name
         ov.data = ov.data..o.ass_body
+        if playing_file then ov.data = ov.data..o.ass_playing end
         if i == state.selected then ov.data = ov.data..o.ass_selected end
 
         if v.type == 'dir' then ov.data = ov.data..[[📁 ]] end
@@ -120,7 +131,7 @@ function update_ass()
         if state.root then ov.data = ov.data..v.label.."\\N"
         else ov.data = ov.data..v.name.."\\N" end
 
-        if i == state.selected then ov.data = ov.data..o.ass_white end
+        if i == state.selected or playing_file then ov.data = ov.data..o.ass_white end
     end
 
     if overflow then ov.data = ov.data..'\\N'..o.ass_footerheader..#list-finish..' items remaining' end
@@ -260,4 +271,8 @@ function toggle_browser()
     end
 end
 
+mp.observe_property('path', 'string', function(_,path)
+    update_current_directory(_,path)
+    if not ov.hidden then update_ass() end
+end)
 mp.add_key_binding('MENU','browse-files', toggle_browser)
