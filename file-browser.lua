@@ -21,10 +21,10 @@ local o = {
 opt.read_options(o, 'file_browser')
 
 local ov = mp.create_osd_overlay('ass-events')
-ov.hidden = true
 local list = {}
 local cache = {}
 local state = {
+    hidden = true,
     directory = nil,
     selected = 1,
     multiple = false,
@@ -105,8 +105,6 @@ end
 
 function update_ass()
     print_ass_header()
-    ov.data = ov.data..o.ass_body
-
     --check for an empty directory
     if #list == 0 then
         ov.data = ov.data.."empty directory"
@@ -114,6 +112,7 @@ function update_ass()
         return
     end
 
+    ov.data = ov.data..o.ass_body
     local start = 1
     local finish = start+o.num_entries
 
@@ -218,8 +217,8 @@ end
 function scroll_down()
     if state.selected < #list then
         state.selected = state.selected + 1
-    update_ass()
-end
+        update_ass()
+    end
 end
 
 function scroll_up()
@@ -267,15 +266,16 @@ function open_browser()
     if state.directory == nil then
         goto_current_dir()
     end
-    ov.hidden = false
-    ov:update()
+    state.hidden = false
+    update_ass()
 end
 
 function close_browser()
     for _,v in ipairs(keybinds) do
         mp.remove_key_binding('dynamic/'..v[2])
     end
-    ov.hidden = true
+    ov.data = ""
+    state.hidden = true
     ov:update()
 end
 
@@ -288,7 +288,7 @@ function open_file(flags)
 end
 
 function toggle_browser()
-    if ov.hidden then
+    if state.hidden then
         open_browser()
     else
         close_browser()
@@ -297,6 +297,6 @@ end
 
 mp.observe_property('path', 'string', function(_,path)
     update_current_directory(_,path)
-    if not ov.hidden then update_ass() end
+    if not state.hidden then update_ass() end
 end)
 mp.add_key_binding('MENU','browse-files', toggle_browser)
