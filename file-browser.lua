@@ -45,7 +45,8 @@ local keybinds = {
     {'DOWN', 'scroll_down', function() scroll_down() end, {repeatable = true}},
     {'UP', 'scroll_up', function() scroll_up() end, {repeatable = true}},
     {'HOME', 'pwd', function() cache = {}; goto_current_dir() end, {}},
-    {'Shift+HOME', 'root', function() goto_root() end, {}}
+    {'Shift+HOME', 'root', function() goto_root() end, {}},
+    {'Ctrl+r', 'reload', function() cache={}; update() end, {}}
 }
 
 --splits the string into a table on the semicolons
