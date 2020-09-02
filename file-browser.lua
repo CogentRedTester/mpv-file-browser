@@ -115,7 +115,6 @@ function update_ass()
 
     local start = 1
     local finish = start+o.num_entries
-    local overflow = true
 
     --handling cursor positioning
     local mid = math.ceil(o.num_entries/2)+1
@@ -130,12 +129,11 @@ function update_ass()
 
         start = start + offset
         finish = finish + offset
-    else
-        overflow = finish < #list
     end
 
     --making sure that we don't overstep the boundaries
     if start < 1 then start = 1 end
+    local overflow = finish < #list
     if not overflow then finish = #list end
 
     --adding a header to show there are items above in the list
