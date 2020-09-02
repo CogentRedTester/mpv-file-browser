@@ -72,8 +72,7 @@ function goto_current_dir()
     state.directory = state.current_file.directory
     state.selected = 1
     cache = {}
-    update_list()
-    update_ass()
+    update()
 end
 
 function goto_root()
@@ -118,7 +117,7 @@ function update_ass()
     local overflow = true
 
     --handling cursor positioning
-    local mid = math.ceil(o.num_entries/2)
+    local mid = math.ceil(o.num_entries/2)+1
     if state.selected+mid > finish then
         local offset = state.selected - finish + mid
 
