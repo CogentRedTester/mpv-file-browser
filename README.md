@@ -20,6 +20,7 @@ The following keybinds are only set while the browser is open:
     LEFT            move to the parent directory
     HOME            move to the directory of the currently playing file
     Shift+HOME      move to the root directory
+    Ctrl+r          reload directory and reset cache
 
 ## Root Directory
 To accomodate for both windows and linux this script has its own virtual root directory where drives and file folders can be manually added. This can also be used to save favourite directories. The root directory can only contain folders.
