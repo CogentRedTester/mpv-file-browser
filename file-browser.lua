@@ -15,7 +15,7 @@ local o = {
     ass_body = "{\\q2\\fs25\\c&Hffffff&}",
     ass_selected = "{\\c&Hfce788&}",
     ass_playing = "{\\c&H33ff66&}",
-    ass_footerheader = "{\\c&00ccff&\\b500\\fs16}"
+    ass_footerheader = "{\\c&00ccff&\\fs16}"
 }
 
 opt.read_options(o, 'file_browser')
@@ -148,10 +148,10 @@ function update_ass()
         local v = list[i]
         local playing_file = current_dir and v.name == state.current_file.name
         ov.data = ov.data..o.ass_body
-        if playing_file then ov.data = ov.data..o.ass_playing end
+        if playing_file then ov.data = ov.data..o.ass_playing..[[▶ ]] end
         if i == state.selected then ov.data = ov.data..o.ass_selected end
 
-        if v.type == 'dir' then ov.data = ov.data..[[📁 ]] end
+        if v.type == 'dir' then ov.data = ov.data..[[🖿 ]] end
 
         if state.root then ov.data = ov.data..v.label.."\\N"
         else ov.data = ov.data..v.name.."\\N" end
