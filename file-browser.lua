@@ -53,8 +53,9 @@ function setup_root()
     root = {}
     for str in string.gmatch(o.root, "([^;]+)") do
         path = mp.command_native({'expand-path', str})
+        path = path:gsub([[\]], [[/]])
         local last_char = path:sub(-1)
-        if last_char ~= '\\' and last_char ~= '/' then path = path..'/' end
+        if last_char ~= '/' then path = path..'/' end
 
         root[#root+1] = {name = path, type = 'dir', label = str}
     end
@@ -64,6 +65,7 @@ function update_current_directory(_, filepath)
     local workingDirectory = mp.get_property('working-directory', '')
     if filepath == nil then filepath = "" end
     local exact_path = utils.join_path(workingDirectory, filepath)
+    exact_path = exact_path:gsub([[\]],[[/]])
     state.current_file.directory, state.current_file.name = utils.split_path(exact_path)
 end
 
