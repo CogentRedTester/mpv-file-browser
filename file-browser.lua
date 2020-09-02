@@ -218,15 +218,15 @@ end
 function scroll_down()
     if state.selected < #list then
         state.selected = state.selected + 1
-    end
     update_ass()
+end
 end
 
 function scroll_up()
     if state.selected > 1 then
         state.selected = state.selected - 1
+        update_ass()
     end
-    update_ass()
 end
 
 function up_dir()
@@ -252,7 +252,7 @@ function up_dir()
 end
 
 function down_dir()
-    if list[state.selected].type ~= 'dir' then return end
+    if not list[state.selected] or list[state.selected].type ~= 'dir' then return end
 
     state.directory = state.directory..list[state.selected].name
     if #cache > 0 then cache[#cache].cursor = state.selected end
