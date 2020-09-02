@@ -44,7 +44,7 @@ local keybinds = {
     {'LEFT', 'up_dir', function() up_dir() end, {}},
     {'DOWN', 'scroll_down', function() scroll_down() end, {repeatable = true}},
     {'UP', 'scroll_up', function() scroll_up() end, {repeatable = true}},
-    {'HOME', 'pwd', function() goto_current_dir() end, {}},
+    {'HOME', 'pwd', function() cache = {}; goto_current_dir() end, {}},
     {'Shift+HOME', 'root', function() goto_root() end, {}}
 }
 
@@ -73,7 +73,6 @@ function goto_current_dir()
     --splits the directory and filename apart
     state.directory = state.current_file.directory
     state.selected = 1
-    cache = {}
     update()
 end
 
