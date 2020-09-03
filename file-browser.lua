@@ -126,7 +126,6 @@ function update_ass()
         --if we've overshot the end of the list then undo some of the offset
         if finish + offset > #list then
             offset = offset - ((finish+offset) - #list)
-            overflow = false
         end
 
         start = start + offset
@@ -136,6 +135,7 @@ function update_ass()
     --making sure that we don't overstep the boundaries
     if start < 1 then start = 1 end
     local overflow = finish < #list
+    --this is necessary when the number of items in the dir is less than the max
     if not overflow then finish = #list end
 
     --adding a header to show there are items above in the list
