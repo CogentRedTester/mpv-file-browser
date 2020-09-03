@@ -100,7 +100,9 @@ function goto_root()
 end
 
 function print_ass_header()
-    ov.data = o.ass_header..state.directory..'\\N ---------------------------------------------------- \\N'
+    local dir_name = state.directory
+    if dir_name == "" then dir_name = "ROOT" end
+    ov.data = o.ass_header..dir_name..'\\N ---------------------------------------------------- \\N'
 end
 
 function update_ass()
