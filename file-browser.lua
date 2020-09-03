@@ -285,6 +285,7 @@ function open_file(flags)
     if state.selected > #list or state.selected < 1 then return end
     mp.commandv('loadfile', state.directory..list[state.selected].name, flags)
     if flags == 'replace' then
+        down_dir()
         close_browser()
     end
 end
