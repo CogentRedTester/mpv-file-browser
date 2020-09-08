@@ -49,6 +49,10 @@ local keybinds = {
     {'Ctrl+r', 'reload', function() cache={}; update() end, {}}
 }
 
+function sort(t)
+    table.sort(t, function(a,b) return a:lower() < b:lower() end)
+end
+
 --splits the string into a table on the semicolons
 function setup_root()
     root = {}
@@ -190,6 +194,8 @@ function update_list(reload)
     end
 
     state.root = false
+
+    sort(list)
     for i,item in ipairs(list) do
         if (state.prev_directory == item) then
             state.selected = i
@@ -200,8 +206,10 @@ function update_list(reload)
 
     --array concatenation taken from https://stackoverflow.com/a/15278426
     local list2 = utils.readdir(state.directory, 'files')
-    for i = 1,#list2 do
-        list[#list+1] = {name = list2[i], type = 'file'}
+    sort(list2)
+    local num_folders = #list
+    for i,v in ipairs(list2) do
+        list[num_folders + i] = {name = v, type = 'file'}
     end
     msg.debug('load time: ' ..mp.get_time() - t)
 
