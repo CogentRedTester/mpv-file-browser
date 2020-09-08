@@ -164,14 +164,14 @@ function update_ass()
     ov:update()
 end
 
-function update_list(reload)
+function update_list()
     msg.verbose('loading contents of ' .. state.directory)
     state.selected = 1
 
     --loads the current directry from the cache to save loading time
     --there will be a way to forcibly reload the current directory at some point
     --the cache is in the form of a stack, items are taken off the stack when the dir moves up
-    if not reload and #cache > 0 then
+    if #cache > 0 then
         local cache = cache[#cache]
         if cache.directory == state.directory then
             msg.verbose('found directory in cache')
@@ -195,6 +195,7 @@ function update_list(reload)
 
     state.root = false
 
+    --sorts folders and formats them into the list of directories
     sort(list)
     for i,item in ipairs(list) do
         if (state.prev_directory == item) then
@@ -205,10 +206,10 @@ function update_list(reload)
     end
     state.prev_directory = ""
 
-    --array concatenation taken from https://stackoverflow.com/a/15278426
+    --appends files to the list of directory items
     local list2 = utils.readdir(state.directory, 'files')
-    local num_folders = #list
     sort(list2)
+    local num_folders = #list
     for i,item in ipairs(list2) do
         msg.debug(item)
         list[num_folders + i] = {name = item, type = 'file'}
