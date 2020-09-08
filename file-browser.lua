@@ -200,16 +200,18 @@ function update_list(reload)
         if (state.prev_directory == item) then
             state.selected = i
         end
+        msg.debug(item..'/')
         list[i] = {name = item..'/', type = 'dir'}
     end
     state.prev_directory = ""
 
     --array concatenation taken from https://stackoverflow.com/a/15278426
     local list2 = utils.readdir(state.directory, 'files')
-    sort(list2)
     local num_folders = #list
-    for i,v in ipairs(list2) do
-        list[num_folders + i] = {name = v, type = 'file'}
+    sort(list2)
+    for i,item in ipairs(list2) do
+        msg.debug(item)
+        list[num_folders + i] = {name = item, type = 'file'}
     end
     msg.debug('load time: ' ..mp.get_time() - t)
 
