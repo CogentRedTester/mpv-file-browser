@@ -56,12 +56,12 @@ local keybinds = {
     {'Ctrl+LEFT', 'select_no', function() state.selection[state.selected] = nil ; update_ass() end, {}}
 }
 
-function sort(t)
+local function sort(t)
     table.sort(t, function(a,b) return a:lower() < b:lower() end)
 end
 
 --splits the string into a table on the semicolons
-function setup_root()
+local function setup_root()
     root = {}
     for str in string.gmatch(o.root, "([^;]+)") do
         path = mp.command_native({'expand-path', str})
@@ -327,11 +327,11 @@ function open_browser()
         goto_current_dir()
     end
     state.hidden = false
-    update_ass()
+    ov:update()
 end
 
 --sortes a table into an array of its key values
-function sort_keys(t)
+local function sort_keys(t)
     local keys = {}
     for k in pairs(t) do keys[#keys+1] = k end
 
@@ -351,9 +351,8 @@ function close_browser()
     for _,v in ipairs(keybinds) do
         mp.remove_key_binding('dynamic/'..v[2])
     end
-    ov.data = ""
     state.hidden = true
-    ov:update()
+    ov:remove()
 end
 
 function open_file(flags)
