@@ -162,8 +162,8 @@ function update_ass()
 
         --handles custom styles for different entries
         --the below text contains unicode whitespace characters
-        if i == state.selected then ov.data = ov.data..o.ass_cursor..[[➤  ]]..o.ass_body
-        else ov.data = ov.data..[[   ]] end
+        if i == state.selected then ov.data = ov.data..o.ass_cursor..[[➤  ]]..o.ass_body
+        else ov.data = ov.data..[[   ]] end
 
         --prints the currently-playing icon and style
         if playing_file then ov.data = ov.data..o.ass_playing..[[▶ ]] end
