@@ -14,8 +14,10 @@ local o = {
     ass_header = "{\\q2\\fs35\\c&00ccff&}",
     ass_body = "{\\q2\\fs25\\c&Hffffff&}",
     ass_selected = "{\\c&Hfce788&}",
+    ass_multiselect = "{\\c&Hfcad88&}",
     ass_playing = "{\\c&H33ff66&}",
-    ass_footerheader = "{\\c&00ccff&\\fs16}"
+    ass_footerheader = "{\\c&00ccff&\\fs16}",
+    ass_cursor = "{\\c&00ccff&}"
 }
 
 opt.read_options(o, 'file_browser')
@@ -27,7 +29,7 @@ local state = {
     hidden = true,
     directory = nil,
     selected = 1,
-    multiple = false,
+    selection = {},
     root = false,
     prev_directory = nil,
     current_file = {
@@ -46,7 +48,12 @@ local keybinds = {
     {'UP', 'scroll_up', function() scroll_up() end, {repeatable = true}},
     {'HOME', 'pwd', function() cache = {}; goto_current_dir() end, {}},
     {'Shift+HOME', 'root', function() goto_root() end, {}},
-    {'Ctrl+r', 'reload', function() cache={}; update() end, {}}
+    {'Ctrl+r', 'reload', function() cache={}; update() end, {}},
+    {'Ctrl+ENTER', 'select', function() toggle_selection() end, {}},
+    {'Ctrl+DOWN', 'select_down', function() drag_down() end, {repeatable = true}},
+    {'Ctrl+UP', 'select_up', function() drag_up() end, {repeatable = true}},
+    {'Ctrl+RIGHT', 'select_yes', function() state.selection[state.selected] = true ; update_ass() end, {}},
+    {'Ctrl+LEFT', 'select_no', function() state.selection[state.selected] = nil ; update_ass() end, {}}
 }
 
 function sort(t)
@@ -100,6 +107,7 @@ function goto_root()
     state.root = true
     state.directory = ""
     cache = {}
+    state.selection = {}
     update_ass()
 end
 
@@ -151,11 +159,23 @@ function update_ass()
         local v = list[i]
         local playing_file = current_dir and v.name == state.current_file.name
         ov.data = ov.data..o.ass_body
-        if playing_file then ov.data = ov.data..o.ass_playing..[[▶ ]] end
-        if i == state.selected then ov.data = ov.data..o.ass_selected end
 
+        --handles custom styles for different entries
+        --the below text contains unicode whitespace characters
+        if i == state.selected then ov.data = ov.data..o.ass_cursor..[[➤  ]]..o.ass_body
+        else ov.data = ov.data..[[   ]] end
+
+        --prints the currently-playing icon and style
+        if playing_file then ov.data = ov.data..o.ass_playing..[[▶ ]] end
+
+        --sets the selection colour scheme
+        if state.selection[i] then ov.data = ov.data..o.ass_multiselect
+        elseif i == state.selected then ov.data = ov.data..o.ass_selected end
+
+        --sets the folder icon
         if v.type == 'dir' then ov.data = ov.data..[[🖿 ]] end
 
+        --adds the actual name of the item
         if state.root then ov.data = ov.data..v.label.."\\N"
         else ov.data = ov.data..v.name.."\\N" end
     end
@@ -167,6 +187,7 @@ end
 function update_list()
     msg.verbose('loading contents of ' .. state.directory)
     state.selected = 1
+    state.selection = {}
 
     --loads the current directry from the cache to save loading time
     --there will be a way to forcibly reload the current directory at some point
@@ -197,7 +218,8 @@ function update_list()
 
     --sorts folders and formats them into the list of directories
     sort(list)
-    for i,item in ipairs(list) do
+    for i=1, #list do
+        local item = list[i]
         if (state.prev_directory == item) then
             state.selected = i
         end
@@ -210,9 +232,9 @@ function update_list()
     local list2 = utils.readdir(state.directory, 'files')
     sort(list2)
     local num_folders = #list
-    for i,item in ipairs(list2) do
-        msg.debug(item)
-        list[num_folders + i] = {name = item, type = 'file'}
+    for i=1, #list2 do
+        msg.debug(list2[i])
+        list[num_folders + i] = {name = list2[i], type = 'file'}
     end
     msg.debug('load time: ' ..mp.get_time() - t)
 
@@ -271,6 +293,31 @@ function down_dir()
     update()
 end
 
+function toggle_selection()
+    if list[state.selected] then
+        if state.selection[state.selected] then
+            state.selection[state.selected] = nil
+        else
+            state.selection[state.selected] = true
+        end
+    end
+    update_ass()
+end
+
+function drag_down()
+    state.selection[state.selected] = true
+    scroll_down()
+    state.selection[state.selected] = true
+    update_ass()
+end
+
+function drag_up()
+    state.selection[state.selected] = true
+    scroll_up()
+    state.selection[state.selected] = true
+    update_ass()
+end
+
 function open_browser()
     for _,v in ipairs(keybinds) do
         mp.add_forced_key_binding(v[1], 'dynamic/'..v[2], v[3], v[4])
@@ -283,7 +330,24 @@ function open_browser()
     update_ass()
 end
 
+--sortes a table into an array of its key values
+function sort_keys(t)
+    local keys = {}
+    for k in pairs(t) do keys[#keys+1] = k end
+
+    table.sort(keys)
+    return keys
+end
+
 function close_browser()
+    --if multiple items are selection cancel the
+    --selection instead of closing the browser
+    if next(state.selection) then
+        state.selection = {}
+        update_ass()
+        return
+    end
+
     for _,v in ipairs(keybinds) do
         mp.remove_key_binding('dynamic/'..v[2])
     end
@@ -294,8 +358,27 @@ end
 
 function open_file(flags)
     if state.selected > #list or state.selected < 1 then return end
+
     mp.commandv('loadfile', state.directory..list[state.selected].name, flags)
-    if flags == 'replace' then
+    state.selection[state.selected] = nil
+
+    --handles multi-selection behaviour
+    if next(state.selection) then
+        local selection = sort_keys(state.selection)
+
+        --the currently selected file will be loaded according to the flag
+        --the remaining files will be appended
+        for i=1, #selection do
+            mp.commandv('loadfile', state.directory..list[selection[i]].name, 'append')
+        end
+
+        --reset the selection after
+        state.selection = {}
+        if flags == 'replace' then close_browser()
+        else update_ass() end
+        return
+
+    elseif flags == 'replace' then
         down_dir()
         close_browser()
     end
