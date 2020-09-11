@@ -14,8 +14,10 @@ local o = {
     ass_header = "{\\q2\\fs35\\c&00ccff&}",
     ass_body = "{\\q2\\fs25\\c&Hffffff&}",
     ass_selected = "{\\c&Hfce788&}",
+    ass_multiselect = "{\\c&Hfcad88&}",
     ass_playing = "{\\c&H33ff66&}",
-    ass_footerheader = "{\\c&00ccff&\\fs16}"
+    ass_footerheader = "{\\c&00ccff&\\fs16}",
+    ass_cursor = "{\\c&00ccff&}"
 }
 
 opt.read_options(o, 'file_browser')
@@ -49,7 +51,9 @@ local keybinds = {
     {'Ctrl+r', 'reload', function() cache={}; update() end, {}},
     {'Ctrl+ENTER', 'select', function() toggle_selection() end, {}},
     {'Ctrl+DOWN', 'select_down', function() drag_down() end, {repeatable = true}},
-    {'Ctrl+UP', 'select_up', function() drag_up() end, {repeatable = true}}
+    {'Ctrl+UP', 'select_up', function() drag_up() end, {repeatable = true}},
+    {'Ctrl+RIGHT', 'select_yes', function() state.selection[state.selected] = true ; update_ass() end, {}},
+    {'Ctrl+LEFT', 'select_no', function() state.selection[state.selected] = nil ; update_ass() end, {}}
 }
 
 function sort(t)
@@ -156,11 +160,21 @@ function update_ass()
         ov.data = ov.data..o.ass_body
 
         --handles custom styles for different entries
-        if playing_file then ov.data = ov.data..o.ass_playing..[[▶ ]] end
-        if i == state.selected then ov.data = ov.data..o.ass_selected end
+        --the below text contains unicode whitespace characters
+        if i == state.selected then ov.data = ov.data..o.ass_cursor..[[➤  ]]..o.ass_body
+        else ov.data = ov.data..[[   ]] end
 
+        --prints the currently-playing icon and style
+        if playing_file then ov.data = ov.data..o.ass_playing..[[▶ ]] end
+
+        --sets the selection colour scheme
+        if state.selection[i] then ov.data = ov.data..o.ass_multiselect
+        elseif i == state.selected then ov.data = ov.data..o.ass_selected end
+
+        --sets the folder icon
         if v.type == 'dir' then ov.data = ov.data..[[🖿 ]] end
 
+        --adds the actual name of the item
         if state.root then ov.data = ov.data..v.label.."\\N"
         else ov.data = ov.data..v.name.."\\N" end
     end
@@ -350,7 +364,7 @@ function open_file(flags)
     if next(state.selection) then
         local selection = sort_keys(state.selection)
 
-        --the first file will be loaded according to the sent flag,
+        --the currently selected file will be loaded according to the flag
         --the remaining files will be appended
         for i=1, #selection do
             mp.commandv('loadfile', state.directory..list[selection[i]].name, 'append')
