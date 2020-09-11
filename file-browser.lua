@@ -27,10 +27,10 @@ local list = {}
 local cache = {}
 local state = {
     hidden = true,
+    flag_update = false,
     directory = nil,
     selected = 1,
     selection = {},
-    root = false,
     prev_directory = nil,
     current_file = {
         directory = nil,
@@ -64,7 +64,7 @@ end
 local function setup_root()
     root = {}
     for str in string.gmatch(o.root, "([^;]+)") do
-        path = mp.command_native({'expand-path', str})
+        local path = mp.command_native({'expand-path', str})
         path = path:gsub([[\]], [[/]])
         local last_char = path:sub(-1)
         if last_char ~= '/' then path = path..'/' end
@@ -103,8 +103,6 @@ function goto_root()
         end
     end
     state.prev_directory = ""
-
-    state.root = true
     state.directory = ""
     cache = {}
     state.selection = {}
@@ -176,7 +174,7 @@ function update_ass()
         if v.type == 'dir' then ov.data = ov.data..[[🖿 ]] end
 
         --adds the actual name of the item
-        if state.root then ov.data = ov.data..v.label.."\\N"
+        if state.directory == "" then ov.data = ov.data..v.label.."\\N"
         else ov.data = ov.data..v.name.."\\N" end
     end
 
@@ -213,8 +211,6 @@ function update_list()
         goto_root()
         return
     end
-
-    state.root = false
 
     --sorts folders and formats them into the list of directories
     sort(list)
@@ -327,7 +323,8 @@ function open_browser()
         goto_current_dir()
     end
     state.hidden = false
-    ov:update()
+    if state.flag_update then update_ass()
+    else ov:update() end
 end
 
 --sortes a table into an array of its key values
@@ -393,6 +390,7 @@ end
 
 mp.observe_property('path', 'string', function(_,path)
     update_current_directory(_,path)
-    if not state.hidden then update_ass() end
+    if not state.hidden then update_ass()
+    else state.flag_update = true end
 end)
 mp.add_key_binding('MENU','browse-files', toggle_browser)
