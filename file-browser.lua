@@ -107,6 +107,7 @@ function goto_root()
     state.root = true
     state.directory = ""
     cache = {}
+    state.selection = {}
     update_ass()
 end
 
@@ -186,6 +187,7 @@ end
 function update_list()
     msg.verbose('loading contents of ' .. state.directory)
     state.selected = 1
+    state.selection = {}
 
     --loads the current directry from the cache to save loading time
     --there will be a way to forcibly reload the current directory at some point
