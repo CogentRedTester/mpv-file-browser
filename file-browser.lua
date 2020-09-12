@@ -153,12 +153,14 @@ function goto_root()
     update_ass()
 end
 
+--prints the persistent header
 function print_ass_header()
     local dir_name = state.directory
     if dir_name == "" then dir_name = "ROOT" end
     ov.data = o.ass_header..dir_name..'\\N ---------------------------------------------------- \\N'
 end
 
+--loops through the directory table and creates the ass string to generate the browser page
 function update_ass()
     print_ass_header()
     --check for an empty directory
@@ -226,6 +228,7 @@ function update_ass()
     ov:update()
 end
 
+--scans the current directory and updates the directory table
 function update_list()
     msg.verbose('loading contents of ' .. state.directory)
     state.selected = 1
@@ -239,7 +242,11 @@ function update_list()
         if cache.directory == state.directory then
             msg.verbose('found directory in cache')
             list = cache.table
+
+            --sets the cursor to the previously opened file and resets the prev_directory in
+            --case we move above the cache source
             state.selected = cache.cursor
+            state.prev_directory = state.directory
             return
         end
     end
@@ -260,18 +267,17 @@ function update_list()
     sort(list)
     for i=1, #list do
         local item = list[i]
-        if (state.prev_directory == item) then
-            state.selected = i
-        end
+
+        --sets the cursor to the previously opened folder
+        if (state.prev_directory == item) then state.selected = i end
+
         msg.debug(item..'/')
         list[i] = {name = item..'/', type = 'dir'}
     end
-    state.prev_directory = ""
 
     --appends files to the list of directory items
     local list2 = utils.readdir(state.directory, 'files')
     sort(list2)
-    local num_folders = #list
     for i=1, #list2 do
         local item = list2[i]
         msg.debug(item)
@@ -291,6 +297,10 @@ function update_list()
 
     --saves the latest directory at the top of the stack
     cache[#cache+1] = {directory = state.directory, table = list}
+
+    --once the directory has been successfully loaded we set it as the 'prev' directory for next time
+    --this is for highlighting the previous folder when moving up a directory
+    state.prev_directory = state.directory
 end
 
 function update()
@@ -323,14 +333,8 @@ function up_dir()
         index = dir:find("[/\\]")
     end
 
-    if index == nil then
-        state.prev_directory = state.directory
-        state.directory = ""
-    else
-        state.prev_directory = dir:sub(1, index-1):reverse()
-        msg.debug('saving previous directory name ' .. state.prev_directory)
-        state.directory = dir:sub(index):reverse()
-    end
+    if index == nil then state.directory = ""
+    else state.directory = dir:sub(index):reverse() end
 
     cache[#cache] = nil
     update()
