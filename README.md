@@ -4,6 +4,8 @@
 
 This script allows users to browse and open files and folders entirely from within mpv. The script uses nothing outside the mpv API, so should work identically on all platforms. The browser can move up and down directories, start playing files and folders, or add them to the queue.
 
+By default only file types compatible with mpv will be shown, but this can be changed in the config file.
+
 ## Keybinds
 The following keybind is set by default
 
@@ -42,4 +44,4 @@ It is highly recommended that this be customised for the computer being used; [f
 By default file-browser only opens/appends the single item that the cursor has selected. However, using the `Ctrl` keybinds specified above, it is possible to select multiple items to open all at once. Selected items are shown in a different colour to the cursor. When multiple items are selected, they will be appended after the currently selected file when using the ENTER commands. The currently selected (with the cursor) file will always be added first, regardless of if it is part of the multi-selection, and will follow replace/append behaviour as normal. Selected items will be appended to the playlist afterwards in the order that they appear on the screen.
 
 ## Configuration
-Currently there aren't many options worth changing other than `root`. See [file_browser.conf](file_browser.conf) for the full list and their default values.
+See [file_browser.conf](file_browser.conf) for the full list of options and their default values.

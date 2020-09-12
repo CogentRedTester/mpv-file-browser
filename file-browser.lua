@@ -10,6 +10,19 @@ local o = {
     --number of entries to show on the screen at once
     num_entries = 18,
 
+    --only show files compatible with mpv
+    filter_files = true,
+
+    --blacklist compatible files, it's recommended to use this rather than to edit the
+    --compatible list directly. A semicolon separated list of extensions without spaces
+    extension_blacklist = "",
+
+    --add extra file extensions
+    extension_whitelist = "",
+
+    --full list of compatible file extensions
+    compatible_files = "264;265;3g2;3ga;3ga2;3gp;3gp2;3gpp;3iv;a52;aac;adt;adts;aif;aifc;aiff;amr;ape;asf;au;avc;avi;awb;ay;bmp;cue;divx;dts;dtshd;dts-hd;dv;dvr;dvr-ms;eac3;evo;evob;f4a;flac;flc;fli;flic;flv;gbs;gif;gxf;gym;h264;h265;hdmov;hdv;hes;hevc;jpeg;jpg;kss;lpcm;m1a;m1v;m2a;m2t;m2ts;m2v;m3u;m3u8;m4a;m4v;mk3d;mka;mkv;mlp;mod;mov;mp1;mp2;mp2v;mp3;mp4;mp4v;mp4v;mpa;mpe;mpeg;mpeg2;mpeg4;mpg;mpg4;mpv;mpv2;mts;mtv;mxf;nsf;nsfe;nsv;nut;oga;ogg;ogm;ogv;ogx;opus;pcm;pls;png;qt;ra;ram;rm;rmvb;sap;svg;ahn;snd;spc;spx;thd;thd+ac3;tif;tiff;tod;trp;truehd;true-hd;ts;tsa;tsv;tta;tts;vfw;vgm;vgz;vob;vro;wav;weba;webm;webp;wm;wma;wmv;wtv;wv;x264;x265;xvid;y4m;yuv",
+
     --ass tags
     ass_header = "{\\q2\\fs35\\c&00ccff&}",
     ass_body = "{\\q2\\fs25\\c&Hffffff&}",
@@ -25,6 +38,7 @@ opt.read_options(o, 'file_browser')
 local ov = mp.create_osd_overlay('ass-events')
 local list = {}
 local cache = {}
+local extensions = nil
 local state = {
     hidden = true,
     flag_update = false,
@@ -55,6 +69,31 @@ local keybinds = {
     {'Ctrl+RIGHT', 'select_yes', function() state.selection[state.selected] = true ; update_ass() end, {}},
     {'Ctrl+LEFT', 'select_no', function() state.selection[state.selected] = nil ; update_ass() end, {}}
 }
+
+--sets up the compatible extensions list
+local function setup_extensions_list()
+    extensions = {}
+    if not o.filter_files then return end
+
+    local blacklist = {}
+
+    --creating the blacklist
+    for str in string.gmatch(o.extension_blacklist, "([^;]+)") do
+        blacklist[str] = true
+    end
+
+    --adding file extensions not on the blacklist
+    for str in string.gmatch(o.compatible_files, "([^;]+)") do
+        if not blacklist[str] then
+            extensions[str] = true
+        end
+    end
+
+    --adding extra extensions on the whitelist
+    for str in string.gmatch(o.extension_whitelist, "([^;]+)") do
+        extensions[str] = true
+    end
+end
 
 local function sort(t)
     table.sort(t, function(a,b) return a:lower() < b:lower() end)
@@ -229,8 +268,19 @@ function update_list()
     sort(list2)
     local num_folders = #list
     for i=1, #list2 do
-        msg.debug(list2[i])
-        list[num_folders + i] = {name = list2[i], type = 'file'}
+        local item = list2[i]
+        msg.debug(item)
+
+        --only adds whitelisted files to the browser
+        if o.filter_files then
+            local index = item:find([[.[^.]*$]])
+            if not index then goto continue end
+            local fileext = item:sub(index + 1)
+            if not extensions[fileext] then goto continue end
+        end
+        list[#list+1] = {name = item, type = 'file'}
+
+        ::continue::
     end
     msg.debug('load time: ' ..mp.get_time() - t)
 
@@ -319,9 +369,9 @@ function open_browser()
         mp.add_forced_key_binding(v[1], 'dynamic/'..v[2], v[3], v[4])
     end
 
-    if state.directory == nil then
-        goto_current_dir()
-    end
+    if extensions == nil then setup_extensions_list() end
+    if state.directory == nil then goto_current_dir() end
+
     state.hidden = false
     if state.flag_update then update_ass()
     else ov:update() end
