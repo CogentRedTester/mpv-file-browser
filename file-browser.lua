@@ -23,6 +23,10 @@ local o = {
     --full list of compatible file extensions
     compatible_files = "264;265;3g2;3ga;3ga2;3gp;3gp2;3gpp;3iv;a52;aac;adt;adts;aif;aifc;aiff;amr;ape;asf;au;avc;avi;awb;ay;bmp;cue;divx;dts;dtshd;dts-hd;dv;dvr;dvr-ms;eac3;evo;evob;f4a;flac;flc;fli;flic;flv;gbs;gif;gxf;gym;h264;h265;hdmov;hdv;hes;hevc;jpeg;jpg;kss;lpcm;m1a;m1v;m2a;m2t;m2ts;m2v;m3u;m3u8;m4a;m4v;mk3d;mka;mkv;mlp;mod;mov;mp1;mp2;mp2v;mp3;mp4;mp4v;mp4v;mpa;mpe;mpeg;mpeg2;mpeg4;mpg;mpg4;mpv;mpv2;mts;mtv;mxf;nsf;nsfe;nsv;nut;oga;ogg;ogm;ogv;ogx;opus;pcm;pls;png;qt;ra;ram;rm;rmvb;sap;svg;ahn;snd;spc;spx;thd;thd+ac3;tif;tiff;tod;trp;truehd;true-hd;ts;tsa;tsv;tta;tts;vfw;vgm;vgz;vob;vro;wav;weba;webm;webp;wm;wma;wmv;wtv;wv;x264;x265;xvid;y4m;yuv",
 
+    --filter dot directories like .config
+    --only usefu on linux systems
+    filter_dot_dirs = false,
+
     --ass tags
     ass_header = "{\\q2\\fs35\\c&00ccff&}",
     ass_body = "{\\q2\\fs25\\c&Hffffff&}",
@@ -252,27 +256,31 @@ function update_list()
     end
 
     local t = mp.get_time()
-    list = utils.readdir(state.directory, 'dirs')
+    list = {}
+    local list1 = utils.readdir(state.directory, 'dirs')
 
     --if we can't access the filesystem for the specified directory then we go to root page
     --this is cuased by either:
     --  a network file being streamed
     --  the user navigating above / on linux or the current drive root on windows
-    if list == nil then
+    if list1 == nil then
         goto_root()
         return
     end
 
     --sorts folders and formats them into the list of directories
-    sort(list)
-    for i=1, #list do
-        local item = list[i]
-
-        --sets the cursor to the previously opened folder
+    sort(list1)
+    for i=1, #list1 do
+        local item = list1[i]
         if (state.prev_directory == item) then state.selected = i end
 
+        --filters hidden dot directories for linux
+        if o.filter_dot_dirs and item:find('%.') == 1 then goto continue end
+
         msg.debug(item..'/')
-        list[i] = {name = item..'/', type = 'dir'}
+        list[#list+1] = {name = item..'/', type = 'dir'}
+
+        ::continue::
     end
 
     --appends files to the list of directory items
@@ -280,7 +288,6 @@ function update_list()
     sort(list2)
     for i=1, #list2 do
         local item = list2[i]
-        msg.debug(item)
 
         --only adds whitelisted files to the browser
         if o.filter_files then
@@ -289,6 +296,8 @@ function update_list()
             local fileext = item:sub(index + 1)
             if not extensions[fileext] then goto continue end
         end
+
+        msg.debug(item)
         list[#list+1] = {name = item, type = 'file'}
 
         ::continue::
