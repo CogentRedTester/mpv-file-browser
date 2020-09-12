@@ -114,7 +114,12 @@ end
 
 function update_current_directory(_, filepath)
     local workingDirectory = mp.get_property('working-directory', '')
-    if filepath == nil then filepath = "" end
+
+    --if we're in idle mode then we want to open to the root
+    if filepath == nil then 
+        state.current_file.directory = ""
+        return
+    end
     local exact_path = utils.join_path(workingDirectory, filepath)
     exact_path = exact_path:gsub([[\]],[[/]])
     state.current_file.directory, state.current_file.name = utils.split_path(exact_path)
