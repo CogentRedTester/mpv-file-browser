@@ -282,7 +282,7 @@ function update_list()
     sort(list1)
     for i=1, #list1 do
         local item = list1[i]
-        if (state.prev_directory == item) then state.selected = i end
+        if (state.prev_directory == state.directory..item..'/') then state.selected = i end
 
         --filters hidden dot directories for linux
         if o.filter_dot_dirs and item:find('%.') == 1 then goto continue end
