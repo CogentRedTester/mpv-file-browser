@@ -127,13 +127,13 @@ local function setup_root()
 end
 
 function update_current_directory(_, filepath)
-    local workingDirectory = mp.get_property('working-directory', '')
-
     --if we're in idle mode then we want to open to the root
     if filepath == nil then 
         state.current_file.directory = ""
         return
     end
+
+    local workingDirectory = mp.get_property('working-directory', '')
     local exact_path = utils.join_path(workingDirectory, filepath)
     exact_path = exact_path:gsub([[\]],[[/]])
     exact_path = exact_path:gsub([[/./]], [[/]])
@@ -400,13 +400,13 @@ function open_browser()
 
     if extensions == nil then setup_extensions_list() end
     if state.directory == nil then
-        update_current_directory(nil, mp.get_property('path', ''))
+        update_current_directory(nil, mp.get_property('path'))
         goto_current_dir()
     end
 
     state.hidden = false
     if state.flag_update then
-        update_current_directory(nil, mp.get_property('path', ''))
+        update_current_directory(nil, mp.get_property('path'))
         update_ass()
     else ov:update() end
 end
