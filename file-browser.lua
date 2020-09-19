@@ -136,6 +136,7 @@ function update_current_directory(_, filepath)
     end
     local exact_path = utils.join_path(workingDirectory, filepath)
     exact_path = exact_path:gsub([[\]],[[/]])
+    exact_path = exact_path:gsub([[/./]], [[/]])
     state.current_file.directory, state.current_file.name = utils.split_path(exact_path)
 end
 
@@ -398,10 +399,15 @@ function open_browser()
     end
 
     if extensions == nil then setup_extensions_list() end
-    if state.directory == nil then goto_current_dir() end
+    if state.directory == nil then
+        update_current_directory(nil, mp.get_property('path', ''))
+        goto_current_dir()
+    end
 
     state.hidden = false
-    if state.flag_update then update_ass()
+    if state.flag_update then
+        update_current_directory(nil, mp.get_property('path', ''))
+        update_ass()
     else ov:update() end
 end
 
@@ -466,9 +472,11 @@ function toggle_browser()
     end
 end
 
+--we don't want to add any overhead when the browser isn't open
 mp.observe_property('path', 'string', function(_,path)
-    update_current_directory(_,path)
-    if not state.hidden then update_ass()
+    if not state.hidden then 
+        update_current_directory(_,path)
+        update_ass()
     else state.flag_update = true end
 end)
 mp.add_key_binding('MENU','browse-files', toggle_browser)
