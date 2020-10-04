@@ -461,10 +461,17 @@ function close_browser()
     ov:remove()
 end
 
+--runs the loadfile command and modifes the path appropriately
+function loadfile(path, flags)
+    if (path == state.dvd_device) then path = "dvd://" end
+    mp.commandv('loadfile', path, flags)
+end
+
+--opens the selelected file(s)
 function open_file(flags)
     if state.selected > #list or state.selected < 1 then return end
 
-    mp.commandv('loadfile', state.directory..list[state.selected].name, flags)
+    loadfile(state.directory..list[state.selected].name, flags)
     state.selection[state.selected] = nil
 
     --handles multi-selection behaviour
@@ -474,7 +481,7 @@ function open_file(flags)
         --the currently selected file will be loaded according to the flag
         --the remaining files will be appended
         for i=1, #selection do
-            mp.commandv('loadfile', state.directory..list[selection[i]].name, 'append')
+            loadfile(state.directory..list[selection[i]].name, "append")
         end
 
         --reset the selection after
