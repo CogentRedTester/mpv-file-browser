@@ -490,7 +490,10 @@ function open_file(flags)
 end
 
 function toggle_browser()
-    if ov.hidden then
+    --if we're in the dvd-device then pass the request on to dvd-browser
+    if o.dvd_browser and state.directory == state.dvd_device then
+        mp.commandv('script-message-to', 'dvd_browser', 'dvd-browser')
+    elseif ov.hidden then
         open_browser()
     else
         close_browser()
