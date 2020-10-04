@@ -43,5 +43,20 @@ It is highly recommended that this be customised for the computer being used; [f
 ## Multi-Select
 By default file-browser only opens/appends the single item that the cursor has selected. However, using the `Ctrl` keybinds specified above, it is possible to select multiple items to open all at once. Selected items are shown in a different colour to the cursor. When multiple items are selected, they will be appended after the currently selected file when using the ENTER commands. The currently selected (with the cursor) file will always be added first, regardless of if it is part of the multi-selection, and will follow replace/append behaviour as normal. Selected items will be appended to the playlist afterwards in the order that they appear on the screen.
 
+## DVD Browser
+My script [mpv-dvd-browser](https://github.com/CogentRedTester/mpv-dvd-browser) is designed to work as an add-on for this script. The script uses the `lsdvd` commandline utility to read and display the titles of DVDs in an interractive browser extremely similar to this one.
+The script also has numerous options to make DVD playback more enjoyable, such as automatic playlist management.
+
+To enable both scripts enable the option `dvd_browser` in `file_browser.conf`, and the associated `file_browser` option in `dvd_browser.conf`.
+When both scripts are active attempting to enter the `--dvd-device` directory will automatically pass control to dvd-browser.
+Similarly, moving up a directory from dvd-browser will pass control back to file-browser.
+It is also important to always use the file-browser activation keybind. Both scripts use `MENU` as the default toggle command, so it will be necessary to explicitly specify which to use by putting `MENU script-binding browse-files` in input.conf.
+
+
+
+With the exception of the multi-select behaviour all file-browser keybinds should work from within dvd-browser, and with identical behaviour. 
+
+Note: unlike file-browser, dvd-browser only works on Linux or WSL
+
 ## Configuration
 See [file_browser.conf](file_browser.conf) for the full list of options and their default values.

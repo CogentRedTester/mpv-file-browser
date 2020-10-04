@@ -37,6 +37,8 @@ local o = {
     --only usefu on linux systems
     filter_dot_dirs = false,
 
+    dvd_browser = false,
+
     --ass tags
     ass_header = "{\\q2\\fs35\\c&00ccff&}",
     ass_body = "{\\q2\\fs25\\c&Hffffff&}",
@@ -50,11 +52,11 @@ local o = {
 opt.read_options(o, 'file_browser')
 
 local ov = mp.create_osd_overlay('ass-events')
+ov.hidden = true
 local list = {}
 local cache = {}
 local extensions = nil
 local state = {
-    hidden = true,
     flag_update = false,
     directory = nil,
     selected = 1,
@@ -63,7 +65,8 @@ local state = {
     current_file = {
         directory = nil,
         name = nil
-    }
+    },
+    dvd_device = nil
 }
 local root = nil
 local keybinds = {
@@ -83,6 +86,12 @@ local keybinds = {
     {'Ctrl+RIGHT', 'select_yes', function() state.selection[state.selected] = true ; update_ass() end, {}},
     {'Ctrl+LEFT', 'select_no', function() state.selection[state.selected] = nil ; update_ass() end, {}}
 }
+
+--updates the dvd_device
+mp.observe_property('dvd-device', 'string', function(_, device)
+    if device == "" then device = "/dev/dvd" end
+    state.dvd_device = device
+end)
 
 --sets up the compatible extensions list
 local function setup_extensions_list()
@@ -131,6 +140,8 @@ function update_current_directory(_, filepath)
     if filepath == nil then 
         state.current_file.directory = ""
         return
+    elseif filepath:find("dvd://") == 1 then
+        filepath = state.dvd_device
     end
 
     local workingDirectory = mp.get_property('working-directory', '')
@@ -248,6 +259,15 @@ function update_list()
     msg.verbose('loading contents of ' .. state.directory)
     state.selected = 1
     state.selection = {}
+    if extensions == nil then setup_extensions_list() end
+
+    if o.dvd_browser then
+        if state.directory == state.dvd_device then
+            open_dvd_browser()
+            list = {}
+            return
+        end
+    end
 
     --loads the current directry from the cache to save loading time
     --there will be a way to forcibly reload the current directory at some point
@@ -398,13 +418,14 @@ function open_browser()
         mp.add_forced_key_binding(v[1], 'dynamic/'..v[2], v[3], v[4])
     end
 
-    if extensions == nil then setup_extensions_list() end
+    ov.hidden = false
+
     if state.directory == nil then
         update_current_directory(nil, mp.get_property('path'))
         goto_current_dir()
+        return
     end
 
-    state.hidden = false
     if state.flag_update then
         update_current_directory(nil, mp.get_property('path'))
         update_ass()
@@ -432,7 +453,7 @@ function close_browser()
     for _,v in ipairs(keybinds) do
         mp.remove_key_binding('dynamic/'..v[2])
     end
-    state.hidden = true
+    ov.hidden = true
     ov:remove()
 end
 
@@ -465,18 +486,45 @@ function open_file(flags)
 end
 
 function toggle_browser()
-    if state.hidden then
+    if ov.hidden then
         open_browser()
     else
         close_browser()
     end
 end
 
+function open_dvd_browser()
+    state.prev_directory = state.dvd_device
+    close_browser()
+    mp.commandv('script-message', 'browse-dvd')
+end
+
 --we don't want to add any overhead when the browser isn't open
 mp.observe_property('path', 'string', function(_,path)
-    if not state.hidden then 
+    if not ov.hidden then 
         update_current_directory(_,path)
         update_ass()
     else state.flag_update = true end
 end)
 mp.add_key_binding('MENU','browse-files', toggle_browser)
+
+--opens the root directory
+mp.register_script_message('goto-root-directory',function()
+    goto_root()
+    open_browser()
+end)
+
+mp.register_script_message('goto-current-directory', function()
+    goto_current_dir()
+    open_browser()
+end)
+
+--allows keybinds/other scripts to auto-open specific directories
+mp.register_script_message('browse-directory', function(directory)
+    msg.verbose('recieved directory from script message: '..directory)
+
+    state.directory = directory
+    cache = {}
+    update()
+    open_browser()
+end)
