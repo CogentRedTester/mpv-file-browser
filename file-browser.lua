@@ -87,11 +87,17 @@ local keybinds = {
     {'Ctrl+LEFT', 'select_no', function() state.selection[state.selected] = nil ; update_ass() end, {}}
 }
 
+local function fix_dir(str)
+    str = str:gsub([[\]],[[/]])
+    str = str:gsub([[/./]], [[/]])
+    if str:sub(-1) ~= '/' then str = str..'/' end
+    return str
+end
+
 --updates the dvd_device
 mp.observe_property('dvd-device', 'string', function(_, device)
-    if device == "" then device = "/dev/dvd/"
-    elseif device:sub(-1) ~= '/' then device = device..'/' end
-    state.dvd_device = device
+    if device == "" then device = "/dev/dvd/" end
+    state.dvd_device = fix_dir(device)
 end)
 
 --sets up the compatible extensions list
@@ -128,9 +134,7 @@ local function setup_root()
     root = {}
     for str in string.gmatch(o.root, "([^;]+)") do
         local path = mp.command_native({'expand-path', str})
-        path = path:gsub([[\]], [[/]])
-        local last_char = path:sub(-1)
-        if last_char ~= '/' then path = path..'/' end
+        path = fix_dir(path)
 
         root[#root+1] = {name = path, type = 'dir', label = str}
     end
@@ -147,8 +151,7 @@ function update_current_directory(_, filepath)
 
     local workingDirectory = mp.get_property('working-directory', '')
     local exact_path = utils.join_path(workingDirectory, filepath)
-    exact_path = exact_path:gsub([[\]],[[/]])
-    exact_path = exact_path:gsub([[/./]], [[/]])
+    exact_path = fix_dir(exact_path)
     state.current_file.directory, state.current_file.name = utils.split_path(exact_path)
 end
 
