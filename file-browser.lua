@@ -18,7 +18,7 @@ local o = {
     root = "~/",
 
     --number of entries to show on the screen at once
-    num_entries = 18,
+    num_entries = 20,
 
     --only show files compatible with mpv
     filter_files = true,
@@ -187,7 +187,7 @@ function update_ass()
 
     ov.data = ov.data..o.ass_body
     local start = 1
-    local finish = start+o.num_entries
+    local finish = start+o.num_entries-1
 
     --handling cursor positioning
     local mid = math.ceil(o.num_entries/2)+1
