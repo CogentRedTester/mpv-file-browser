@@ -89,7 +89,8 @@ local keybinds = {
 
 --updates the dvd_device
 mp.observe_property('dvd-device', 'string', function(_, device)
-    if device == "" then device = "/dev/dvd" end
+    if device == "" then device = "/dev/dvd/"
+    elseif device:sub(-1) ~= '/' then device = device..'/' end
     state.dvd_device = device
 end)
 
