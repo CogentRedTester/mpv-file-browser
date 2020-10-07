@@ -30,9 +30,6 @@ local o = {
     --add extra file extensions
     extension_whitelist = "",
 
-    --full list of compatible file extensions
-    compatible_files = "264;265;3g2;3ga;3ga2;3gp;3gp2;3gpp;3iv;a52;aac;adt;adts;aif;aifc;aiff;amr;ape;asf;au;avc;avi;awb;ay;bmp;cue;divx;dts;dtshd;dts-hd;dv;dvr;dvr-ms;eac3;evo;evob;f4a;flac;flc;fli;flic;flv;gbs;gif;gxf;gym;h264;h265;hdmov;hdv;hes;hevc;jpeg;jpg;kss;lpcm;m1a;m1v;m2a;m2t;m2ts;m2v;m3u;m3u8;m4a;m4v;mk3d;mka;mkv;mlp;mod;mov;mp1;mp2;mp2v;mp3;mp4;mp4v;mp4v;mpa;mpe;mpeg;mpeg2;mpeg4;mpg;mpg4;mpv;mpv2;mts;mtv;mxf;nsf;nsfe;nsv;nut;oga;ogg;ogm;ogv;ogx;opus;pcm;pls;png;qt;ra;ram;rm;rmvb;sap;svg;ahn;snd;spc;spx;thd;thd+ac3;tif;tiff;tod;trp;truehd;true-hd;ts;tsa;tsv;tta;tts;vfw;vgm;vgz;vob;vro;wav;weba;webm;webp;wm;wma;wmv;wtv;wv;x264;x265;xvid;y4m;yuv",
-
     --filter dot directories like .config
     --only usefu on linux systems
     filter_dot_dirs = false,
@@ -87,6 +84,18 @@ local keybinds = {
     {'Ctrl+LEFT', 'select_no', function() state.selection[state.selected] = nil ; update_ass() end, {}}
 }
 
+--default list of compatible file extensions
+--adding an item to this list is a valid request on github
+local compatible_file_extensions = {
+    "264","265","3g2","3ga","3ga2","3gp","3gp2","3gpp","3iv","a52","aac","adt","adts","ahn","aif","aifc","aiff","amr","ape","asf","au","avc","avi","awb","ay",
+    "bmp","cue","divx","dts","dtshd","dts-hd","dv","dvr","dvr-ms","eac3","evo","evob","f4a","flac","flc","fli","flic","flv","gbs","gif","gxf","gym",
+    "h264","h265","hdmov","hdv","hes","hevc","jpeg","jpg","kss","lpcm","m1a","m1v","m2a","m2t","m2ts","m2v","m3u","m3u8","m4a","m4v","mid","mk3d","mka","mkv",
+    "mlp","mod","mov","mp1","mp2","mp2v","mp3","mp4","mp4v","mp4v","mpa","mpe","mpeg","mpeg2","mpeg4","mpg","mpg4","mpv","mpv2","mts","mtv","mxf","nsf",
+    "nsfe","nsv","nut","oga","ogg","ogm","ogv","ogx","opus","pcm","pls","png","qt","ra","ram","rm","rmvb","sap","snd","spc","spx","svg","thd","thd+ac3",
+    "tif","tiff","tod","trp","truehd","true-hd","ts","tsa","tsv","tta","tts","vfw","vgm","vgz","vob","vro","wav","weba","webm","webp","wm","wma","wmv","wtv",
+    "wv","x264","x265","xvid","y4m","yuv"
+}
+
 local function fix_path(str, directory)
     str = str:gsub([[\]],[[/]])
     str = str:gsub([[/./]], [[/]])
@@ -105,23 +114,19 @@ local function setup_extensions_list()
     extensions = {}
     if not o.filter_files then return end
 
-    local blacklist = {}
-
-    --creating the blacklist
-    for str in string.gmatch(o.extension_blacklist, "([^;]+)") do
-        blacklist[str] = true
-    end
-
-    --adding file extensions not on the blacklist
-    for str in string.gmatch(o.compatible_files, "([^;]+)") do
-        if not blacklist[str] then
-            extensions[str] = true
-        end
+    --adding file extensions to the set
+    for i=1, #compatible_file_extensions do
+        extensions[compatible_file_extensions[i]] = true
     end
 
     --adding extra extensions on the whitelist
     for str in string.gmatch(o.extension_whitelist, "([^;]+)") do
         extensions[str] = true
+    end
+
+    --removing extensions that are in the blacklist
+    for str in string.gmatch(o.extension_blacklist, "([^;]+)") do
+        extensions[str] = nil
     end
 end
 
