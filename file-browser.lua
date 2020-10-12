@@ -467,8 +467,10 @@ function close_browser()
 end
 
 --runs the loadfile command and modifes the path appropriately
-function loadfile(path, flags)
-    if (path == state.dvd_device) then path = "dvd://" end
+local function loadfile(item, flags)
+    local path = state.directory..item.name
+    if (path == state.dvd_device) then path = "dvd://"
+    elseif item.type == "dir" then path = path:sub(1, -2) end
     mp.commandv('loadfile', path, flags)
 end
 
@@ -476,7 +478,7 @@ end
 function open_file(flags)
     if state.selected > #list or state.selected < 1 then return end
 
-    loadfile(state.directory..list[state.selected].name, flags)
+    loadfile(list[state.selected], flags)
     state.selection[state.selected] = nil
 
     --handles multi-selection behaviour
@@ -486,7 +488,7 @@ function open_file(flags)
         --the currently selected file will be loaded according to the flag
         --the remaining files will be appended
         for i=1, #selection do
-            loadfile(state.directory..list[selection[i]].name, "append")
+            loadfile(list[selection[i]], "append")
         end
 
         --reset the selection after
