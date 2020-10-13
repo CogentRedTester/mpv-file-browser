@@ -466,12 +466,12 @@ function close_browser()
     ov:remove()
 end
 
---runs the loadfile command and modifes the path appropriately
+--runs the loadfile or loadlist command
 local function loadfile(item, flags)
     local path = state.directory..item.name
     if (path == state.dvd_device) then path = "dvd://"
-    elseif item.type == "dir" then path = path:sub(1, -2) end
-    mp.commandv('loadfile', path, flags)
+    elseif item.type == "dir" then return mp.commandv('loadlist', path, flags) end
+    return mp.commandv('loadfile', path, flags)
 end
 
 --opens the selelected file(s)
