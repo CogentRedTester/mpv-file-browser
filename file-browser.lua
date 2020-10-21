@@ -49,13 +49,13 @@ local o = {
 opt.read_options(o, 'file_browser')
 
 local ov = mp.create_osd_overlay('ass-events')
-ov.hidden = true
 local list = {}
 local cache = {}
 local extensions = nil
 local state = {
     flag_update = false,
     directory = nil,
+    hidden = true,
     selected = 1,
     selection = {},
     prev_directory = nil,
@@ -274,7 +274,7 @@ function update_list()
         if state.directory == state.dvd_device then
             open_dvd_browser()
             list = {}
-            return
+            return false
         end
     end
 
@@ -355,8 +355,8 @@ end
 function update()
     print_ass_header()
     ov:update()
-    update_list()
-    update_ass()
+    if update_list() == nil then
+    update_ass() end
 end
 
 function scroll_down()
@@ -427,7 +427,7 @@ function open_browser()
         mp.add_forced_key_binding(v[1], 'dynamic/'..v[2], v[3], v[4])
     end
 
-    ov.hidden = false
+    state.hidden = false
 
     if state.directory == nil then
         update_current_directory(nil, mp.get_property('path'))
@@ -462,7 +462,7 @@ function close_browser()
     for _,v in ipairs(keybinds) do
         mp.remove_key_binding('dynamic/'..v[2])
     end
-    ov.hidden = true
+    state.hidden = true
     ov:remove()
 end
 
@@ -507,7 +507,7 @@ function toggle_browser()
     --if we're in the dvd-device then pass the request on to dvd-browser
     if o.dvd_browser and state.directory == state.dvd_device then
         mp.commandv('script-message-to', 'dvd_browser', 'dvd-browser')
-    elseif ov.hidden then
+    elseif state.hidden then
         open_browser()
     else
         close_browser()
@@ -522,7 +522,7 @@ end
 
 --we don't want to add any overhead when the browser isn't open
 mp.observe_property('path', 'string', function(_,path)
-    if not ov.hidden then 
+    if not state.hidden then 
         update_current_directory(_,path)
         update_ass()
     else state.flag_update = true end
