@@ -130,8 +130,17 @@ local function setup_extensions_list()
     end
 end
 
+--sorts the table lexicographically ignoring case and accounting for leading/non-leading zeroes
+--the number format functionality was proposed by github user twophyro, and was presumably taken
+--from here: http://notebook.kulchenko.com/algorithms/alphanumeric-natural-sorting-for-humans-in-lua
 local function sort(t)
-    table.sort(t, function(a,b) return a:lower() < b:lower() end)
+    local function padnum(d)
+        local r = string.match(d, "0*(.+)")
+        return ("%03d%s"):format(#r, r)
+    end
+
+    table.sort(t, function(a,b) return a:lower():gsub("%d+",padnum) < b:lower():gsub("%d+",padnum) end)
+    return t
 end
 
 --splits the string into a table on the semicolons
