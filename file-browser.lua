@@ -249,19 +249,18 @@ function update_ass()
         ov.data = ov.data..o.ass_body
 
         --handles custom styles for different entries
-        --the below text contains unicode whitespace characters
-        if i == state.selected then ov.data = ov.data..o.ass_cursor..[[➤  ]]..o.ass_body
-        else ov.data = ov.data..[[   ]] end
+        if i == state.selected then ov.data = ov.data..o.ass_cursor..[[➤\h]]..o.ass_body
+        else ov.data = ov.data..[[\h\h\h\h]] end
 
         --prints the currently-playing icon and style
-        if playing_file then ov.data = ov.data..o.ass_playing..[[▶ ]] end
+        if playing_file then ov.data = ov.data..o.ass_playing..[[▶\h]] end
 
         --sets the selection colour scheme
         if state.selection[i] then ov.data = ov.data..o.ass_multiselect
         elseif i == state.selected then ov.data = ov.data..o.ass_selected end
 
         --sets the folder icon
-        if v.type == 'dir' then ov.data = ov.data..[[🖿 ]] end
+        if v.type == 'dir' then ov.data = ov.data..[[🖿\h]] end
 
         --adds the actual name of the item
         if state.directory == "" then ov.data = ov.data..v.label.."\\N"
