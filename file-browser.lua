@@ -96,6 +96,13 @@ local function highlight_entry(v)
     end
 end
 
+list.format_header = function(this)
+    local dir_name = state.directory
+    if dir_name == "" then dir_name = "ROOT" end
+    this:append(o.ass_header .. dir_name..'\\N ----------------------------------------------------')
+    this:newline()
+end
+
 --creating the custom formatting function
 list.format_line = function(this, i, v)
     local playing_file = highlight_entry(v)
@@ -232,7 +239,6 @@ local function update_list()
     if o.dvd_browser then
         if state.directory == state.dvd_device then
             open_dvd_browser()
-            list.list = {}
             return false
         end
     end
@@ -254,8 +260,6 @@ local function update_list()
         end
     end
 
-    local t = mp.get_time()
-    list.list = {}
     local list1 = utils.readdir(state.directory, 'dirs')
 
     --if we can't access the filesystem for the specified directory then we go to root page
@@ -277,7 +281,7 @@ local function update_list()
         if o.filter_dot_dirs and item:find('%.') == 1 then goto continue end
 
         msg.debug(item..'/')
-        list.list[#list.list+1] = {name = item..'/', type = 'dir'}
+        table.insert(list.list, {name = item..'/', type = 'dir'})
 
         ::continue::
     end
@@ -297,11 +301,10 @@ local function update_list()
         end
 
         msg.debug(item)
-        list.list[#list.list+1] = {name = item, type = 'file'}
+        table.insert(list.list, {name = item, type = 'file'})
 
         ::continue::
     end
-    msg.debug('load time: ' ..mp.get_time() - t)
 
     --saves the latest directory at the top of the stack
     cache[#cache+1] = {directory = state.directory, table = list.list}
@@ -313,8 +316,10 @@ end
 
 --rescans the folder and updates the list
 local function update()
-    list.ass.data = list.header_style .. print_ass_header()
-    list.ass:update()
+    list.empty_text = "~"
+    list.list = {}
+    list:update()
+    list.empty_text = "empty directory"
     if update_list() == nil then
     list:update() end
 end
@@ -381,21 +386,6 @@ local function drag_up()
     list:update()
 end
 
---opens the browser
-local function open_browser()
-    if state.directory == nil then
-        update_current_directory(nil, mp.get_property('path'))
-        list:open()
-        goto_current_dir()
-        return
-    end
-
-    if list.flag_update then
-        update_current_directory(nil, mp.get_property('path'))
-    end
-    list:open()
-end
-
 --sortes a table into an array of its key values
 local function sort_keys(t)
     local keys = {}
@@ -442,14 +432,31 @@ local function open_file(flags)
     end
 end
 
+--opens the browser
+list.open = function(this)
+    this:add_keybinds()
+
+    list.hidden = false
+    if state.directory == nil then
+        update_current_directory(nil, mp.get_property('path'))
+        goto_current_dir()
+        return
+    end
+
+    if list.flag_update then
+        update_current_directory(nil, mp.get_property('path'))
+    end
+    list:open_list()
+end
+
+--intercepts toggles when in an addons domain
+--otherwise passes the request to the lists toggle function
 local function toggle_browser()
     --if we're in the dvd-device then pass the request on to dvd-browser
     if o.dvd_browser and state.directory == state.dvd_device then
         mp.commandv('script-message-to', 'dvd_browser', 'dvd-browser')
-    elseif list.hidden then
-        open_browser()
     else
-        list:close()
+        list:toggle()
     end
 end
 
@@ -509,13 +516,13 @@ mp.add_key_binding('MENU','browse-files', toggle_browser)
 --opens the root directory
 mp.register_script_message('goto-root-directory',function()
     goto_root()
-    open_browser()
+    list:open()
 end)
 
 --opens the directory of the currently playing file
 mp.register_script_message('goto-current-directory', function()
     goto_current_dir()
-    open_browser()
+    list:open()
 end)
 
 --allows keybinds/other scripts to auto-open specific directories
@@ -525,5 +532,5 @@ mp.register_script_message('browse-directory', function(directory)
     state.directory = directory
     cache = {}
     update()
-    open_browser()
+    list:open()
 end)
