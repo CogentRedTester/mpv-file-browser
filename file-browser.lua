@@ -160,7 +160,8 @@ local function sort(t)
         return ("%03d%s"):format(#r, r)
     end
 
-    table.sort(t, function(a,b) return a:lower():gsub("%d+",padnum) < b:lower():gsub("%d+",padnum) end)
+    --appends the letter d or f to the start of the comparison to sort directories and folders as well
+    table.sort(t, function(a,b) return a.type:sub(1,1)..a.name:lower():gsub("%d+",padnum) < b.type:sub(1,1)..b.name:lower():gsub("%d+",padnum) end)
     return t
 end
 
@@ -235,7 +236,6 @@ local function update_local_list()
     end
 
     --sorts folders and formats them into the list of directories
-    sort(list1)
     for i=1, #list1 do
         local item = list1[i]
         if (state.prev_directory == state.directory..item..'/') then list.selected = i end
@@ -251,7 +251,6 @@ local function update_local_list()
 
     --appends files to the list of directory items
     local list2 = utils.readdir(state.directory, 'files')
-    sort(list2)
     for i=1, #list2 do
         local item = list2[i]
 
@@ -268,6 +267,8 @@ local function update_local_list()
 
         ::continue::
     end
+
+    sort(list.list)
 
     --saves the latest directory at the top of the stack
     cache[#cache+1] = {directory = state.directory, table = list.list}
@@ -546,6 +547,7 @@ end)
 mp.register_script_message('update-list-callback', function(json)
     if not json then goto_root(); return end
     list.list = utils.parse_json(json)
+    sort(list.list)
 
     --setting up the cache stuff
     cache[#cache+1] = {directory = state.directory, table = list.list}
