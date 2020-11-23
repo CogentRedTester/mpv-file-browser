@@ -165,6 +165,31 @@ local function sort(t)
     return t
 end
 
+--checks if the name has a valid extension
+local function is_valid(name)
+    local index = name:find([[.[^.]*$]])
+    if not index then return false end
+    local fileext = name:sub(index + 1)
+    return extensions[fileext]
+end
+
+--removes items and folders from the list
+--this is for addons which can't filter things during their normal processing
+local function filter(t)
+    local max = #t
+    local top = 1
+    for i = 1, max do
+        local temp = t[i]
+        t[i] = nil
+        if  ( temp.type == "dir" and (not o.filter_dot_dirs or (temp.name:find('%.') ~= 1)) )
+            or ( temp.type == "file" and o.filter_files and is_valid(temp.name) )
+        then
+            t[top] = temp
+            top = top+1
+        end
+    end
+end
+
 --splits the string into a table on the semicolons
 local function setup_root()
     root = {}
@@ -256,10 +281,7 @@ local function update_local_list()
 
         --only adds whitelisted files to the browser
         if o.filter_files then
-            local index = item:find([[.[^.]*$]])
-            if not index then goto continue end
-            local fileext = item:sub(index + 1)
-            if not extensions[fileext] then goto continue end
+            if not is_valid(item) then goto continue end
         end
 
         msg.debug(item)
@@ -547,6 +569,7 @@ end)
 mp.register_script_message('update-list-callback', function(json)
     if not json then goto_root(); return end
     list.list = utils.parse_json(json)
+    if o.filter_files or o.filter_dot_dirs then filter(list.list) end
     sort(list.list)
 
     --setting up the cache stuff
