@@ -14,9 +14,7 @@ do
     local function _(hex) return char(tonumber(hex, 16)) end
 
     function decodeURI(s)
-        msg.debug('decoding string: ' .. s)
         s = gsub(s, '%%(%x%x)', _)
-        msg.debug('returning string: ' .. s)
         return s
     end
 end
@@ -59,9 +57,9 @@ end
 
 mp.register_script_message("browse-http", function(dir)
     local result = parse_http(dir)
-    if not result then
-        mp.commandv("script-message", "update-list-callback")
-    else
+    if result then
         mp.commandv("script-message", "update-list-callback", result)
+    else
+        mp.commandv("script-message", "update-list-callback")
     end
 end)
