@@ -34,7 +34,10 @@ local o = {
     --only usefu on linux systems
     filter_dot_dirs = false,
 
+    --enable addons
     dvd_browser = false,
+    http_browser = false,
+    ftp_browser = false,
 
     --ass tags
     ass_header = "{\\q2\\fs35\\c&00ccff&}",
@@ -115,7 +118,7 @@ list.format_line = function(this, i, v)
     if v.type == 'dir' then this:append([[🖿\h]]) end
 
     --adds the actual name of the item
-    if state.directory == "" then this:append(v.label.."\\N")
+    if v.label then this:append(v.label.."\\N")
     else this:append(v.name.."\\N") end
 end
 
@@ -157,8 +160,34 @@ local function sort(t)
         return ("%03d%s"):format(#r, r)
     end
 
-    table.sort(t, function(a,b) return a:lower():gsub("%d+",padnum) < b:lower():gsub("%d+",padnum) end)
+    --appends the letter d or f to the start of the comparison to sort directories and folders as well
+    table.sort(t, function(a,b) return a.type:sub(1,1)..a.name:lower():gsub("%d+",padnum) < b.type:sub(1,1)..b.name:lower():gsub("%d+",padnum) end)
     return t
+end
+
+--checks if the name has a valid extension
+local function is_valid(name)
+    local index = name:find([[.[^.]*$]])
+    if not index then return false end
+    local fileext = name:sub(index + 1)
+    return extensions[fileext]
+end
+
+--removes items and folders from the list
+--this is for addons which can't filter things during their normal processing
+local function filter(t)
+    local max = #t
+    local top = 1
+    for i = 1, max do
+        local temp = t[i]
+        t[i] = nil
+        if  ( temp.type == "dir" and (not o.filter_dot_dirs or (temp.name:find('%.') ~= 1)) )
+            or ( temp.type == "file" and o.filter_files and is_valid(temp.name) )
+        then
+            t[top] = temp
+            top = top+1
+        end
+    end
 end
 
 --splits the string into a table on the semicolons
@@ -183,9 +212,16 @@ local function update_current_directory(_, filepath)
     end
 
     local workingDirectory = mp.get_property('working-directory', '')
-    local exact_path = utils.join_path(workingDirectory, filepath)
+    local exact_path = filepath:find(":") and filepath or utils.join_path(workingDirectory, filepath)
     exact_path = fix_path(exact_path, false)
     state.current_file.directory, state.current_file.name = utils.split_path(exact_path)
+end
+
+--updates the header with the current directory
+local function update_header()
+    local dir_name = state.directory
+    if dir_name == "" then dir_name = "ROOT" end
+    list.header = dir_name..'\\N ----------------------------------------------------'
 end
 
 --loads the root list
@@ -207,16 +243,64 @@ local function goto_root()
     state.directory = ""
     cache = {}
     state.selection = {}
+    update_header()
     list:update()
 end
 
---updates the header with the current directory
-local function update_header()
-    local dir_name = state.directory
-    if dir_name == "" then dir_name = "ROOT" end
-    list.header = dir_name..'\\N ----------------------------------------------------'
-end
 --scans the current directory and updates the directory table
+local function update_local_list()
+    local list1 = utils.readdir(state.directory, 'dirs')
+
+    --if we can't access the filesystem for the specified directory then we go to root page
+    --this is cuased by either:
+    --  a network file being streamed
+    --  the user navigating above / on linux or the current drive root on windows
+    if list1 == nil then
+        goto_root()
+        return
+    end
+
+    --sorts folders and formats them into the list of directories
+    for i=1, #list1 do
+        local item = list1[i]
+        if (state.prev_directory == state.directory..item..'/') then list.selected = i end
+
+        --filters hidden dot directories for linux
+        if o.filter_dot_dirs and item:find('%.') == 1 then goto continue end
+
+        msg.debug(item..'/')
+        table.insert(list.list, {name = item..'/', type = 'dir'})
+
+        ::continue::
+    end
+
+    --appends files to the list of directory items
+    local list2 = utils.readdir(state.directory, 'files')
+    for i=1, #list2 do
+        local item = list2[i]
+
+        --only adds whitelisted files to the browser
+        if o.filter_files then
+            if not is_valid(item) then goto continue end
+        end
+
+        msg.debug(item)
+        table.insert(list.list, {name = item, type = 'file'})
+
+        ::continue::
+    end
+
+    sort(list.list)
+
+    --saves the latest directory at the top of the stack
+    cache[#cache+1] = {directory = state.directory, table = list.list}
+
+    --once the directory has been successfully loaded we set it as the 'prev' directory for next time
+    --this is for highlighting the previous folder when moving up a directory
+    state.prev_directory = state.directory
+end
+
+--sends update requests to the different parsers
 local function update_list()
     msg.verbose('loading contents of ' .. state.directory)
 
@@ -224,10 +308,11 @@ local function update_list()
     state.selection = {}
     if extensions == nil then setup_extensions_list() end
 
+    --dvd browser has special behaviour, so it is called seperately from the other add-ons
     if o.dvd_browser then
         if state.directory == state.dvd_device then
             open_dvd_browser()
-            return false
+            return
         end
     end
 
@@ -244,62 +329,19 @@ local function update_list()
             --case we move above the cache source
             list.selected = cache.cursor
             state.prev_directory = state.directory
+            list:update()
             return
         end
     end
 
-    local list1 = utils.readdir(state.directory, 'dirs')
-
-    --if we can't access the filesystem for the specified directory then we go to root page
-    --this is cuased by either:
-    --  a network file being streamed
-    --  the user navigating above / on linux or the current drive root on windows
-    if list1 == nil then
+    if state.directory == "" then
         goto_root()
-        return
+    elseif o.http_browser and state.directory:find("https?://") == 1 then
+        mp.commandv("script-message", "browse-http", state.directory)
+    else
+        update_local_list()
+        list:update()
     end
-
-    --sorts folders and formats them into the list of directories
-    sort(list1)
-    for i=1, #list1 do
-        local item = list1[i]
-        if (state.prev_directory == state.directory..item..'/') then list.selected = i end
-
-        --filters hidden dot directories for linux
-        if o.filter_dot_dirs and item:find('%.') == 1 then goto continue end
-
-        msg.debug(item..'/')
-        table.insert(list.list, {name = item..'/', type = 'dir'})
-
-        ::continue::
-    end
-
-    --appends files to the list of directory items
-    local list2 = utils.readdir(state.directory, 'files')
-    sort(list2)
-    for i=1, #list2 do
-        local item = list2[i]
-
-        --only adds whitelisted files to the browser
-        if o.filter_files then
-            local index = item:find([[.[^.]*$]])
-            if not index then goto continue end
-            local fileext = item:sub(index + 1)
-            if not extensions[fileext] then goto continue end
-        end
-
-        msg.debug(item)
-        table.insert(list.list, {name = item, type = 'file'})
-
-        ::continue::
-    end
-
-    --saves the latest directory at the top of the stack
-    cache[#cache+1] = {directory = state.directory, table = list.list}
-
-    --once the directory has been successfully loaded we set it as the 'prev' directory for next time
-    --this is for highlighting the previous folder when moving up a directory
-    state.prev_directory = state.directory
 end
 
 --rescans the folder and updates the list
@@ -309,8 +351,7 @@ local function update()
     list.list = {}
     list:update()
     list.empty_text = "empty directory"
-    if update_list() == nil then
-    list:update() end
+    update_list()
 end
 
 --switches to the directory of the currently playing file
@@ -522,4 +563,17 @@ mp.register_script_message('browse-directory', function(directory)
     cache = {}
     update()
     list:open()
+end)
+
+--a callback function for addon scripts to return the results of their filesystem processing
+mp.register_script_message('update-list-callback', function(json)
+    if not json then goto_root(); return end
+    list.list = utils.parse_json(json)
+    if o.filter_files or o.filter_dot_dirs then filter(list.list) end
+    sort(list.list)
+
+    --setting up the cache stuff
+    cache[#cache+1] = {directory = state.directory, table = list.list}
+    state.prev_directory = state.directory
+    list:update()
 end)
