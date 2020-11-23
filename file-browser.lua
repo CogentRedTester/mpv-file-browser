@@ -34,7 +34,10 @@ local o = {
     --only usefu on linux systems
     filter_dot_dirs = false,
 
+    --enable addons
     dvd_browser = false,
+    http_browser = false,
+    ftp_browser = false,
 
     --ass tags
     ass_header = "{\\q2\\fs35\\c&00ccff&}",
@@ -183,9 +186,16 @@ local function update_current_directory(_, filepath)
     end
 
     local workingDirectory = mp.get_property('working-directory', '')
-    local exact_path = utils.join_path(workingDirectory, filepath)
+    local exact_path = filepath:find(":") and filepath or utils.join_path(workingDirectory, filepath)
     exact_path = fix_path(exact_path, false)
     state.current_file.directory, state.current_file.name = utils.split_path(exact_path)
+end
+
+--updates the header with the current directory
+local function update_header()
+    local dir_name = state.directory
+    if dir_name == "" then dir_name = "ROOT" end
+    list.header = dir_name..'\\N ----------------------------------------------------'
 end
 
 --loads the root list
@@ -207,47 +217,12 @@ local function goto_root()
     state.directory = ""
     cache = {}
     state.selection = {}
+    update_header()
     list:update()
 end
 
---updates the header with the current directory
-local function update_header()
-    local dir_name = state.directory
-    if dir_name == "" then dir_name = "ROOT" end
-    list.header = dir_name..'\\N ----------------------------------------------------'
-end
 --scans the current directory and updates the directory table
-local function update_list()
-    msg.verbose('loading contents of ' .. state.directory)
-
-    list.selected = 1
-    state.selection = {}
-    if extensions == nil then setup_extensions_list() end
-
-    if o.dvd_browser then
-        if state.directory == state.dvd_device then
-            open_dvd_browser()
-            return false
-        end
-    end
-
-    --loads the current directry from the cache to save loading time
-    --there will be a way to forcibly reload the current directory at some point
-    --the cache is in the form of a stack, items are taken off the stack when the dir moves up
-    if #cache > 0 then
-        local cache = cache[#cache]
-        if cache.directory == state.directory then
-            msg.verbose('found directory in cache')
-            list.list = cache.table
-
-            --sets the cursor to the previously opened file and resets the prev_directory in
-            --case we move above the cache source
-            list.selected = cache.cursor
-            state.prev_directory = state.directory
-            return
-        end
-    end
-
+local function update_local_list()
     local list1 = utils.readdir(state.directory, 'dirs')
 
     --if we can't access the filesystem for the specified directory then we go to root page
@@ -302,6 +277,50 @@ local function update_list()
     state.prev_directory = state.directory
 end
 
+--sends update requests to the different parsers
+local function update_list()
+    msg.verbose('loading contents of ' .. state.directory)
+
+    list.selected = 1
+    state.selection = {}
+    if extensions == nil then setup_extensions_list() end
+
+    --dvd browser has special behaviour, so it is called seperately from the other add-ons
+    if o.dvd_browser then
+        if state.directory == state.dvd_device then
+            open_dvd_browser()
+            return
+        end
+    end
+
+    --loads the current directry from the cache to save loading time
+    --there will be a way to forcibly reload the current directory at some point
+    --the cache is in the form of a stack, items are taken off the stack when the dir moves up
+    if #cache > 0 then
+        local cache = cache[#cache]
+        if cache.directory == state.directory then
+            msg.verbose('found directory in cache')
+            list.list = cache.table
+
+            --sets the cursor to the previously opened file and resets the prev_directory in
+            --case we move above the cache source
+            list.selected = cache.cursor
+            state.prev_directory = state.directory
+            list:update()
+            return
+        end
+    end
+
+    if state.directory == "" then
+        goto_root()
+    elseif o.http_browser and state.directory:find("https?://") == 1 then
+        mp.commandv("script-message", "browse-http", state.directory)
+    else
+        update_local_list()
+        list:update()
+    end
+end
+
 --rescans the folder and updates the list
 local function update()
     update_header()
@@ -309,8 +328,7 @@ local function update()
     list.list = {}
     list:update()
     list.empty_text = "empty directory"
-    if update_list() == nil then
-    list:update() end
+    update_list()
 end
 
 --switches to the directory of the currently playing file
@@ -522,4 +540,15 @@ mp.register_script_message('browse-directory', function(directory)
     cache = {}
     update()
     list:open()
+end)
+
+--a callback function for addon scripts to return the results of their filesystem processing
+mp.register_script_message('update-list-callback', function(json)
+    if not json then goto_root() end
+    list.list = utils.parse_json(json)
+
+    --setting up the cache stuff
+    cache[#cache+1] = {directory = state.directory, table = list.list}
+    state.prev_directory = state.directory
+    list:update()
 end)
