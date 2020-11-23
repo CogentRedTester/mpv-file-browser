@@ -42,6 +42,7 @@ local o = {
     ass_selected = "{\\c&Hfce788&}",
     ass_multiselect = "{\\c&Hfcad88&}",
     ass_playing = "{\\c&H33ff66&}",
+    ass_playingselected = [[{\c&H22b547&}]],
     ass_footerheader = "{\\c&00ccff&\\fs16}",
     ass_cursor = "{\\c&00ccff&}"
 }
@@ -52,10 +53,6 @@ package.path = mp.command_native( {"expand-path", (mp.get_opt("scroll_list-direc
 local list = require "scroll-list"
 
 --setting ass styles for the list
-list.header_style = o.ass_header
-list.cursor_style = o.ass_cursor
-list.wrapper_style = o.ass_footerheader
-list.list_style = o.ass_body
 list.num_entries = o.num_entries
 
 local ov = mp.create_osd_overlay('ass-events')
@@ -114,11 +111,13 @@ list.format_line = function(this, i, v)
     else this:append([[\h\h\h\h]]) end
 
     --sets the selection colour scheme
-    if state.selection[i] then this:append(o.ass_multiselect)
+    local multiselected = state.selection[i]
+    if multiselected then this:append(o.ass_multiselect)
     elseif i == list.selected then this:append(o.ass_selected) end
 
     --prints the currently-playing icon and style
-    if playing_file then this:append(o.ass_playing) end
+    if playing_file and multiselected then this:append(o.ass_playingselected)
+    elseif playing_file then this:append(o.ass_playing) end
 
     --sets the folder icon
     if v.type == 'dir' then this:append([[🖿\h]]) end
@@ -381,7 +380,7 @@ end
 --drags the selection up
 local function drag_up()
     state.selection[list.selected] = true
-    list:scroll_up()()
+    list:scroll_up()
     state.selection[list.selected] = true
     list:update()
 end
