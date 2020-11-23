@@ -385,8 +385,8 @@ end
 local function open_browser()
     if state.directory == nil then
         update_current_directory(nil, mp.get_property('path'))
-        goto_current_dir()
         list:open()
+        goto_current_dir()
         return
     end
 
