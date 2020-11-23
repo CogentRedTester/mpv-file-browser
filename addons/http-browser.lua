@@ -6,14 +6,6 @@ local mp = require 'mp'
 local msg = require 'mp.msg'
 local utils = require 'mp.utils'
 
---https://stackoverflow.com/questions/132397/get-back-the-output-of-os-execute-in-lua
-function os.capture(cmd)
-    local f = assert(io.popen(cmd, 'r'))
-    local s = assert(f:read('*a'))
-    f:close()
-    return s
-  end
-
 --decodes a URL address
 --this piece of code was taken from: https://stackoverflow.com/questions/20405985/lua-decodeuri-luvit/20406960#20406960
 local decodeURI
@@ -32,23 +24,30 @@ end
 local function parse_http(directory)
     msg.verbose(directory)
 
-    -- cmd.stdout = cmd.stdout:gsub("[\n\r]", ' ')
-    msg.trace("curl -k -l "..string.format("%q", directory).. ' | grep "<tr>"')
-    local html = os.capture("curl -k -l -s "..string.format("%q", directory).. ' | grep "href"' )
+    msg.trace("curl -k -l -s "..string.format("%q", directory))
 
-    -- print(html)
+    local html = mp.command_native({
+        name = "subprocess",
+        playback_only = false,
+        capture_stdout = true,
+        capture_stderr = true,
+        args = {"curl", "-k", "-l", directory}
+    })
+    html = html.stdout
     if not html:find("%[PARENTDIR%]") then return end
 
     local list = {}
     for str in string.gmatch(html, "[^\r\n]+") do
+        if str:sub(1,4) ~= "<tr>" then goto continue end
+
         local link = str:match('href="(.-)"')
         local alt = str:match('alt="%[(.-)%]"')
-        msg.trace(alt..": "..link)
 
         if not alt or not link then goto continue end
         if alt == "PARENTDIR" or alt == "ICO" then goto continue end
         if link:find("[:?<>|]") then goto continue end
 
+        msg.trace(alt..": "..link)
         table.insert(list, { name = link, type = (alt == "DIR" and "dir" or "file"), label = decodeURI(link) })
 
         ::continue::
