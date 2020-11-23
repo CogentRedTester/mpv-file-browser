@@ -118,7 +118,7 @@ list.format_line = function(this, i, v)
     if v.type == 'dir' then this:append([[🖿\h]]) end
 
     --adds the actual name of the item
-    if state.directory == "" then this:append(v.label.."\\N")
+    if v.label then this:append(v.label.."\\N")
     else this:append(v.name.."\\N") end
 end
 
@@ -544,7 +544,7 @@ end)
 
 --a callback function for addon scripts to return the results of their filesystem processing
 mp.register_script_message('update-list-callback', function(json)
-    if not json then goto_root() end
+    if not json then goto_root(); return end
     list.list = utils.parse_json(json)
 
     --setting up the cache stuff
