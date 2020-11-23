@@ -54,9 +54,8 @@ local list = require "scroll-list"
 
 --setting ass styles for the list
 list.num_entries = o.num_entries
+list.header_style = o.ass_header
 
-local ov = mp.create_osd_overlay('ass-events')
--- local list = {}
 local cache = {}
 local extensions = nil
 local state = {
@@ -91,13 +90,6 @@ local function highlight_entry(v)
     else
         return state.current_file.directory == state.directory and state.current_file.name == v.name
     end
-end
-
-list.format_header = function(this)
-    local dir_name = state.directory
-    if dir_name == "" then dir_name = "ROOT" end
-    this:append(o.ass_header .. dir_name..'\\N ----------------------------------------------------')
-    this:newline()
 end
 
 --creating the custom formatting function
@@ -218,19 +210,16 @@ local function goto_root()
     list:update()
 end
 
---prints the persistent header
-local function print_ass_header()
+--updates the header with the current directory
+local function update_header()
     local dir_name = state.directory
     if dir_name == "" then dir_name = "ROOT" end
     list.header = dir_name..'\\N ----------------------------------------------------'
-    return list.header
 end
-
 --scans the current directory and updates the directory table
 local function update_list()
     msg.verbose('loading contents of ' .. state.directory)
 
-    print_ass_header()
     list.selected = 1
     state.selection = {}
     if extensions == nil then setup_extensions_list() end
@@ -315,6 +304,7 @@ end
 
 --rescans the folder and updates the list
 local function update()
+    update_header()
     list.empty_text = "~"
     list.list = {}
     list:update()
