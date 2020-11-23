@@ -6,6 +6,8 @@ This script allows users to browse and open files and folders entirely from with
 
 By default only file types compatible with mpv will be shown, but this can be changed in the config file.
 
+This script requires [mpv-scroll-list](https://github.com/CogentRedTester/mpv-scroll-list) to work, simply place `scroll-list.lua` into the `~~/scripts` folder.
+
 ## Keybinds
 The following keybind is set by default
 

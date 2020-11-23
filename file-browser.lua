@@ -42,21 +42,24 @@ local o = {
     ass_selected = "{\\c&Hfce788&}",
     ass_multiselect = "{\\c&Hfcad88&}",
     ass_playing = "{\\c&H33ff66&}",
+    ass_playingselected = [[{\c&H22b547&}]],
     ass_footerheader = "{\\c&00ccff&\\fs16}",
     ass_cursor = "{\\c&00ccff&}"
 }
 
 opt.read_options(o, 'file_browser')
 
-local ov = mp.create_osd_overlay('ass-events')
-local list = {}
+package.path = mp.command_native( {"expand-path", (mp.get_opt("scroll_list-directory") or "~~/scripts") } ) .. "/?.lua;" .. package.path
+local list = require "scroll-list"
+
+--setting ass styles for the list
+list.num_entries = o.num_entries
+list.header_style = o.ass_header
+
 local cache = {}
 local extensions = nil
 local state = {
-    flag_update = false,
     directory = nil,
-    hidden = true,
-    selected = 1,
     selection = {},
     prev_directory = nil,
     current_file = {
@@ -66,23 +69,7 @@ local state = {
     dvd_device = nil
 }
 local root = nil
-local keybinds = {
-    {'ENTER', 'open', function() open_file('replace') end, {}},
-    {'Shift+ENTER', 'append_playlist', function() open_file('append') end, {}},
-    {'ESC', 'exit', function() close_browser() end, {}},
-    {'RIGHT', 'down_dir', function() down_dir() end, {}},
-    {'LEFT', 'up_dir', function() up_dir() end, {}},
-    {'DOWN', 'scroll_down', function() scroll_down() end, {repeatable = true}},
-    {'UP', 'scroll_up', function() scroll_up() end, {repeatable = true}},
-    {'HOME', 'pwd', function() cache = {}; goto_current_dir() end, {}},
-    {'Shift+HOME', 'root', function() goto_root() end, {}},
-    {'Ctrl+r', 'reload', function() cache={}; update() end, {}},
-    {'Ctrl+ENTER', 'select', function() toggle_selection() end, {}},
-    {'Ctrl+DOWN', 'select_down', function() drag_down() end, {repeatable = true}},
-    {'Ctrl+UP', 'select_up', function() drag_up() end, {repeatable = true}},
-    {'Ctrl+RIGHT', 'select_yes', function() state.selection[state.selected] = true ; update_ass() end, {}},
-    {'Ctrl+LEFT', 'select_no', function() state.selection[state.selected] = nil ; update_ass() end, {}}
-}
+local open_dvd_browser
 
 --default list of compatible file extensions
 --adding an item to this list is a valid request on github
@@ -96,18 +83,49 @@ local compatible_file_extensions = {
     "wv","x264","x265","xvid","y4m","yuv"
 }
 
+--detects whether or not to highlight the given entry as being played
+local function highlight_entry(v)
+    if v.type == "dir" then
+        return state.current_file.directory:find(state.directory .. v.name, 1, true)
+    else
+        return state.current_file.directory == state.directory and state.current_file.name == v.name
+    end
+end
+
+--creating the custom formatting function
+list.format_line = function(this, i, v)
+    local playing_file = highlight_entry(v)
+    -- if not playing_file then print(utils.to_string(state.current_file)) ; print(state.directory) end
+    this:append(o.ass_body)
+
+    --handles custom styles for different entries
+    if i == list.selected then this:append(o.ass_cursor..[[➤\h]]..o.ass_body)
+    else this:append([[\h\h\h\h]]) end
+
+    --sets the selection colour scheme
+    local multiselected = state.selection[i]
+    if multiselected then this:append(o.ass_multiselect)
+    elseif i == list.selected then this:append(o.ass_selected) end
+
+    --prints the currently-playing icon and style
+    if playing_file and multiselected then this:append(o.ass_playingselected)
+    elseif playing_file then this:append(o.ass_playing) end
+
+    --sets the folder icon
+    if v.type == 'dir' then this:append([[🖿\h]]) end
+
+    --adds the actual name of the item
+    if state.directory == "" then this:append(v.label.."\\N")
+    else this:append(v.name.."\\N") end
+end
+
+--standardises filepaths across systems
 local function fix_path(str, directory)
     str = str:gsub([[\]],[[/]])
     str = str:gsub([[/./]], [[/]])
     if directory and str:sub(-1) ~= '/' then str = str..'/' end
     return str
 end
-
---updates the dvd_device
-mp.observe_property('dvd-device', 'string', function(_, device)
-    if device == "" then device = "/dev/dvd/" end
-    state.dvd_device = fix_path(device, true)
-end)
 
 --sets up the compatible extensions list
 local function setup_extensions_list()
@@ -154,7 +172,8 @@ local function setup_root()
     end
 end
 
-function update_current_directory(_, filepath)
+--saves the directory and name of the currently playing file
+local function update_current_directory(_, filepath)
     --if we're in idle mode then we want to open to the root
     if filepath == nil then 
         state.current_file.directory = ""
@@ -169,24 +188,18 @@ function update_current_directory(_, filepath)
     state.current_file.directory, state.current_file.name = utils.split_path(exact_path)
 end
 
-function goto_current_dir()
-    --splits the directory and filename apart
-    state.directory = state.current_file.directory
-    state.selected = 1
-    update()
-end
-
-function goto_root()
+--loads the root list
+local function goto_root()
     if root == nil then setup_root() end
     msg.verbose('loading root')
-    state.selected = 1
-    list = root
+    list.selected = 1
+    list.list = root
 
     --if moving to root from one of the connected locations,
     --then select that location
-    for i,item in ipairs(list) do
+    for i,item in ipairs(list.list) do
         if (state.prev_directory == item.name) then
-            state.selected = i
+            list.selected = i
             break
         end
     end
@@ -194,94 +207,26 @@ function goto_root()
     state.directory = ""
     cache = {}
     state.selection = {}
-    update_ass()
+    list:update()
 end
 
---prints the persistent header
-function print_ass_header()
+--updates the header with the current directory
+local function update_header()
     local dir_name = state.directory
     if dir_name == "" then dir_name = "ROOT" end
-    ov.data = o.ass_header..dir_name..'\\N ---------------------------------------------------- \\N'
+    list.header = dir_name..'\\N ----------------------------------------------------'
 end
-
---loops through the directory table and creates the ass string to generate the browser page
-function update_ass()
-    print_ass_header()
-    --check for an empty directory
-    if #list == 0 then
-        ov.data = ov.data.."empty directory"
-        ov:update()
-        return
-    end
-
-    ov.data = ov.data..o.ass_body
-    local start = 1
-    local finish = start+o.num_entries-1
-
-    --handling cursor positioning
-    local mid = math.ceil(o.num_entries/2)+1
-    if state.selected+mid > finish then
-        local offset = state.selected - finish + mid
-
-        --if we've overshot the end of the list then undo some of the offset
-        if finish + offset > #list then
-            offset = offset - ((finish+offset) - #list)
-        end
-
-        start = start + offset
-        finish = finish + offset
-    end
-
-    --making sure that we don't overstep the boundaries
-    if start < 1 then start = 1 end
-    local overflow = finish < #list
-    --this is necessary when the number of items in the dir is less than the max
-    if not overflow then finish = #list end
-
-    --adding a header to show there are items above in the list
-    if start > 1 then ov.data = ov.data..o.ass_footerheader..(start-1)..' items above\\N\\N' end
-
-    local current_dir = state.directory == state.current_file.directory
-
-    for i=start,finish do
-        local v = list[i]
-        local playing_file = current_dir and v.name == state.current_file.name
-        ov.data = ov.data..o.ass_body
-
-        --handles custom styles for different entries
-        if i == state.selected then ov.data = ov.data..o.ass_cursor..[[➤\h]]..o.ass_body
-        else ov.data = ov.data..[[\h\h\h\h]] end
-
-        --prints the currently-playing icon and style
-        if playing_file then ov.data = ov.data..o.ass_playing..[[▶\h]] end
-
-        --sets the selection colour scheme
-        if state.selection[i] then ov.data = ov.data..o.ass_multiselect
-        elseif i == state.selected then ov.data = ov.data..o.ass_selected end
-
-        --sets the folder icon
-        if v.type == 'dir' then ov.data = ov.data..[[🖿\h]] end
-
-        --adds the actual name of the item
-        if state.directory == "" then ov.data = ov.data..v.label.."\\N"
-        else ov.data = ov.data..v.name.."\\N" end
-    end
-
-    if overflow then ov.data = ov.data..'\\N'..o.ass_footerheader..#list-finish..' items remaining' end
-    ov:update()
-end
-
 --scans the current directory and updates the directory table
-function update_list()
+local function update_list()
     msg.verbose('loading contents of ' .. state.directory)
-    state.selected = 1
+
+    list.selected = 1
     state.selection = {}
     if extensions == nil then setup_extensions_list() end
 
     if o.dvd_browser then
         if state.directory == state.dvd_device then
             open_dvd_browser()
-            list = {}
             return false
         end
     end
@@ -293,18 +238,16 @@ function update_list()
         local cache = cache[#cache]
         if cache.directory == state.directory then
             msg.verbose('found directory in cache')
-            list = cache.table
+            list.list = cache.table
 
             --sets the cursor to the previously opened file and resets the prev_directory in
             --case we move above the cache source
-            state.selected = cache.cursor
+            list.selected = cache.cursor
             state.prev_directory = state.directory
             return
         end
     end
 
-    local t = mp.get_time()
-    list = {}
     local list1 = utils.readdir(state.directory, 'dirs')
 
     --if we can't access the filesystem for the specified directory then we go to root page
@@ -320,13 +263,13 @@ function update_list()
     sort(list1)
     for i=1, #list1 do
         local item = list1[i]
-        if (state.prev_directory == state.directory..item..'/') then state.selected = i end
+        if (state.prev_directory == state.directory..item..'/') then list.selected = i end
 
         --filters hidden dot directories for linux
         if o.filter_dot_dirs and item:find('%.') == 1 then goto continue end
 
         msg.debug(item..'/')
-        list[#list+1] = {name = item..'/', type = 'dir'}
+        table.insert(list.list, {name = item..'/', type = 'dir'})
 
         ::continue::
     end
@@ -346,42 +289,40 @@ function update_list()
         end
 
         msg.debug(item)
-        list[#list+1] = {name = item, type = 'file'}
+        table.insert(list.list, {name = item, type = 'file'})
 
         ::continue::
     end
-    msg.debug('load time: ' ..mp.get_time() - t)
 
     --saves the latest directory at the top of the stack
-    cache[#cache+1] = {directory = state.directory, table = list}
+    cache[#cache+1] = {directory = state.directory, table = list.list}
 
     --once the directory has been successfully loaded we set it as the 'prev' directory for next time
     --this is for highlighting the previous folder when moving up a directory
     state.prev_directory = state.directory
 end
 
-function update()
-    print_ass_header()
-    ov:update()
+--rescans the folder and updates the list
+local function update()
+    update_header()
+    list.empty_text = "~"
+    list.list = {}
+    list:update()
+    list.empty_text = "empty directory"
     if update_list() == nil then
-    update_ass() end
+    list:update() end
 end
 
-function scroll_down()
-    if state.selected < #list then
-        state.selected = state.selected + 1
-        update_ass()
-    end
+--switches to the directory of the currently playing file
+local function goto_current_dir()
+    --splits the directory and filename apart
+    state.directory = state.current_file.directory
+    list.selected = 1
+    update()
 end
 
-function scroll_up()
-    if state.selected > 1 then
-        state.selected = state.selected - 1
-        update_ass()
-    end
-end
-
-function up_dir()
+--moves up a directory
+local function up_dir()
     local dir = state.directory:reverse()
     local index = dir:find("[/\\]")
 
@@ -397,56 +338,41 @@ function up_dir()
     update()
 end
 
-function down_dir()
-    if not list[state.selected] or list[state.selected].type ~= 'dir' then return end
+--moves down a directory
+local function down_dir()
+    if not list.list[list.selected] or list.list[list.selected].type ~= 'dir' then return end
 
-    state.directory = state.directory..list[state.selected].name
-    if #cache > 0 then cache[#cache].cursor = state.selected end
+    state.directory = state.directory..list.list[list.selected].name
+    if #cache > 0 then cache[#cache].cursor = list.selected end
     update()
 end
 
-function toggle_selection()
-    if list[state.selected] then
-        if state.selection[state.selected] then
-            state.selection[state.selected] = nil
+--toggles the selection
+local function toggle_selection()
+    if list.list[list.selected] then
+        if state.selection[list.selected] then
+            state.selection[list.selected] = nil
         else
-            state.selection[state.selected] = true
+            state.selection[list.selected] = true
         end
     end
-    update_ass()
+    list:update()
 end
 
-function drag_down()
-    state.selection[state.selected] = true
-    scroll_down()
-    state.selection[state.selected] = true
-    update_ass()
+--drags the selection down
+local function drag_down()
+    state.selection[list.selected] = true
+    list:scroll_down()
+    state.selection[list.selected] = true
+    list:update()
 end
 
-function drag_up()
-    state.selection[state.selected] = true
-    scroll_up()
-    state.selection[state.selected] = true
-    update_ass()
-end
-
-function open_browser()
-    for _,v in ipairs(keybinds) do
-        mp.add_forced_key_binding(v[1], 'dynamic/'..v[2], v[3], v[4])
-    end
-
-    state.hidden = false
-
-    if state.directory == nil then
-        update_current_directory(nil, mp.get_property('path'))
-        goto_current_dir()
-        return
-    end
-
-    if state.flag_update then
-        update_current_directory(nil, mp.get_property('path'))
-        update_ass()
-    else ov:update() end
+--drags the selection up
+local function drag_up()
+    state.selection[list.selected] = true
+    list:scroll_up()
+    state.selection[list.selected] = true
+    list:update()
 end
 
 --sortes a table into an array of its key values
@@ -458,22 +384,6 @@ local function sort_keys(t)
     return keys
 end
 
-function close_browser()
-    --if multiple items are selection cancel the
-    --selection instead of closing the browser
-    if next(state.selection) then
-        state.selection = {}
-        update_ass()
-        return
-    end
-
-    for _,v in ipairs(keybinds) do
-        mp.remove_key_binding('dynamic/'..v[2])
-    end
-    state.hidden = true
-    ov:remove()
-end
-
 --runs the loadfile or loadlist command
 local function loadfile(item, flags)
     local path = state.directory..item.name
@@ -483,11 +393,11 @@ local function loadfile(item, flags)
 end
 
 --opens the selelected file(s)
-function open_file(flags)
-    if state.selected > #list or state.selected < 1 then return end
+local function open_file(flags)
+    if list.selected > #list.list or list.selected < 1 then return end
 
-    loadfile(list[state.selected], flags)
-    state.selection[state.selected] = nil
+    loadfile(list.list[list.selected], flags)
+    state.selection[list.selected] = nil
 
     --handles multi-selection behaviour
     if next(state.selection) then
@@ -496,56 +406,112 @@ function open_file(flags)
         --the currently selected file will be loaded according to the flag
         --the remaining files will be appended
         for i=1, #selection do
-            loadfile(list[selection[i]], "append")
+            loadfile(list.list[selection[i]], "append")
         end
 
         --reset the selection after
         state.selection = {}
-        if flags == 'replace' then close_browser()
-        else update_ass() end
+        if flags == 'replace' then list:close()
+        else list:update() end
         return
 
     elseif flags == 'replace' then
         down_dir()
-        close_browser()
+        list:close()
     end
 end
 
-function toggle_browser()
+--opens the browser
+list.open = function(this)
+    this:add_keybinds()
+
+    list.hidden = false
+    if state.directory == nil then
+        update_current_directory(nil, mp.get_property('path'))
+        goto_current_dir()
+        return
+    end
+
+    if list.flag_update then
+        update_current_directory(nil, mp.get_property('path'))
+    end
+    list:open_list()
+end
+
+--intercepts toggles when in an addons domain
+--otherwise passes the request to the lists toggle function
+local function toggle_browser()
     --if we're in the dvd-device then pass the request on to dvd-browser
     if o.dvd_browser and state.directory == state.dvd_device then
         mp.commandv('script-message-to', 'dvd_browser', 'dvd-browser')
-    elseif state.hidden then
-        open_browser()
     else
-        close_browser()
+        list:toggle()
     end
 end
 
-function open_dvd_browser()
+--run when the escape key is used
+local function escape()
+    --if multiple items are selection cancel the
+    --selection instead of closing the browser
+    if next(state.selection) then
+        state.selection = {}
+        list:update()
+        return
+    end
+    list:close()
+end
+
+--passes control to DVD browser
+open_dvd_browser = function()
     state.prev_directory = state.dvd_device
-    close_browser()
+    list:close()
     mp.commandv('script-message', 'browse-dvd')
 end
 
+list.keybinds = {
+    {'ENTER', 'open', function() open_file('replace') end, {}},
+    {'Shift+ENTER', 'append_playlist', function() open_file('append') end, {}},
+    {'ESC', 'exit', function() escape() end, {}},
+    {'RIGHT', 'down_dir', function() down_dir() end, {}},
+    {'LEFT', 'up_dir', function() up_dir() end, {}},
+    {'DOWN', 'scroll_down', function() list:scroll_down() end, {repeatable = true}},
+    {'UP', 'scroll_up', function() list:scroll_up() end, {repeatable = true}},
+    {'HOME', 'pwd', function() cache = {}; goto_current_dir() end, {}},
+    {'Shift+HOME', 'root', function() goto_root() end, {}},
+    {'Ctrl+r', 'reload', function() cache={}; update() end, {}},
+    {'Ctrl+ENTER', 'select', function() toggle_selection() end, {}},
+    {'Ctrl+DOWN', 'select_down', function() drag_down() end, {repeatable = true}},
+    {'Ctrl+UP', 'select_up', function() drag_up() end, {repeatable = true}},
+    {'Ctrl+RIGHT', 'select_yes', function() state.selection[list.selected] = true ; list:update() end, {}},
+    {'Ctrl+LEFT', 'select_no', function() state.selection[list.selected] = nil ; list:update() end, {}}
+}
+
 --we don't want to add any overhead when the browser isn't open
 mp.observe_property('path', 'string', function(_,path)
-    if not state.hidden then 
+    if not list.hidden then 
         update_current_directory(_,path)
-        update_ass()
-    else state.flag_update = true end
+        list:update()
+    else list.flag_update = true end
 end)
+
+--updates the dvd_device
+mp.observe_property('dvd-device', 'string', function(_, device)
+    if device == "" then device = "/dev/dvd/" end
+    state.dvd_device = fix_path(device, true)
+end)
+
 mp.add_key_binding('MENU','browse-files', toggle_browser)
 
 --opens the root directory
 mp.register_script_message('goto-root-directory',function()
     goto_root()
-    open_browser()
+    list:open()
 end)
 
+--opens the directory of the currently playing file
 mp.register_script_message('goto-current-directory', function()
     goto_current_dir()
-    open_browser()
+    list:open()
 end)
 
 --allows keybinds/other scripts to auto-open specific directories
@@ -555,5 +521,5 @@ mp.register_script_message('browse-directory', function(directory)
     state.directory = directory
     cache = {}
     update()
-    open_browser()
+    list:open()
 end)
