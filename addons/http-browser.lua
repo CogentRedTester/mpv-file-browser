@@ -51,10 +51,31 @@ local function parse_http(directory)
         ::continue::
     end
 
-    local json, _ = utils.format_json(list)
-    return json
+    return list
 end
 
-mp.register_script_message("browse-http", function(dir)
-    mp.commandv("script-message", "update-list-callback", parse_http(dir) or "")
+--recursively opens the given directory
+local function open_directory(path, flags)
+    local list = parse_http(path)
+    if not list then return end
+    for i = 1, #list do
+        local item_path = path..list[i].name
+
+        if list[i].type == "dir" then open_directory(item_path, flags)
+        else mp.commandv("loadfile", item_path, flags) end
+    end
+end
+
+--custom parsing of directories
+mp.register_script_message("http/browse-dir", function(dir)
+    local json = parse_http(dir)
+    if json then json = utils.format_json(json) end
+    mp.commandv("script-message", "update-list-callback", json or "")
+end)
+
+--custom handling for opening directories
+mp.register_script_message("http/open-dir", function(path, flags)
+    if flags == "replace" then mp.commandv("playlist-clear") end
+    open_directory(path, "append")
+    if flags == "replace" then mp.commandv("playlist-remove", "current") end
 end)
