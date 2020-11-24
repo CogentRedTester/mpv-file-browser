@@ -567,7 +567,7 @@ end)
 
 --a callback function for addon scripts to return the results of their filesystem processing
 mp.register_script_message('update-list-callback', function(json)
-    if not json then goto_root(); return end
+    if not json or json == "" then goto_root(); return end
     list.list = utils.parse_json(json)
     if o.filter_files or o.filter_dot_dirs then filter(list.list) end
     sort(list.list)

@@ -56,10 +56,5 @@ local function parse_http(directory)
 end
 
 mp.register_script_message("browse-http", function(dir)
-    local result = parse_http(dir)
-    if result then
-        mp.commandv("script-message", "update-list-callback", result)
-    else
-        mp.commandv("script-message", "update-list-callback")
-    end
+    mp.commandv("script-message", "update-list-callback", parse_http(dir) or "")
 end)
