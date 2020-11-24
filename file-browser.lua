@@ -69,7 +69,8 @@ local state = {
         directory = nil,
         name = nil
     },
-    dvd_device = nil
+    dvd_device = nil,
+    parser = "file-browser"
 }
 local root = nil
 local open_dvd_browser
@@ -197,7 +198,14 @@ local function setup_root()
         local path = mp.command_native({'expand-path', str})
         path = fix_path(path, true)
 
-        root[#root+1] = {name = path, type = 'dir', label = str}
+        local temp = {name = path, type = 'dir', label = str}
+
+        --setting up the addon handlers
+        if o.http_browser and path:find("https://") == 1 then temp.parser = "http"
+        elseif o.ftp_browser and path:sub(1,6) == "ftp://" then temp.parser = "ftp"
+        else temp.parser = "file" end
+
+        root[#root+1] = temp
     end
 end
 
@@ -239,6 +247,7 @@ local function goto_root()
             break
         end
     end
+    state.parser = ""
     state.prev_directory = ""
     state.directory = ""
     cache = {}
@@ -311,6 +320,7 @@ local function update_list()
     --dvd browser has special behaviour, so it is called seperately from the other add-ons
     if o.dvd_browser then
         if state.directory == state.dvd_device then
+            state.parser = "dvd"
             open_dvd_browser()
             return
         end
@@ -337,8 +347,13 @@ local function update_list()
     if state.directory == "" then
         goto_root()
     elseif o.http_browser and state.directory:find("https?://") == 1 then
-        mp.commandv("script-message", "browse-http", state.directory)
+        state.parser = "http"
+        mp.commandv("script-message", "http/browse-dir", state.directory)
+    elseif o.ftp_browser and state.directory:sub(1, 6) == "ftp://" then
+        state.parser = "ftp"
+        mp.commandv("script-message", "ftp/browse-dir", state.directory)
     else
+        state.parser = "file"
         update_local_list()
         list:update()
     end
@@ -425,11 +440,19 @@ local function sort_keys(t)
     return keys
 end
 
+--loads lists or defers the command to add-ons
+local function loadlist(item, path, flags)
+    local parser = item.parser or state.parser
+    if parser == "file" or parser == "dvd" then mp.commandv('loadlist', path, flags)
+    elseif parser ~= "" then mp.commandv("script-message", parser.."/open-dir", path, flags)
+    end
+end
+
 --runs the loadfile or loadlist command
 local function loadfile(item, flags)
     local path = state.directory..item.name
     if (path == state.dvd_device) then path = "dvd://"
-    elseif item.type == "dir" then return mp.commandv('loadlist', path, flags) end
+    elseif item.type == "dir" then return loadlist(item, path, flags) end
     return mp.commandv('loadfile', path, flags)
 end
 
