@@ -49,16 +49,17 @@ By default file-browser only opens/appends the single item that the cursor has s
 Add-ons are extra scripts that add parsing support for non-native filesystems.
 They can be enabled by loading the add-on script normally and enabling the corresponding `script-opt`.
 
-Browsing filesystems provided by add-ons should feel identical to the normal handling of the script.
+Browsing filesystems provided by add-ons should feel identical to the normal handling of the script,
+but they may require extra commandline tools be installed.
 
-### http-browser
+### [http-browser](addons/http-browser.lua)
 This add-on implements support for http/https file servers, specifically the directory indexes that apache servers dynamically generate.
 I don't know if this will work on different types of servers.
 
 Requires `curl` in the system PATH.
 
-### ftp-browser
-Planned
+### [ftp-browser](addons/ftp-browser.lua)
+Implements support for ftp file servers. Requires `curl` in the system path.
 
 ### [DVD Browser](https://github.com/CogentRedTester/mpv-dvd-browser)
 This add-on is a little different from the others. dvd-browser is actually standalone, and has a number of other dvd related features that don't
