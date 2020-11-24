@@ -64,7 +64,7 @@ local extensions = nil
 local state = {
     directory = nil,
     selection = {},
-    prev_directory = nil,
+    prev_directory = "",
     current_file = {
         directory = nil,
         name = nil
@@ -191,6 +191,21 @@ local function filter(t)
     end
 end
 
+--scans the list for the folder that the script just moved out of
+--must be run after the sort
+local function select_prev_directory()
+    if state.prev_directory:find(state.directory, 1, true) ~= 1 then return end
+
+    local i = 1
+    while (list.list[i] and list.list[i].type == "dir") do
+        if state.prev_directory:find(state.directory..list.list[i].name) then
+            list.selected = i
+            break
+        end
+        i = i+1
+    end
+end
+
 --splits the string into a table on the semicolons
 local function setup_root()
     root = {}
@@ -241,15 +256,11 @@ local function goto_root()
 
     --if moving to root from one of the connected locations,
     --then select that location
-    for i,item in ipairs(list.list) do
-        if (state.prev_directory == item.name) then
-            list.selected = i
-            break
-        end
-    end
+    state.directory = ""
+    select_prev_directory()
+
     state.parser = ""
     state.prev_directory = ""
-    state.directory = ""
     cache = {}
     state.selection = {}
     update_header()
@@ -272,7 +283,6 @@ local function update_local_list()
     --sorts folders and formats them into the list of directories
     for i=1, #list1 do
         local item = list1[i]
-        if (state.prev_directory == state.directory..item..'/') then list.selected = i end
 
         --filters hidden dot directories for linux
         if o.filter_dot_dirs and item:find('%.') == 1 then goto continue end
@@ -298,8 +308,8 @@ local function update_local_list()
 
         ::continue::
     end
-
     sort(list.list)
+    select_prev_directory()
 
     --saves the latest directory at the top of the stack
     cache[#cache+1] = {directory = state.directory, table = list.list}
@@ -594,6 +604,7 @@ mp.register_script_message('update-list-callback', function(json)
     list.list = utils.parse_json(json)
     if o.filter_files or o.filter_dot_dirs then filter(list.list) end
     sort(list.list)
+    select_prev_directory()
 
     --setting up the cache stuff
     cache[#cache+1] = {directory = state.directory, table = list.list}
