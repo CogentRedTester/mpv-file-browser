@@ -67,6 +67,7 @@ list.header_style = o.ass_header
 
 local cache = {}
 local extensions = nil
+local sub_extensions = nil
 local state = {
     directory = nil,
     selection = {},
@@ -92,6 +93,14 @@ local compatible_file_extensions = {
     "tif","tiff","tod","trp","truehd","true-hd","ts","tsa","tsv","tta","tts","vfw","vgm","vgz","vob","vro","wav","weba","webm","webp","wm","wma","wmv","wtv",
     "wv","x264","x265","xvid","y4m","yuv"
 }
+
+--creating a set of subtitle extensions for custom subtitle loading behaviour
+local subtitle_extensions = {
+    "etf","etf8","utf-8","idx","sub","srt","rt","ssa","ass","mks","vtt","sup","scc","smi","lrc",'pgs'
+}
+for i = 1, #subtitle_extensions do
+    sub_extensions[subtitle_extensions[i]] = true
+end
 
 --detects whether or not to highlight the given entry as being played
 local function highlight_entry(v)
@@ -145,6 +154,9 @@ local function setup_extensions_list()
     --adding file extensions to the set
     for i=1, #compatible_file_extensions do
         extensions[compatible_file_extensions[i]] = true
+    end
+    for i = 1, #subtitle_extensions do
+        extensions[subtitle_extensions[i]] = true
     end
 
     --adding extra extensions on the whitelist
