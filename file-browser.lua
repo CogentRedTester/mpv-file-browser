@@ -144,12 +144,12 @@ local function setup_extensions_list()
     end
 
     --adding extra extensions on the whitelist
-    for str in string.gmatch(o.extension_whitelist, "([^;^"..o.root_seperators.."]+)") do
+    for str in string.gmatch(o.extension_whitelist, "([^"..o.root_seperators.."]+)") do
         extensions[str] = true
     end
 
     --removing extensions that are in the blacklist
-    for str in string.gmatch(o.extension_blacklist, "([^;^"..o.root_seperators.."]+)") do
+    for str in string.gmatch(o.extension_blacklist, "([^"..o.root_seperators.."]+)") do
         extensions[str] = nil
     end
 end
