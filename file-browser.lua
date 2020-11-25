@@ -482,7 +482,7 @@ local function open_file(flags)
         --the currently selected file will be loaded according to the flag
         --the remaining files will be appended
         for i=1, #selection do
-            loadfile(list.list[selection[i]], "append")
+            loadfile(list.list[selection[i]], "append-play")
         end
 
         --reset the selection after
@@ -546,7 +546,7 @@ end
 
 list.keybinds = {
     {'ENTER', 'open', function() open_file('replace') end, {}},
-    {'Shift+ENTER', 'append_playlist', function() open_file('append') end, {}},
+    {'Shift+ENTER', 'append_playlist', function() open_file('append-play') end, {}},
     {'ESC', 'exit', function() escape() end, {}},
     {'RIGHT', 'down_dir', function() down_dir() end, {}},
     {'LEFT', 'up_dir', function() up_dir() end, {}},

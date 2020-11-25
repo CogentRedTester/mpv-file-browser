@@ -55,14 +55,14 @@ local function parse_http(directory)
 end
 
 --recursively opens the given directory
-local function open_directory(path, flags)
+local function open_directory(path)
     local list = parse_http(path)
     if not list then return end
     for i = 1, #list do
         local item_path = path..list[i].name
 
-        if list[i].type == "dir" then open_directory(item_path, flags)
-        else mp.commandv("loadfile", item_path, flags) end
+        if list[i].type == "dir" then open_directory(item_path)
+        else mp.commandv("loadfile", item_path, "append-play") end
     end
 end
 
@@ -76,6 +76,7 @@ end)
 --custom handling for opening directories
 mp.register_script_message("http/open-dir", function(path, flags)
     if flags == "replace" then mp.commandv("playlist-clear") end
-    open_directory(path, "append")
-    if flags == "replace" then mp.commandv("playlist-remove", "current") end
+    local idle = mp.get_property_bool("idle-active")
+    open_directory(path)
+    if flags == "replace" and not idle then mp.commandv("playlist-remove", "current") end
 end)
