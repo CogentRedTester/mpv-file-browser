@@ -67,14 +67,14 @@ Example:
 
 The command can also be an array of arrays, in order to send multiple commands at once:
 ```
-    {
-        "key": "KP2",
-        "command": [
-            ["command": ["print-text", "example2"],
-            "command": ["show-text", "example2"]
-        ],
-        "multiselect": false
-    }
+{
+    "key": "KP2",
+    "command": [
+        ["command": ["print-text", "example2"],
+        "command": ["show-text", "example2"]
+    ],
+    "multiselect": false
+}
 ```
 
 Filter should not be included unless one wants to limit what types of list entries the command should be run on.
@@ -95,11 +95,11 @@ This is not necessary for most mpv commands, but can be very useful when sending
 Example of a command to add a subtitle file:
 
 ```
-    {
-        "key": "Alt+ENTER",
-        "command": ["sub-add", "%f"],
-        "filter": "file"
-    }
+{
+    "key": "Alt+ENTER",
+    "command": ["sub-add", "%f"],
+    "filter": "file"
+}
 ```
 
 When multiple items are selected the command will be run on every item in the order they appear on the screen.

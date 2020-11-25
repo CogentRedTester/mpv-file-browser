@@ -46,12 +46,12 @@
     },
     {
         "key": "Ctrl+o",
-        "command": ["run", "powershell", "-command", "explorer.exe", "(( \"%d\" ).TrimEnd('/') -replace '/', '\\' )"],
+        "command": ["run", "powershell", "-command", "explorer.exe", "(( %P ).TrimEnd('/') -replace '/', '\\' )"],
         "multiselect": false
     },
     {
         "key": "Ctrl+O",
-        "command": ["run", "powershell", "-command", "explorer.exe", "(( \"%f\" ).TrimEnd('/') -replace '/', '\\' )"],
+        "command": ["run", "powershell", "-command", "explorer.exe", "(( %F ).TrimEnd('/') -replace '/', '\\' )"],
         "filter": "dir",
         "multiselect": true
     }
