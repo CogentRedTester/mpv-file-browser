@@ -17,6 +17,7 @@ local o = {
     --root directories
     root = "~/",
 
+    --characters to use as seperators
     root_seperators = ",;",
 
     --number of entries to show on the screen at once
@@ -24,6 +25,9 @@ local o = {
 
     --only show files compatible with mpv
     filter_files = true,
+
+    --enable custom keybinds
+    custom_keybinds = false,
 
     --blacklist compatible files, it's recommended to use this rather than to edit the
     --compatible list directly. A semicolon separated list of extensions without spaces
@@ -537,6 +541,65 @@ local function escape()
     list:close()
 end
 
+--isolates just the name of the current directory
+local function get_dir_name()
+    local find = state.directory:reverse():match("/(.-)/")
+    if find then return find:reverse()
+    else return state.directory:match("(.-)/") end
+end
+
+--iterates through the command table and substitutes special
+--character codes for the correct strings used for custom functions
+local function format_command_table(t, index)
+    local l = list.list
+    local copy = {}
+    for i = 1, #t do
+        copy[i] = t[i]:gsub("%%.", {
+            ["%%"] = "%",
+            ["%f"] = l[index] and state.directory..l[index].name or "",
+            ["%F"] = l[index] and (l[index].label or l[index].name) or "",
+            ["%d"] = state.directory or "",
+            ["%D"] = get_dir_name() or ""
+        })
+    end
+    return copy
+end
+
+--runs all of the commands in the command table
+--recurses to handle nested tables of commands
+local function run_custom_command(t, index)
+    if type(t[1]) == "table" then
+        for i = 1, #t do
+            run_custom_command(t[i], index)
+        end
+    else
+        msg.debug("running command: " .. utils.to_string(t))
+        local custom_cmd = format_command_table(t, index)
+        mp.command_native(custom_cmd)
+    end
+end
+
+--runs one of the custom commands
+local function custom_command(cmd)
+    --filtering commands
+    if cmd.filter then
+        if list.list[list.selected] and list.list[list.selected].type ~= cmd.filter then
+            msg.verbose("cancelling custom command")
+            return
+        end
+    end
+
+    --runs the command on all multi-selected items
+    if next(state.selection) then
+        local selection = sort_keys(state.selection)
+        for i = 1, #selection do
+            run_custom_command(cmd.command, selection[i])
+        end
+    else
+        run_custom_command(cmd.command, list.selected)
+    end
+end
+
 --passes control to DVD browser
 open_dvd_browser = function()
     state.prev_directory = state.dvd_device
@@ -544,6 +607,7 @@ open_dvd_browser = function()
     mp.commandv('script-message', 'browse-dvd')
 end
 
+--dynamic keybinds to set while the browser is open
 list.keybinds = {
     {'ENTER', 'open', function() open_file('replace') end, {}},
     {'Shift+ENTER', 'append_playlist', function() open_file('append-play') end, {}},
@@ -562,6 +626,23 @@ list.keybinds = {
     {'Ctrl+LEFT', 'select_no', function() state.selection[list.selected] = nil ; list:update() end, {}}
 }
 
+--loading the custom keybinds
+if o.custom_keybinds then
+    local path = mp.command_native({"expand-path", "~~/script-opts"}).."/file-browser-keybinds.json"
+    local custom_keybinds, err = assert(io.open( path ))
+    if custom_keybinds then
+        local json = custom_keybinds:read("*a")
+        custom_keybinds:close()
+
+        json = utils.parse_json(json)
+        if not json then error("invalid json syntax for "..path) end
+
+        for i = 1, #json do
+            table.insert(list.keybinds, { json[i].key, "custom"..tostring(i), function() custom_command(json[i]) end, {} })
+        end
+    end
+end
+
 --we don't want to add any overhead when the browser isn't open
 mp.observe_property('path', 'string', function(_,path)
     if not list.hidden then 
@@ -576,6 +657,7 @@ mp.observe_property('dvd-device', 'string', function(_, device)
     state.dvd_device = fix_path(device, true)
 end)
 
+--declares the keybind to open the browser
 mp.add_key_binding('MENU','browse-files', toggle_browser)
 
 --opens the root directory
