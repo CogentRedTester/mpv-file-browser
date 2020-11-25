@@ -557,9 +557,13 @@ local function format_command_table(t, index)
         copy[i] = t[i]:gsub("%%.", {
             ["%%"] = "%",
             ["%f"] = l[index] and state.directory..l[index].name or "",
-            ["%F"] = l[index] and (l[index].label or l[index].name) or "",
-            ["%d"] = state.directory or "",
-            ["%D"] = get_dir_name() or ""
+            ["%F"] = string.format("%q", l[index] and state.directory..l[index].name or ""),
+            ["%n"] = l[index] and (l[index].label or l[index].name) or "",
+            ["%N"] = string.format("%q", l[index] and (l[index].label or l[index].name) or ""),
+            ["%p"] = state.directory or "",
+            ["%P"] = string.format("%q", state.directory or ""),
+            ["%d"] = get_dir_name() or "",
+            ["%D"] = string.format("q", get_dir_name() or "")
         })
     end
     return copy
@@ -573,8 +577,8 @@ local function run_custom_command(t, index)
             run_custom_command(t[i], index)
         end
     else
-        msg.debug("running command: " .. utils.to_string(t))
         local custom_cmd = format_command_table(t, index)
+        msg.debug("running command: " .. utils.to_string(custom_cmd))
         mp.command_native(custom_cmd)
     end
 end

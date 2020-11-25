@@ -5,15 +5,15 @@
     },
     {
         "key": "KP2",
-        "command": ["print-text", "filename: %F"]
+        "command": ["print-text", "name: %n"]
     },
     {
         "key": "KP3",
-        "command": ["print-text", "directory: %d"]
+        "command": ["print-text", "open directory: %p"]
     },
     {
         "key": "KP4",
-        "command": ["print-text", "directory name: %D"]
+        "command": ["print-text", "directory name: %d"]
     },
     {
         "key": "KP5",
@@ -24,19 +24,23 @@
         "command": ["print-text", "full filepath via concatenation: %d%F"]
     },
     {
+        "key": "KP7",
+        "command": ["print-text", "quote/escape filepath: %F"]
+    },
+    {
         "key": "Alt+ENTER",
         "command": ["sub-add", "%f"],
         "filter": "file"
     },
     {
         "key": "Alt+DEL",
-        "command": ["run", "rm", "\"%f\""],
+        "command": ["run", "rm", "%F"],
         "filter": "file"
     },
     {
         "key": "Ctrl+c",
         "command": [
-            ["run", "powershell", "-command", "Set-Clipboard", "\"%f\""],
+            ["run", "powershell", "-command", "Set-Clipboard", "%F"],
             ["print-text", "copied filepath to clipboard"]
         ]
     },
