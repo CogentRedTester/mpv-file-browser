@@ -71,8 +71,8 @@ The command can also be an array of arrays, in order to send multiple commands a
 {
     "key": "KP2",
     "command": [
-        ["command": ["print-text", "example2"],
-        "command": ["show-text", "example2"]
+        ["print-text", "example2"],
+        ["show-text", "example2"]
     ],
     "multiselect": false
 }
