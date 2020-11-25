@@ -168,7 +168,7 @@ local function sort(t)
     end
 
     --appends the letter d or f to the start of the comparison to sort directories and folders as well
-    table.sort(t, function(a,b) return a.type:sub(1,1)..a.name:lower():gsub("%d+",padnum) < b.type:sub(1,1)..b.name:lower():gsub("%d+",padnum) end)
+    table.sort(t, function(a,b) return a.type:sub(1,1)..(a.label or a.name):lower():gsub("%d+",padnum) < b.type:sub(1,1)..(b.label or b.name):lower():gsub("%d+",padnum) end)
     return t
 end
 
@@ -189,7 +189,7 @@ local function filter(t)
         local temp = t[i]
         t[i] = nil
         if  ( temp.type == "dir" and (not o.filter_dot_dirs or (temp.name:find('%.') ~= 1)) )
-            or ( temp.type == "file" and o.filter_files and is_valid(temp.name) )
+            or ( temp.type == "file" and (not o.filter_files or is_valid(temp.name)) )
         then
             t[top] = temp
             top = top+1
