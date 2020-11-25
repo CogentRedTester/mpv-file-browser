@@ -1,0 +1,52 @@
+[
+    {
+        "key": "KP1",
+        "command": ["print-text", "file: %f"]
+    },
+    {
+        "key": "KP2",
+        "command": ["print-text", "filename: %F"]
+    },
+    {
+        "key": "KP3",
+        "command": ["print-text", "directory: %d"]
+    },
+    {
+        "key": "KP4",
+        "command": ["print-text", "directory name: %D"]
+    },
+    {
+        "key": "KP5",
+        "command": ["print-text", "escape the code: %%f"]
+    },
+    {
+        "key": "KP6",
+        "command": ["print-text", "full filepath via concatenation: %d%F"]
+    },
+    {
+        "key": "Alt+ENTER",
+        "command": ["sub-add", "%f"],
+        "filter": "file"
+    },
+    {
+        "key": "Alt+DEL",
+        "command": ["run", "rm", "\"%f\""],
+        "filter": "file"
+    },
+    {
+        "key": "Ctrl+c",
+        "command": [
+            ["run", "powershell", "-command", "Set-Clipboard", "\"%f\""],
+            ["print-text", "copied filepath to clipboard"]
+        ]
+    },
+    {
+        "key": "Ctrl+o",
+        "command": ["run", "powershell", "-command", "explorer.exe", "(( \"%d\" ).TrimEnd('/') -replace '/', '\\' )"]
+    },
+    {
+        "key": "Ctrl+O",
+        "command": ["run", "powershell", "-command", "explorer.exe", "(( \"%f\" ).TrimEnd('/') -replace '/', '\\' )"],
+        "filter": "dir"
+    }
+]
