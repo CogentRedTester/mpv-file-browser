@@ -17,7 +17,7 @@ local o = {
     --root directories
     root = "~/",
 
-    root_seperator = ",",
+    root_seperators = ",;",
 
     --number of entries to show on the screen at once
     num_entries = 20,
@@ -144,12 +144,12 @@ local function setup_extensions_list()
     end
 
     --adding extra extensions on the whitelist
-    for str in string.gmatch(o.extension_whitelist, "([^;^"..o.root_seperator.."]+)") do
+    for str in string.gmatch(o.extension_whitelist, "([^;^"..o.root_seperators.."]+)") do
         extensions[str] = true
     end
 
     --removing extensions that are in the blacklist
-    for str in string.gmatch(o.extension_blacklist, "([^;^"..o.root_seperator.."]+)") do
+    for str in string.gmatch(o.extension_blacklist, "([^;^"..o.root_seperators.."]+)") do
         extensions[str] = nil
     end
 end
@@ -211,7 +211,7 @@ end
 --splits the string into a table on the semicolons
 local function setup_root()
     root = {}
-    for str in string.gmatch(o.root, "([^"..o.root_seperator.."]+)") do
+    for str in string.gmatch(o.root, "([^"..o.root_seperators.."]+)") do
         local path = mp.command_native({'expand-path', str})
         path = fix_path(path, true)
 
