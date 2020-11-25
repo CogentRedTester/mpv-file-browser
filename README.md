@@ -49,7 +49,8 @@ By default file-browser only opens/appends the single item that the cursor has s
 File-browser also supports custom keybinds. These keybinds send normal input commands, but the script will substitute characters in the command strings for specific values depending on the currently open directory, and currently selected item.
 This allows for a wide range of customised behaviour, such as loading subtitle files from the browser, or copying the path of the selected item to the clipboard.
 
-The keybinds are declared in the `~~/script-opts/file-browser-keybinds.json` file, the config takes the form of an array of json objects, with the following keys:
+The feature is disabled by default, but is enabled with the `custom_keybinds` script-opt.
+Keybinds are declared in the `~~/script-opts/file-browser-keybinds.json` file, the config takes the form of an array of json objects, with the following keys:
 
     key             the key to bind the command to - same syntax as input.conf
     command         a json array of commands and arguments
