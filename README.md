@@ -34,13 +34,13 @@ The following keybinds are only set while the browser is open:
 ## Root Directory
 To accomodate for both windows and linux this script has its own virtual root directory where drives and file folders can be manually added. This can also be used to save favourite directories. The root directory can only contain folders.
 
-The root directory is set using the `root` option, which is a semicolon separated list of directories. Entries are sent through mpv's `expand-path` command. By default the only root value is the user's home folder:
+The root directory is set using the `root` option, which is a comma separated list of directories. Entries are sent through mpv's `expand-path` command. By default the only root value is the user's home folder:
 
 `root=~/`
 
 It is highly recommended that this be customised for the computer being used; [file_browser.conf](file_browser.conf) contains commented out suggestions for generic linux and windows systems. For example, my windows root looks like:
 
-`root=~/;C:/;D:/;E:/;Z:/`
+`root=~/,C:/,D:/,E:/,Z:/`
 
 ## Multi-Select
 By default file-browser only opens/appends the single item that the cursor has selected. However, using the `Ctrl` keybinds specified above, it is possible to select multiple items to open all at once. Selected items are shown in a different colour to the cursor. When multiple items are selected, they will be appended after the currently selected file when using the ENTER commands. The currently selected (with the cursor) file will always be added first, regardless of if it is part of the multi-selection, and will follow replace/append behaviour as normal. Selected items will be appended to the playlist afterwards in the order that they appear on the screen.
