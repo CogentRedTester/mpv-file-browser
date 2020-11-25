@@ -200,7 +200,7 @@ local function select_prev_directory()
 
     local i = 1
     while (list.list[i] and list.list[i].type == "dir") do
-        if state.prev_directory:find(state.directory..list.list[i].name) then
+        if state.prev_directory:find(state.directory..list.list[i].name, 1, true) then
             list.selected = i
             break
         end
