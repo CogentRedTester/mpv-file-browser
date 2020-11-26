@@ -21,15 +21,14 @@ end
 
 local function parse_http(directory)
     msg.verbose(directory)
-
-    msg.trace("curl -k -l -s "..string.format("%q", directory))
+    msg.trace("curl -k -l -m 5 "..string.format("%q", directory))
 
     local html = mp.command_native({
         name = "subprocess",
         playback_only = false,
         capture_stdout = true,
         capture_stderr = true,
-        args = {"curl", "-k", "-l", directory}
+        args = {"curl", "-k", "-l", "-m", "5", directory}
     })
     html = html.stdout
     if not html:find("%[PARENTDIR%]") then return end
