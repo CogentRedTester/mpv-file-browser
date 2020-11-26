@@ -28,11 +28,6 @@
         "command": ["print-text", "quote/escape filepath: %F"]
     },
     {
-        "key": "Alt+ENTER",
-        "command": ["sub-add", "%f"],
-        "filter": "file"
-    },
-    {
         "key": "Alt+DEL",
         "command": ["run", "rm", "%F"],
         "filter": "file"
