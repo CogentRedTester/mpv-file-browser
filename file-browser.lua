@@ -67,7 +67,7 @@ list.header_style = o.ass_header
 
 local cache = {}
 local extensions = nil
-local sub_extensions = nil
+local sub_extensions = {}
 local state = {
     directory = nil,
     selection = {},
@@ -184,12 +184,12 @@ local function sort(t)
     return t
 end
 
---checks if the name has a valid extension
-local function is_valid(name)
+--checks returns the extension of the file
+local function get_extension(name)
     local index = name:find([[.[^.]*$]])
     if not index then return false end
     local fileext = name:sub(index + 1)
-    return extensions[fileext]
+    return fileext
 end
 
 --removes items and folders from the list
@@ -201,7 +201,7 @@ local function filter(t)
         local temp = t[i]
         t[i] = nil
         if  ( temp.type == "dir" and (not o.filter_dot_dirs or (temp.name:find('%.') ~= 1)) )
-            or ( temp.type == "file" and (not o.filter_files or is_valid(temp.name)) )
+            or ( temp.type == "file" and (not o.filter_files or extensions[ get_extension(temp.name) ]) )
         then
             t[top] = temp
             top = top+1
@@ -318,7 +318,7 @@ local function update_local_list()
 
         --only adds whitelisted files to the browser
         if o.filter_files then
-            if not is_valid(item) then goto continue end
+            if not extensions[ get_extension(item) ] then goto continue end
         end
 
         msg.debug(item)
@@ -481,7 +481,9 @@ local function loadfile(item, flags)
     local path = state.directory..item.name
     if (path == state.dvd_device) then path = "dvd://"
     elseif item.type == "dir" then return loadlist(item, path, flags) end
-    return mp.commandv('loadfile', path, flags)
+
+    if sub_extensions[ get_extension(item.name) ] then mp.commandv("sub-add", path, flags == "replace" and "select" or "auto")
+    else mp.commandv('loadfile', path, flags) end
 end
 
 --opens the selelected file(s)
