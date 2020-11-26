@@ -541,13 +541,6 @@ local function escape()
     list:close()
 end
 
---isolates just the name of the current directory
-local function get_dir_name()
-    local find = state.directory:reverse():match("/(.-)/")
-    if find then return find:reverse()
-    else return state.directory:match("(.-)/") end
-end
-
 --iterates through the command table and substitutes special
 --character codes for the correct strings used for custom functions
 local function format_command_table(t, index)
@@ -562,8 +555,8 @@ local function format_command_table(t, index)
             ["%N"] = string.format("%q", l[index] and (l[index].label or l[index].name) or ""),
             ["%p"] = state.directory or "",
             ["%P"] = string.format("%q", state.directory or ""),
-            ["%d"] = get_dir_name() or "",
-            ["%D"] = string.format("q", get_dir_name() or "")
+            ["%d"] = state.directory:match("([^/]+)/$") or "",
+            ["%D"] = string.format("q", state.directory:match("([^/]+)/$") or "")
         })
     end
     return copy
