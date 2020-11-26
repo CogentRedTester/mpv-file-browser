@@ -31,6 +31,8 @@ The following keybinds are only set while the browser is open:
     Ctrl+DOWN       drag selection down
     Ctrl+UP         drag selection up
 
+When attempting to play or append a subtitle file the script will instead load the subtitle track into the existing video.
+
 ## Root Directory
 To accomodate for both windows and linux this script has its own virtual root directory where drives and file folders can be manually added. This can also be used to save favourite directories. The root directory can only contain folders.
 
@@ -47,7 +49,7 @@ By default file-browser only opens/appends the single item that the cursor has s
 
 ## Custom Keybinds
 File-browser also supports custom keybinds. These keybinds send normal input commands, but the script will substitute characters in the command strings for specific values depending on the currently open directory, and currently selected item.
-This allows for a wide range of customised behaviour, such as loading subtitle files from the browser, or copying the path of the selected item to the clipboard.
+This allows for a wide range of customised behaviour, such as loading additional audio tracks from the browser, or copying the path of the selected item to the clipboard.
 
 The feature is disabled by default, but is enabled with the `custom_keybinds` script-opt.
 Keybinds are declared in the `~~/script-opts/file-browser-keybinds.json` file, the config takes the form of an array of json objects, with the following keys:
@@ -93,12 +95,12 @@ Additionally, using the uppercase forms of those codes will send the substituted
 This adds double quotes around the string and automatically escapes any quotation marks within the string.
 This is not necessary for most mpv commands, but can be very useful when sending commands to the console with the `run` command.
 
-Example of a command to add a subtitle file:
+Example of a command to add an audio track:
 
 ```
 {
     "key": "Alt+ENTER",
-    "command": ["sub-add", "%f"],
+    "command": ["audio-add", "%f"],
     "filter": "file"
 }
 ```
