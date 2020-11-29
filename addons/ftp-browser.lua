@@ -39,6 +39,7 @@ local function parse_ftp(directory)
     local list = {}
     local i = 1
     for str in string.gmatch(entries.stdout, "[^\r\n]+") do
+        if (not str or not response[i]) then goto continue end
         msg.trace(str .. ' | ' .. response[i])
 
         if response[i]:sub(1,1) == "d" then
@@ -48,6 +49,7 @@ local function parse_ftp(directory)
         end
 
         i = i+1
+        ::continue::
     end
 
     return list
