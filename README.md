@@ -45,7 +45,10 @@ It is highly recommended that this be customised for the computer being used; [f
 `root=~/,C:/,D:/,E:/,Z:/`
 
 ## Multi-Select
-By default file-browser only opens/appends the single item that the cursor has selected. However, using the `Ctrl` keybinds specified above, it is possible to select multiple items to open all at once. Selected items are shown in a different colour to the cursor. When multiple items are selected, they will be appended after the currently selected file when using the ENTER commands. The currently selected (with the cursor) file will always be added first, regardless of if it is part of the multi-selection, and will follow replace/append behaviour as normal. Selected items will be appended to the playlist afterwards in the order that they appear on the screen.
+By default file-browser only opens/appends the single item that the cursor has selected.
+However, using the `Ctrl` keybinds specified above, it is possible to select multiple items to open all at once. Selected items are shown in a different colour to the cursor.
+When multiple items are selected using the open or append commands will add all selected files to the playlist in the order they appear on the screen.
+The currently selected (with the cursor) file will be ignored, instead the first multi-selected item in the folder will follow replace/append behaviour as normal, and following selected items will be appended to the playlist afterwards in the order that they appear on the screen.
 
 ## Custom Keybinds
 File-browser also supports custom keybinds. These keybinds send normal input commands, but the script will substitute characters in the command strings for specific values depending on the currently open directory, and currently selected item.

@@ -498,16 +498,15 @@ end
 local function open_file(flags)
     if list.selected > #list.list or list.selected < 1 then return end
 
-    loadfile(list.list[list.selected], flags)
-    state.selection[list.selected] = nil
-
     --handles multi-selection behaviour
     if next(state.selection) then
         local selection = sort_keys(state.selection)
 
         --the currently selected file will be loaded according to the flag
         --the remaining files will be appended
-        for i=1, #selection do
+        loadfile(list.list[selection[1]], flags)
+
+        for i=2, #selection do
             loadfile(list.list[selection[i]], "append-play")
         end
 
@@ -518,6 +517,7 @@ local function open_file(flags)
         return
 
     elseif flags == 'replace' then
+        loadfile(list.list[list.selected], flags)
         down_dir()
         list:close()
     end
