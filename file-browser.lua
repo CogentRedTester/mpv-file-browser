@@ -37,8 +37,9 @@ local o = {
     extension_whitelist = "",
 
     --filter dot directories like .config
-    --only usefu on linux systems
+    --most useful on linux systems
     filter_dot_dirs = false,
+    filter_dot_files = false,
 
     --enable addons
     dvd_browser = false,
@@ -200,12 +201,18 @@ local function filter(t)
     for i = 1, max do
         local temp = t[i]
         t[i] = nil
-        if  ( temp.type == "dir" and (not o.filter_dot_dirs or (temp.name:find('%.') ~= 1)) )
-            or ( temp.type == "file" and (not o.filter_files or extensions[ get_extension(temp.name) ]) )
-        then
-            t[top] = temp
-            top = top+1
+
+        if temp.type == "dir" and (not o.filter_dot_dirs or temp.name:sub(1,1) ~= ".") then goto continue end
+
+        if temp.type == "file"  then
+            if not o.filter_dot_files or (temp.name:sub(1,1) ~= ".") then goto continue end
+            if not o.filter_files or extensions[ get_extension(temp.name) ] then goto continue end
         end
+
+        t[top] = temp
+        top = top+1
+
+        ::continue::
     end
 end
 
@@ -303,7 +310,7 @@ local function update_local_list()
         local item = list1[i]
 
         --filters hidden dot directories for linux
-        if o.filter_dot_dirs and item:find('%.') == 1 then goto continue end
+        if o.filter_dot_dirs and item:sub(1,1) == "." then goto continue end
 
         msg.debug(item..'/')
         table.insert(list.list, {name = item..'/', type = 'dir'})
@@ -320,6 +327,8 @@ local function update_local_list()
         if o.filter_files then
             if not extensions[ get_extension(item) ] then goto continue end
         end
+
+        if o.filter_dot_files and item:sub(1,1) == "." then goto continue end
 
         msg.debug(item)
         table.insert(list.list, {name = item, type = 'file'})
