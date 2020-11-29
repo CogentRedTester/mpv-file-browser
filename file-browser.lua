@@ -474,6 +474,7 @@ end
 
 --loads lists or defers the command to add-ons
 local function loadlist(item, path, flags)
+    if flags == "append-play" then flags = "append" end
     local parser = item.parser or state.parser
     if parser == "file" or parser == "dvd" then mp.commandv('loadlist', path, flags)
     elseif parser ~= "" then
@@ -511,7 +512,7 @@ local function open_file(flags)
         loadfile(list.list[selection[1]], flags)
 
         for i=2, #selection do
-            loadfile(list.list[selection[i]], "append-play")
+            loadfile(list.list[selection[i]], "append")
         end
 
         --reset the selection after
@@ -524,6 +525,8 @@ local function open_file(flags)
         loadfile(list.list[list.selected], flags)
         down_dir()
         list:close()
+    else
+        loadfile(list.list[list.selected], flags)
     end
 end
 
