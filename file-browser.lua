@@ -202,11 +202,11 @@ local function filter(t)
         local temp = t[i]
         t[i] = nil
 
-        if temp.type == "dir" and (not o.filter_dot_dirs or temp.name:sub(1,1) ~= ".") then goto continue end
+        if temp.type == "dir" and (o.filter_dot_dirs and temp.name:sub(1,1) == ".") then goto continue end
 
         if temp.type == "file"  then
-            if not o.filter_dot_files or (temp.name:sub(1,1) ~= ".") then goto continue end
-            if not o.filter_files or extensions[ get_extension(temp.name) ] then goto continue end
+            if o.filter_dot_files and (temp.name:sub(1,1) == ".") then goto continue end
+            if o.filter_files and not extensions[ get_extension(temp.name) ] then goto continue end
         end
 
         t[top] = temp
