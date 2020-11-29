@@ -489,15 +489,12 @@ local directory_parser = {
 
     --continue with the next directory in the queue/stack
     continue = function(this)
-        if not this.stack[1] then
-            if this.queue[1] then
-                this:setup_parse(this.queue[1])
-                table.remove(this.queue, 1)
-                this:open_directory()
-            end
-            return
+        if this.stack[1] then this:open_directory()
+        elseif this.queue[1] then
+            this:setup_parse(this.queue[1])
+            table.remove(this.queue, 1)
+            this:open_directory()
         end
-        this:open_directory()
     end,
 
     --queue an item to be opened
@@ -553,7 +550,7 @@ local directory_parser = {
             mp.commandv("script-message", parser.."/browse-dir", directory, "callback/custom-loadlist")
         else
             top.files = scan_directory(directory)
-            this:continue()
+            this:open_directory()
         end
     end,
 
@@ -578,7 +575,7 @@ local directory_parser = {
                     top.pos = i
                     table.insert(this.stack, { pos = 0, directory = directory..files[i].name, files = nil})
                     this:scan_files()
-                    return
+                    if this.parser ~= "file" then return end
                 end
             end
         end
