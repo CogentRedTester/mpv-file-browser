@@ -41,6 +41,12 @@ local o = {
     filter_dot_dirs = false,
     filter_dot_files = false,
 
+    --when loading a directory from the browser use the scripts
+    --parsing code to load the contents of the folder (using filters and sorting)
+    --this means that files will be added to the playlist identically
+    --to how they appear in the browser, rather than leaving it to mpv
+    custom_dir_loading = false,
+
     --enable addons
     dvd_browser = false,
     http_browser = false,
@@ -291,7 +297,8 @@ local function goto_root()
 end
 
 --scans the current directory and updates the directory table
-local function open_directory(directory)
+local function scan_directory(directory)
+    msg.verbose("scanning files in " .. directory)
     local new_list = {}
     local list1 = utils.readdir(directory, 'dirs')
 
@@ -380,7 +387,7 @@ local function update_list()
         mp.commandv("script-message", "ftp/browse-dir", state.directory, "callback/browse-dir")
     else
         state.parser = "file"
-        list.list = open_directory(state.directory)
+        list.list = scan_directory(state.directory)
         if not list.list then goto_root() end
 
         --saves cache information
@@ -472,31 +479,77 @@ local function sort_keys(t)
     return keys
 end
 
---loads lists or defers the command to add-ons
-local function loadlist(item, path, flags)
-    if flags == "append-play" then flags = "append" end
+--declaring the open_directory function early since we're doing a cyclic recursive call
+local open_directory
+
+--custom directory loading function
+local function custom_loadlist(directory, item, flags)
     local parser = item.parser or state.parser
-    if parser == "file" or parser == "dvd" then mp.commandv('loadlist', path, flags)
+    directory = directory..item.name
+
+    if flags == "replace" then mp.commandv("playlist-clear") end
+    local clear_current = (flags == "replace" and not mp.get_property_bool("core-idle", true))
+
+    if parser ~= "file" then
+        mp.commandv("script-message", parser.."/browse-dir", directory, "callback/custom-loadlist", tostring(clear_current), directory)
+    else
+        open_directory( directory, scan_directory(directory) )
+        if clear_current then mp.commandv("playlist-remove", "current") end
+    end
+end
+
+--filters and sorts the response from the addons
+mp.register_script_message("callback/custom-loadlist", function(json, clear_current, directory)
+    if not json or json == "" then return msg.warn("could not open "..directory) end
+    local files = utils.parse_json(json)
+    if o.filter_files or o.filter_dot_dirs or o.filter_dot_files then filter(files) end
+    sort(files)
+    open_directory(directory, files)
+    if clear_current == "true" then mp.commandv("playlist-remove", "current") end
+end)
+
+--loads lists or defers the command to add-ons
+local function loadlist(item, flags)
+    local parser = item.parser or state.parser
+    if parser == "file" or parser == "dvd" then mp.commandv('loadlist', item.name, flags)
     elseif parser ~= "" then
         if flags == "replace" then mp.commandv("playlist-clear") end
-        local idle = mp.get_property("idle-active")
-        mp.commandv("script-message", parser.."/open-dir", path, "callback/loadlist", flags, idle)
+        local clear_current = (flags == "replace" and not mp.get_property("core-idle", true))
+        mp.commandv("script-message", parser.."/open-dir", item.name, "callback/loadlist", clear_current)
     end
 end
 
 --removes the current file if replacing a directory from an addon
-mp.register_script_message("callback/loadlist", function(flags, idle)
-    if flags == "replace" and idle == "no" then mp.commandv("playlist-remove", "current") end
+mp.register_script_message("callback/loadlist", function(clear_current)
+    if clear_current then mp.commandv("playlist-remove", "current") end
 end)
 
 --runs the loadfile or loadlist command
 local function loadfile(item, flags)
     local path = state.directory..item.name
     if (path == state.dvd_device) then path = "dvd://"
-    elseif item.type == "dir" then return loadlist(item, path, flags) end
+    elseif item.type == "dir" then 
+        if o.custom_dir_loading then return custom_loadlist(state.directory, item, flags == "append-play" and "append" or flags)
+        else return loadlist(item, flags == "append-play" and "append" or flags) end
+    end
 
     if sub_extensions[ get_extension(item.name) ] then mp.commandv("sub-add", path, flags == "replace" and "select" or "auto")
     else mp.commandv('loadfile', path, flags) end
+end
+
+--opens a whole directory
+--this is for custom directory loading
+open_directory = function(directory, files)
+    msg.debug("loading '"..directory.."' into playlist")
+    for i = 1, #files do
+        if not sub_extensions[ get_extension(files[i].name) ] then
+            if files[i].type == "file" then
+                mp.commandv("loadfile", directory..files[i].name, "append-play")
+            else
+                custom_loadlist(directory, files[i])
+            end
+        end
+    end
 end
 
 --opens the selelected file(s)
@@ -713,7 +766,7 @@ end)
 mp.register_script_message('callback/browse-dir', function(json)
     if not json or json == "" then goto_root(); return end
     list.list = utils.parse_json(json)
-    if o.filter_files or o.filter_dot_dirs then filter(list.list) end
+    if o.filter_files or o.filter_dot_dirs or o.filter_dot_files then filter(list.list) end
     sort(list.list)
     select_prev_directory()
 
