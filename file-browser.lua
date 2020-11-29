@@ -219,8 +219,6 @@ end
 --scans the list for the folder that the script just moved out of
 --must be run after the sort
 local function select_prev_directory()
-    if state.prev_directory:find(state.directory, 1, true) ~= 1 then return end
-
     local i = 1
     while (list.list[i] and list.list[i].type == "dir") do
         if state.prev_directory:find(state.directory..list.list[i].name, 1, true) then
@@ -293,17 +291,15 @@ local function goto_root()
 end
 
 --scans the current directory and updates the directory table
-local function update_local_list()
-    local list1 = utils.readdir(state.directory, 'dirs')
+local function open_directory(directory)
+    local new_list = {}
+    local list1 = utils.readdir(directory, 'dirs')
 
     --if we can't access the filesystem for the specified directory then we go to root page
     --this is cuased by either:
     --  a network file being streamed
     --  the user navigating above / on linux or the current drive root on windows
-    if list1 == nil then
-        goto_root()
-        return
-    end
+    if list1 == nil then return nil end
 
     --sorts folders and formats them into the list of directories
     for i=1, #list1 do
@@ -313,13 +309,13 @@ local function update_local_list()
         if o.filter_dot_dirs and item:sub(1,1) == "." then goto continue end
 
         msg.debug(item..'/')
-        table.insert(list.list, {name = item..'/', type = 'dir'})
+        table.insert(new_list, {name = item..'/', type = 'dir'})
 
         ::continue::
     end
 
     --appends files to the list of directory items
-    local list2 = utils.readdir(state.directory, 'files')
+    local list2 = utils.readdir(directory, 'files')
     for i=1, #list2 do
         local item = list2[i]
 
@@ -331,19 +327,12 @@ local function update_local_list()
         if o.filter_dot_files and item:sub(1,1) == "." then goto continue end
 
         msg.debug(item)
-        table.insert(list.list, {name = item, type = 'file'})
+        table.insert(new_list, {name = item, type = 'file'})
 
         ::continue::
     end
-    sort(list.list)
-    select_prev_directory()
-
-    --saves the latest directory at the top of the stack
-    cache[#cache+1] = {directory = state.directory, table = list.list}
-
-    --once the directory has been successfully loaded we set it as the 'prev' directory for next time
-    --this is for highlighting the previous folder when moving up a directory
-    state.prev_directory = state.directory
+    sort(new_list)
+    return new_list
 end
 
 --sends update requests to the different parsers
@@ -391,7 +380,12 @@ local function update_list()
         mp.commandv("script-message", "ftp/browse-dir", state.directory, "callback/browse-dir")
     else
         state.parser = "file"
-        update_local_list()
+        list.list = open_directory(state.directory)
+        if not list.list then goto_root() end
+
+        --saves cache information
+        cache[#cache+1] = {directory = state.directory, table = list.list}
+        state.prev_directory = state.directory
         list:update()
     end
 end
@@ -429,6 +423,7 @@ local function up_dir()
 
     cache[#cache] = nil
     update()
+    select_prev_directory()
 end
 
 --moves down a directory
