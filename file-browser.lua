@@ -376,10 +376,10 @@ local function update_list()
         goto_root()
     elseif o.http_browser and state.directory:find("https?://") == 1 then
         state.parser = "http"
-        mp.commandv("script-message", "http/browse-dir", state.directory)
+        mp.commandv("script-message", "http/browse-dir", state.directory, "callback/browse-dir")
     elseif o.ftp_browser and state.directory:sub(1, 6) == "ftp://" then
         state.parser = "ftp"
-        mp.commandv("script-message", "ftp/browse-dir", state.directory)
+        mp.commandv("script-message", "ftp/browse-dir", state.directory, "callback/browse-dir")
     else
         state.parser = "file"
         update_local_list()
@@ -472,9 +472,17 @@ end
 local function loadlist(item, path, flags)
     local parser = item.parser or state.parser
     if parser == "file" or parser == "dvd" then mp.commandv('loadlist', path, flags)
-    elseif parser ~= "" then mp.commandv("script-message", parser.."/open-dir", path, flags)
+    elseif parser ~= "" then
+        if flags == "replace" then mp.commandv("playlist-clear") end
+        local idle = mp.get_property("idle-active")
+        mp.commandv("script-message", parser.."/open-dir", path, "callback/loadlist", flags, idle)
     end
 end
+
+--removes the current file if replacing a directory from an addon
+mp.register_script_message("callback/loadlist", function(flags, idle)
+    if flags == "replace" and idle == "no" then mp.commandv("playlist-remove", "current") end
+end)
 
 --runs the loadfile or loadlist command
 local function loadfile(item, flags)
@@ -695,7 +703,7 @@ mp.register_script_message('browse-directory', function(directory)
 end)
 
 --a callback function for addon scripts to return the results of their filesystem processing
-mp.register_script_message('update-list-callback', function(json)
+mp.register_script_message('callback/browse-dir', function(json)
     if not json or json == "" then goto_root(); return end
     list.list = utils.parse_json(json)
     if o.filter_files or o.filter_dot_dirs then filter(list.list) end

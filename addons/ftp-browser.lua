@@ -66,16 +66,14 @@ local function open_directory(path)
 end
 
 --custom parsing of directories
-mp.register_script_message("ftp/browse-dir", function(dir)
+mp.register_script_message("ftp/browse-dir", function(dir, callback, ...)
     local json = parse_ftp(dir)
     if json then json = utils.format_json(json) end
-    mp.commandv("script-message", "update-list-callback", json or "")
+    mp.commandv("script-message", callback, json or "", ...)
 end)
 
 --custom handling for opening directories
-mp.register_script_message("ftp/open-dir", function(path, flags)
-    if flags == "replace" then mp.commandv("playlist-clear") end
-    local idle = mp.get_property_bool("idle-active")
+mp.register_script_message("ftp/open-dir", function(path, callback, ...)
     open_directory(path)
-    if flags == "replace" and not idle then mp.commandv("playlist-remove", "current") end
+    mp.commandv("script-message", callback, ...)
 end)
