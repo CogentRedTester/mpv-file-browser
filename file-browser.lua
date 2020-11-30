@@ -599,7 +599,7 @@ mp.register_script_message("callback/custom-loadlist", function(...) directory_p
 --loads lists or defers the command to add-ons
 local function loadlist(item, flags)
     local parser = item.parser or state.parser
-    if parser == "file" or parser == "dvd" then mp.commandv('loadlist', item.name, flags)
+    if parser == "file" or parser == "dvd" then mp.commandv('loadlist', state.directory..item.name, flags)
     elseif parser ~= "" then
         if flags == "replace" then mp.commandv("playlist-clear") end
         local clear_current = (flags == "replace" and not mp.get_property("core-idle", true))
@@ -617,7 +617,7 @@ local function loadfile(item, flags)
     local path = state.directory..item.name
     if (path == state.dvd_device) then path = "dvd://"
     elseif item.type == "dir" then 
-        if o.custom_dir_loading then return directory_parser:queue_directory(item, flags == "append-play" and "append" or flags)
+        if o.custom_dir_loading then return directory_parser:queue_directory(item, flags)
         else return loadlist(item, flags == "append-play" and "append" or flags) end
     end
 
