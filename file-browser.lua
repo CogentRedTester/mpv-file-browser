@@ -489,35 +489,43 @@ local directory_parser = {
 
     --continue with the next directory in the queue/stack
     continue = function(this)
-        if this.stack[1] then this:open_directory()
+        if this.stack[1] then return this:open_directory()
         elseif this.queue[1] then
-            this:setup_parse(this.queue[1])
+            local front = this.queue[1]
+            this:setup_parse(front.directory, front.parser, front.flags)
             table.remove(this.queue, 1)
-            this:open_directory()
+            return this:open_directory()
         end
     end,
 
     --queue an item to be opened
     queue_directory = function(this, item, flags)
         local dir = state.directory..item.name
+        local parser = item.parser or state.parser
+
+        --if it is a local file we won't worry about asynchronous loading and instead load it immediately
+        if parser == "file" then
+            this:setup_parse(dir, parser, flags)
+            return this:open_directory()
+        end
+
         table.insert(this.queue, {
             directory = dir,
-            parser = item.parser or state.parser,
+            parser = parser,
             flags = flags
         })
         msg.trace("queuing " .. dir .. " for opening")
     end,
 
     --setup the variables to start opening from a specific directory
-    setup_parse = function(this, args)
-        -- this.stack = {}
+    setup_parse = function(this, directory, parser, flags)
         this.stack[1] = {
             pos = 0,
-            directory = args.directory,
+            directory = directory,
             files = nil
         }
-        this.flags = args.flags
-        this.parser = args.parser
+        this.flags = flags
+        this.parser = parser
 
         if this.flags == "replace" then mp.commandv("playlist-clear") end
     end,
@@ -536,7 +544,7 @@ local directory_parser = {
         if o.filter_files or o.filter_dot_dirs or o.filter_dot_files then filter(files) end
         sort(files)
         top.files = files
-        this:continue()
+        return this:open_directory()
     end,
 
     --scan for files in the specific directory
@@ -550,7 +558,7 @@ local directory_parser = {
             mp.commandv("script-message", parser.."/browse-dir", directory, "callback/custom-loadlist")
         else
             top.files = scan_directory(directory)
-            this:open_directory()
+            return this:open_directory()
         end
     end,
 
@@ -561,7 +569,7 @@ local directory_parser = {
         local directory = top.directory
         msg.verbose("opening " .. directory)
 
-        if not files then this:scan_files() ; return
+        if not files then return this:scan_files()
         else msg.debug("loading '"..directory.."' into playlist") end
 
         --the position to iterate from is saved in case an asynchronous request needs to
@@ -574,14 +582,14 @@ local directory_parser = {
                 else
                     top.pos = i
                     table.insert(this.stack, { pos = 0, directory = directory..files[i].name, files = nil})
-                    this:scan_files()
-                    if this.parser ~= "file" then return end
+                    if this.parser ~= "file" then return this:scan_files()
+                    else this:scan_files() end
                 end
             end
         end
 
         this.stack[#this.stack] = nil
-        this:continue()
+        return this:continue()
     end
 }
 
@@ -620,6 +628,7 @@ end
 --opens the selelected file(s)
 local function open_file(flags)
     if list.selected > #list.list or list.selected < 1 then return end
+    if flags == 'replace' then list:close() end
 
     --handles multi-selection behaviour
     if next(state.selection) then
@@ -635,8 +644,7 @@ local function open_file(flags)
 
         --reset the selection after
         state.selection = {}
-        if flags == 'replace' then list:close()
-        else list:update() end
+        list:update()
 
     elseif flags == 'replace' then
         loadfile(list.list[list.selected], flags)
