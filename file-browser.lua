@@ -599,18 +599,13 @@ mp.register_script_message("callback/custom-loadlist", function(...) directory_p
 --loads lists or defers the command to add-ons
 local function loadlist(item, flags)
     local parser = item.parser or state.parser
-    if parser == "file" or parser == "dvd" then mp.commandv('loadlist', state.directory..item.name, flags)
+    if parser == "file" or parser == "dvd" then
+        mp.commandv('loadlist', state.directory..item.name, flags == "append-play" and "append" or flags)
+        if flags == "append-play" and mp.get_property_bool("core-idle") then mp.commandv("playlist-play-index", 0) end
     elseif parser ~= "" then
-        if flags == "replace" then mp.commandv("playlist-clear") end
-        local clear_current = (flags == "replace" and not mp.get_property("core-idle", true))
-        mp.commandv("script-message", parser.."/open-dir", item.name, "callback/loadlist", clear_current)
+        mp.commandv("script-message", parser.."/open-dir", state.directory..item.name, flags, "callback/loadlist")
     end
 end
-
---removes the current file if replacing a directory from an addon
-mp.register_script_message("callback/loadlist", function(clear_current)
-    if clear_current then mp.commandv("playlist-remove", "current") end
-end)
 
 --runs the loadfile or loadlist command
 local function loadfile(item, flags)
@@ -618,7 +613,7 @@ local function loadfile(item, flags)
     if (path == state.dvd_device) then path = "dvd://"
     elseif item.type == "dir" then 
         if o.custom_dir_loading then return directory_parser:queue_directory(item, flags)
-        else return loadlist(item, flags == "append-play" and "append" or flags) end
+        else return loadlist(item, flags) end
     end
 
     if sub_extensions[ get_extension(item.name) ] then mp.commandv("sub-add", path, flags == "replace" and "select" or "auto")
