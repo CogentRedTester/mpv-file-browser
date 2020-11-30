@@ -78,8 +78,7 @@ mp.register_script_message("http/browse-dir", function(dir, callback, ...)
 end)
 
 --custom handling for opening directories
-mp.register_script_message("http/open-dir", function(path, flags, callback, ...)
+mp.register_script_message("http/open-dir", function(path, flags)
     flag = flags
     open_directory(path)
-    mp.commandv("script-message", callback, ...)
 end)

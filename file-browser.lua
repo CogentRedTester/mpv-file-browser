@@ -603,7 +603,7 @@ local function loadlist(item, flags)
         mp.commandv('loadlist', state.directory..item.name, flags == "append-play" and "append" or flags)
         if flags == "append-play" and mp.get_property_bool("core-idle") then mp.commandv("playlist-play-index", 0) end
     elseif parser ~= "" then
-        mp.commandv("script-message", parser.."/open-dir", state.directory..item.name, flags, "callback/loadlist")
+        mp.commandv("script-message", parser.."/open-dir", state.directory..item.name, flags)
     end
 end
 
