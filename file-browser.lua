@@ -526,8 +526,6 @@ local directory_parser = {
         }
         this.flags = flags
         this.parser = parser
-
-        if this.flags == "replace" then mp.commandv("playlist-clear") end
     end,
 
     --parse the response from an add-on
@@ -537,9 +535,9 @@ local directory_parser = {
         if not json or json == "" then 
             msg.warn("could not open "..top.directory)
             this.stack[#this.stack] = nil
-            this:continue()
-            return
+            return this:continue()
         end
+
         local files = utils.parse_json(json)
         if o.filter_files or o.filter_dot_dirs or o.filter_dot_files then filter(files) end
         sort(files)
