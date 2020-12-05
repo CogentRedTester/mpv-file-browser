@@ -501,17 +501,10 @@ local directory_parser = {
     --queue an item to be opened
     queue_directory = function(this, item, flags)
         local dir = state.directory..item.name
-        local parser = item.parser or state.parser
-
-        --if it is a local file we won't worry about asynchronous loading and instead load it immediately
-        if parser == "file" then
-            this:setup_parse(dir, parser, flags)
-            return this:open_directory()
-        end
 
         table.insert(this.queue, {
             directory = dir,
-            parser = parser,
+            parser = item.parser or state.parser,
             flags = flags
         })
         msg.trace("queuing " .. dir .. " for opening")
