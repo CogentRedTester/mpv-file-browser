@@ -49,5 +49,13 @@
         "command": ["run", "powershell", "-command", "explorer.exe", "(( %F ).TrimEnd('/') -replace '/', '\\' )"],
         "filter": "dir",
         "multiselect": true
+    },
+    {
+        "key": "Alt+o",
+        "command": [
+            ["script-binding", "file_browser/dynamic/1/close"],
+            ["script-message", "type", "script-message browse-directory \"\" \n; script-binding console/_console_1", "34"]
+        ],
+        "multiselect": false
     }
 ]
