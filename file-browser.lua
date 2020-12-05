@@ -576,8 +576,7 @@ local directory_parser = {
                 else
                     top.pos = i
                     table.insert(this.stack, { pos = 0, directory = directory..files[i].name, files = nil})
-                    if this.parser ~= "file" then return this:scan_files()
-                    else this:scan_files() end
+                    return this:scan_files()
                 end
             end
         end
