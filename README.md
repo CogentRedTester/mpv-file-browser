@@ -18,6 +18,7 @@ The following keybinds are only set while the browser is open:
     ESC             closes the browser or clears the selection
     ENTER           plays the currently selected file or folder
     Shift+ENTER     appends the current file or folder to the playlist
+    Alt+ENTER       loads playlist entries before and after the selected file (like autoload.lua)
     DOWN            move selector down the list
     UP              move selector up the list
     RIGHT           enter the currently selected directory
@@ -32,6 +33,9 @@ The following keybinds are only set while the browser is open:
     Ctrl+UP         drag selection up
 
 When attempting to play or append a subtitle file the script will instead load the subtitle track into the existing video.
+
+The behaviour of the autoload keybind can be reversed with the `autoload` script-opt.
+By default the playlist will only be autoloaded if `Alt+ENTER` is used on a single file, however when the option is switched autoload will always be used on single files *unless* `Alt+ENTER` is used. Using autoload on a directory, or while appending an item, will not work.
 
 ## Root Directory
 To accomodate for both windows and linux this script has its own virtual root directory where drives and file folders can be manually added. This can also be used to save favourite directories. The root directory can only contain folders.

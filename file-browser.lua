@@ -47,6 +47,11 @@ local o = {
     --to how they appear in the browser, rather than leaving it to mpv
     custom_dir_loading = false,
 
+    --this option reverses the behaviour of the alt+ENTER keybind
+    --when disabled the keybind is required to enable autoload for the file
+    --when enabled the keybind disables autoload for the file
+    autoload = false,
+
     --enable addons
     dvd_browser = false,
     http_browser = false,
@@ -595,8 +600,23 @@ local function loadlist(item, flags)
     end
 end
 
+--load playlist entries before and after the currently playing file
+local function autoload_dir(path)
+    local pos = 1
+    local file_count = 0
+    for _,item in ipairs(list.list) do
+        if item.type == "file" then
+            local p = state.directory..item.name
+            if p == path then pos = file_count
+            else mp.commandv("loadfile", p, "append") end
+            file_count = file_count + 1
+        end
+    end
+    mp.commandv("playlist-move", 0, pos+1)
+end
+
 --runs the loadfile or loadlist command
-local function loadfile(item, flags)
+local function loadfile(item, flags, autoload)
     local path = state.directory..item.name
     if (path == state.dvd_device) then path = "dvd://"
     elseif item.type == "dir" then 
@@ -605,11 +625,14 @@ local function loadfile(item, flags)
     end
 
     if sub_extensions[ get_extension(item.name) ] then mp.commandv("sub-add", path, flags == "replace" and "select" or "auto")
-    else mp.commandv('loadfile', path, flags) end
+    else
+        mp.commandv('loadfile', path, flags)
+        if autoload then autoload_dir(path) end
+    end
 end
 
 --opens the selelected file(s)
-local function open_file(flags)
+local function open_file(flags, autoload)
     if list.selected > #list.list or list.selected < 1 then return end
     if flags == 'replace' then list:close() end
 
@@ -630,7 +653,7 @@ local function open_file(flags)
         list:update()
 
     elseif flags == 'replace' then
-        loadfile(list.list[list.selected], flags)
+        loadfile(list.list[list.selected], flags, autoload ~= o.autoload)
         down_dir()
         list:close()
     else
@@ -745,15 +768,16 @@ end
 
 --dynamic keybinds to set while the browser is open
 list.keybinds = {
-    {'ENTER', 'open', function() open_file('replace') end, {}},
-    {'Shift+ENTER', 'append_playlist', function() open_file('append-play') end, {}},
-    {'ESC', 'exit', function() escape() end, {}},
+    {'ENTER', 'open', function() open_file('replace', false) end, {}},
+    {'Shift+ENTER', 'open_append', function() open_file('append-play', false) end, {}},
+    {'Alt+ENTER', 'open_autoload', function() open_file('replace', true) end, {}},
+    {'ESC', 'close', function() escape() end, {}},
     {'RIGHT', 'down_dir', function() down_dir() end, {}},
     {'LEFT', 'up_dir', function() up_dir() end, {}},
     {'DOWN', 'scroll_down', function() list:scroll_down() end, {repeatable = true}},
     {'UP', 'scroll_up', function() list:scroll_up() end, {repeatable = true}},
-    {'HOME', 'pwd', function() cache = {}; goto_current_dir() end, {}},
-    {'Shift+HOME', 'root', function() goto_root() end, {}},
+    {'HOME', 'goto_current', function() cache = {}; goto_current_dir() end, {}},
+    {'Shift+HOME', 'goto_root', function() goto_root() end, {}},
     {'Ctrl+r', 'reload', function() cache={}; update() end, {}},
     {'Ctrl+ENTER', 'select', function() toggle_selection() end, {}},
     {'Ctrl+DOWN', 'select_down', function() drag_down() end, {repeatable = true}},
