@@ -55,6 +55,8 @@ local function parse_ftp(directory)
     return list
 end
 
+local flag = ""
+
 --recursively opens the given directory
 local function open_directory(path)
     local list = parse_ftp(path)
@@ -63,7 +65,10 @@ local function open_directory(path)
         local item_path = path..list[i].name
 
         if list[i].type == "dir" then open_directory(item_path)
-        else mp.commandv("loadfile", item_path, "append-play") end
+        else
+            mp.commandv("loadfile", item_path, flag)
+            flag = "append"
+        end
     end
 end
 
@@ -75,7 +80,7 @@ mp.register_script_message("ftp/browse-dir", function(dir, callback, ...)
 end)
 
 --custom handling for opening directories
-mp.register_script_message("ftp/open-dir", function(path, callback, ...)
+mp.register_script_message("ftp/open-dir", function(path, flags)
+    flag = flags
     open_directory(path)
-    mp.commandv("script-message", callback, ...)
 end)

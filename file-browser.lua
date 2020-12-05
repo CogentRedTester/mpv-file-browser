@@ -41,6 +41,12 @@ local o = {
     filter_dot_dirs = false,
     filter_dot_files = false,
 
+    --when loading a directory from the browser use the scripts
+    --parsing code to load the contents of the folder (using filters and sorting)
+    --this means that files will be added to the playlist identically
+    --to how they appear in the browser, rather than leaving it to mpv
+    custom_dir_loading = false,
+
     --enable addons
     dvd_browser = false,
     http_browser = false,
@@ -115,7 +121,6 @@ end
 --creating the custom formatting function
 list.format_line = function(this, i, v)
     local playing_file = highlight_entry(v)
-    -- if not playing_file then print(utils.to_string(state.current_file)) ; print(state.directory) end
     this:append(o.ass_body)
 
     --handles custom styles for different entries
@@ -288,7 +293,8 @@ local function goto_root()
 end
 
 --scans the current directory and updates the directory table
-local function open_directory(directory)
+local function scan_directory(directory)
+    msg.verbose("scanning files in " .. directory)
     local new_list = {}
     local list1 = utils.readdir(directory, 'dirs')
 
@@ -377,7 +383,7 @@ local function update_list()
         mp.commandv("script-message", "ftp/browse-dir", state.directory, "callback/browse-dir")
     else
         state.parser = "file"
-        list.list = open_directory(state.directory)
+        list.list = scan_directory(state.directory)
         if not list.list then goto_root() end
 
         --saves cache information
@@ -469,28 +475,134 @@ local function sort_keys(t)
     return keys
 end
 
+--an object for custom directory loading and parsing
+--this is written specifically for handling asynchronous playback from add-ons
+--I've bundled this into an object to make it clearer how everything works together
+local directory_parser = {
+    stack = {},
+    parser = "file",
+    flags = "",
+    queue = {},
+
+    --continue with the next directory in the queue/stack
+    continue = function(this)
+        if this.stack[1] then return this:open_directory()
+        elseif this.queue[1] then
+            local front = this.queue[1]
+            this:setup_parse(front.directory, front.parser, front.flags)
+            table.remove(this.queue, 1)
+            return this:open_directory()
+        end
+    end,
+
+    --queue an item to be opened
+    queue_directory = function(this, item, flags)
+        local dir = state.directory..item.name
+
+        table.insert(this.queue, {
+            directory = dir,
+            parser = item.parser or state.parser,
+            flags = flags
+        })
+        msg.trace("queuing " .. dir .. " for opening")
+    end,
+
+    --setup the variables to start opening from a specific directory
+    setup_parse = function(this, directory, parser, flags)
+        this.stack[1] = {
+            pos = 0,
+            directory = directory,
+            files = nil
+        }
+        this.flags = flags
+        this.parser = parser
+    end,
+
+    --parse the response from an add-on
+    callback = function(this, json)
+        local top = this.stack[#this.stack]
+
+        if not json or json == "" then 
+            msg.warn("could not open "..top.directory)
+            this.stack[#this.stack] = nil
+            return this:continue()
+        end
+
+        local files = utils.parse_json(json)
+        if o.filter_files or o.filter_dot_dirs or o.filter_dot_files then filter(files) end
+        sort(files)
+        top.files = files
+        return this:open_directory()
+    end,
+
+    --scan for files in the specific directory
+    scan_files = function(this)
+        local top = this.stack[#this.stack]
+        local parser = this.parser
+        local directory = top.directory
+        msg.debug("parsing files in '"..directory.."'")
+
+        if parser ~= "file" then
+            mp.commandv("script-message", parser.."/browse-dir", directory, "callback/custom-loadlist")
+        else
+            top.files = scan_directory(directory)
+            return this:open_directory()
+        end
+    end,
+
+    --open the files in a directory
+    open_directory = function(this)
+        local top = this.stack[#this.stack]
+        local files = top.files
+        local directory = top.directory
+        msg.verbose("opening " .. directory)
+
+        if not files then return this:scan_files()
+        else msg.debug("loading '"..directory.."' into playlist") end
+
+        --the position to iterate from is saved in case an asynchronous request needs to
+        --be made to open a folder part way through
+        for i = top.pos+1, #files do
+            if not sub_extensions[ get_extension(files[i].name) ] then
+                if files[i].type == "file" then
+                    mp.commandv("loadfile", directory..files[i].name, this.flags)
+                    this.flags = "append"
+                else
+                    top.pos = i
+                    table.insert(this.stack, { pos = 0, directory = directory..files[i].name, files = nil})
+                    if this.parser ~= "file" then return this:scan_files()
+                    else this:scan_files() end
+                end
+            end
+        end
+
+        this.stack[#this.stack] = nil
+        return this:continue()
+    end
+}
+
+--filters and sorts the response from the addons
+mp.register_script_message("callback/custom-loadlist", function(...) directory_parser:callback(...) end)
+
 --loads lists or defers the command to add-ons
-local function loadlist(item, path, flags)
-    if flags == "append-play" then flags = "append" end
+local function loadlist(item, flags)
     local parser = item.parser or state.parser
-    if parser == "file" or parser == "dvd" then mp.commandv('loadlist', path, flags)
+    if parser == "file" or parser == "dvd" then
+        mp.commandv('loadlist', state.directory..item.name, flags == "append-play" and "append" or flags)
+        if flags == "append-play" and mp.get_property_bool("core-idle") then mp.commandv("playlist-play-index", 0) end
     elseif parser ~= "" then
-        if flags == "replace" then mp.commandv("playlist-clear") end
-        local idle = mp.get_property("idle-active")
-        mp.commandv("script-message", parser.."/open-dir", path, "callback/loadlist", flags, idle)
+        mp.commandv("script-message", parser.."/open-dir", state.directory..item.name, flags)
     end
 end
-
---removes the current file if replacing a directory from an addon
-mp.register_script_message("callback/loadlist", function(flags, idle)
-    if flags == "replace" and idle == "no" then mp.commandv("playlist-remove", "current") end
-end)
 
 --runs the loadfile or loadlist command
 local function loadfile(item, flags)
     local path = state.directory..item.name
     if (path == state.dvd_device) then path = "dvd://"
-    elseif item.type == "dir" then return loadlist(item, path, flags) end
+    elseif item.type == "dir" then 
+        if o.custom_dir_loading then return directory_parser:queue_directory(item, flags)
+        else return loadlist(item, flags) end
+    end
 
     if sub_extensions[ get_extension(item.name) ] then mp.commandv("sub-add", path, flags == "replace" and "select" or "auto")
     else mp.commandv('loadfile', path, flags) end
@@ -499,6 +611,7 @@ end
 --opens the selelected file(s)
 local function open_file(flags)
     if list.selected > #list.list or list.selected < 1 then return end
+    if flags == 'replace' then list:close() end
 
     --handles multi-selection behaviour
     if next(state.selection) then
@@ -514,9 +627,7 @@ local function open_file(flags)
 
         --reset the selection after
         state.selection = {}
-        if flags == 'replace' then list:close()
-        else list:update() end
-        return
+        list:update()
 
     elseif flags == 'replace' then
         loadfile(list.list[list.selected], flags)
@@ -525,6 +636,8 @@ local function open_file(flags)
     else
         loadfile(list.list[list.selected], flags)
     end
+
+    if o.custom_dir_loading then directory_parser:continue() end
 end
 
 --opens the browser
@@ -710,7 +823,7 @@ end)
 mp.register_script_message('callback/browse-dir', function(json)
     if not json or json == "" then goto_root(); return end
     list.list = utils.parse_json(json)
-    if o.filter_files or o.filter_dot_dirs then filter(list.list) end
+    if o.filter_files or o.filter_dot_dirs or o.filter_dot_files then filter(list.list) end
     sort(list.list)
     select_prev_directory()
 
