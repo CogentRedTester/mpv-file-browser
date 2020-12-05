@@ -226,6 +226,7 @@ end
 --scans the list for the folder that the script just moved out of
 --must be run after the sort
 local function select_prev_directory()
+    if state.prev_directory:find(state.directory, 1, true) ~= 1 then return end
     local i = 1
     while (list.list[i] and list.list[i].type == "dir") do
         if state.prev_directory:find(state.directory..list.list[i].name, 1, true) then
@@ -390,6 +391,7 @@ local function update_list()
         state.parser = "file"
         list.list = scan_directory(state.directory)
         if not list.list then goto_root() end
+        select_prev_directory()
 
         --saves cache information
         cache[#cache+1] = {directory = state.directory, table = list.list}
@@ -431,7 +433,6 @@ local function up_dir()
 
     cache[#cache] = nil
     update()
-    select_prev_directory()
 end
 
 --moves down a directory
