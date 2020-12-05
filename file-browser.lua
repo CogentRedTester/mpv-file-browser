@@ -185,12 +185,9 @@ local function sort(t)
     return t
 end
 
---checks returns the extension of the file
-local function get_extension(name)
-    local index = name:find([[.[^.]*$]])
-    if not index then return false end
-    local fileext = name:sub(index + 1)
-    return fileext
+--returns the file extension of the given file
+local function get_extension(filename)
+    return filename:match("%.([^%.]+)$")
 end
 
 --removes items and folders from the list
