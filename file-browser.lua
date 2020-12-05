@@ -226,14 +226,22 @@ end
 --scans the list for the folder that the script just moved out of
 --must be run after the sort
 local function select_prev_directory()
-    if state.prev_directory:find(state.directory, 1, true) ~= 1 then return end
-    local i = 1
-    while (list.list[i] and list.list[i].type == "dir") do
-        if state.prev_directory:find(state.directory..list.list[i].name, 1, true) then
-            list.selected = i
-            break
+    if state.prev_directory:find(state.directory, 1, true) == 1 then
+        local i = 1
+        while (list.list[i] and list.list[i].type == "dir") do
+            if state.prev_directory:find(state.directory..list.list[i].name, 1, true) then
+                list.selected = i
+                return
+            end
+            i = i+1
         end
-        i = i+1
+    end
+
+    for i,item in ipairs(list.list) do
+        if highlight_entry(item) then
+            list.selected = i
+            return
+        end
     end
 end
 
