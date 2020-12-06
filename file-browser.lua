@@ -223,8 +223,9 @@ local function filter(t)
     end
 end
 
---scans the list for the folder that the script just moved out of
---must be run after the sort
+--scans the list for which item to select by default
+--chooses the folder that the script just moved out of
+--or, otherwise, the item highlighted as currently playing
 local function select_prev_directory()
     if state.prev_directory:find(state.directory, 1, true) == 1 then
         local i = 1
