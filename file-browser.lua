@@ -76,9 +76,11 @@ local list = require "scroll-list"
 --setting ass styles for the list
 list.num_entries = o.num_entries
 list.header_style = o.ass_header
+list.cursor_style = o.ass_cursor
 
 list.directory = nil
 list.selection = {}
+list.multiselect = nil
 list.prev_directory = ""
 list.dvd_device = nil
 list.parser = "file-browser"
@@ -91,6 +93,7 @@ local current_file = {
     directory = nil,
     name = nil
 }
+
 local root = nil
 local open_dvd_browser
 
@@ -129,7 +132,7 @@ list.format_line = function(this, i, v)
     this:append(o.ass_body)
 
     --handles custom styles for different entries
-    if i == list.selected then this:append(o.ass_cursor..[[➤\h]]..o.ass_body)
+    if i == list.selected then this:append(list.cursor_style..[[➤\h]]..o.ass_body)
     else this:append([[\h\h\h\h]]) end
 
     --sets the selection colour scheme
@@ -248,6 +251,11 @@ local function select_prev_directory()
     end
 end
 
+local function disable_select_mode()
+    list.cursor_style = o.ass_cursor
+    list.multiselect = nil
+end
+
 --splits the string into a table on the semicolons
 local function setup_root()
     root = {}
@@ -305,6 +313,7 @@ local function goto_root()
     list.prev_directory = ""
     cache = {}
     list.selection = {}
+    disable_select_mode()
     update_header()
     list:update()
 end
@@ -416,6 +425,7 @@ local function update()
     update_header()
     list.empty_text = "~"
     list.list = {}
+    disable_select_mode()
     list:update()
     list.empty_text = "empty directory"
     update_list()
@@ -456,36 +466,49 @@ local function down_dir()
     update()
 end
 
---toggles the selection
-local function toggle_selection()
-    if list.list[list.selected] then
-        if list.selection[list.selected] then
-            list.selection[list.selected] = nil
-        else
-            list.selection[list.selected] = true
-        end
+--calculates what drag behaviour is required for that specific movement
+local function drag_select(direction)
+    local setting = list.selection[list.multiselect]
+    local below = (list.multiselect - list.selected) < 1
+
+    if list.selected ~= list.multiselect and below == (direction == 1) then
+        list.selection[list.selected] = setting
+    elseif setting then
+        list.selection[list.selected - direction] = nil
     end
     list:update()
 end
 
---drags the selection down
-local function drag_down()
-    list.selection[list.selected] = true
+--wrapper for list:scroll_down() which runs the multiselect drag behaviour when required
+local function scroll_down()
     list:scroll_down()
-    list.selection[list.selected] = true
-    list:update()
+    if list.multiselect then drag_select(1) end
 end
 
---drags the selection up
-local function drag_up()
-    list.selection[list.selected] = true
+--wrapper for list:scroll_up() which runs the multiselect drag behaviour when required
+local function scroll_up()
     list:scroll_up()
-    list.selection[list.selected] = true
+    if list.multiselect then drag_select(-1) end
+end
+
+--toggles the selection
+local function toggle_selection()
+    if list.list[list.selected] then
+        list.selection[list.selected] = not list.selection[list.selected] or nil
+    end
     list:update()
 end
 
-local function set_select_flags(complex)
-
+--toggles select mode
+local function toggle_select_mode()
+    if list.multiselect == nil then
+        list.multiselect = list.selected
+        list.cursor_style = o.ass_multiselect
+        toggle_selection()
+    else
+        disable_select_mode()
+        list:update()
+    end
 end
 
 --sortes a table into an array of its key values
@@ -666,6 +689,7 @@ local function open_file(flags, autoload)
 
         --reset the selection after
         list.selection = {}
+        disable_select_mode()
         list:update()
 
     elseif flags == 'replace' then
@@ -711,8 +735,9 @@ end
 local function escape()
     --if multiple items are selection cancel the
     --selection instead of closing the browser
-    if next(list.selection) then
+    if next(list.selection) or list.multiselect then
         list.selection = {}
+        disable_select_mode()
         list:update()
         return
     end
@@ -790,17 +815,13 @@ list.keybinds = {
     {'ESC', 'close', escape, {}},
     {'RIGHT', 'down_dir', down_dir, {}},
     {'LEFT', 'up_dir', up_dir, {}},
-    {'DOWN', 'scroll_down', function() list:scroll_down() end, {repeatable = true}},
-    {'UP', 'scroll_up', function() list:scroll_up() end, {repeatable = true}},
+    {'DOWN', 'scroll_down', scroll_down, {repeatable = true}},
+    {'UP', 'scroll_up', scroll_up, {repeatable = true}},
     {'HOME', 'goto_current', goto_current_dir, {}},
     {'Shift+HOME', 'goto_root', goto_root, {}},
     {'Ctrl+r', 'reload', function() cache={}; update() end, {}},
-    {'s', 'select',  }
-    -- {'Ctrl+ENTER', 'select', function() toggle_selection() end, {}},
-    -- {'Ctrl+DOWN', 'select_down', function() drag_down() end, {repeatable = true}},
-    -- {'Ctrl+UP', 'select_up', function() drag_up() end, {repeatable = true}},
-    -- {'Ctrl+RIGHT', 'select_yes', function() list.selection[list.selected] = true ; list:update() end, {}},
-    -- {'Ctrl+LEFT', 'select_no', function() list.selection[list.selected] = nil ; list:update() end, {}}
+    {'s', 'select_mode', toggle_select_mode, {}},
+    {'S', 'select', toggle_selection, {}}
 }
 
 --loading the custom keybinds
@@ -852,7 +873,7 @@ end)
 
 --allows keybinds/other scripts to auto-open specific directories
 mp.register_script_message('browse-directory', function(directory)
-    directory = fix_path(directory, true)
+    if directory ~= "" then directory = fix_path(directory, true) end
     msg.verbose('recieved directory from script message: '..directory)
 
     list.directory = directory

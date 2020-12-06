@@ -26,11 +26,8 @@ The following keybinds are only set while the browser is open:
     HOME            move to the directory of the currently playing file
     Shift+HOME      move to the root directory
     Ctrl+r          reload directory and reset cache
-    Ctrl+ENTER      toggle selection for the current item
-    Ctrl+RIGHT      select current item
-    Ctrl+LEFT       deselect current item
-    Ctrl+DOWN       drag selection down
-    Ctrl+UP         drag selection up
+    s               toggles multiselect mode
+    S               toggles selection for the current item
 
 When attempting to play or append a subtitle file the script will instead load the subtitle track into the existing video.
 
@@ -50,7 +47,9 @@ It is highly recommended that this be customised for the computer being used; [f
 
 ## Multi-Select
 By default file-browser only opens/appends the single item that the cursor has selected.
-However, using the `Ctrl` keybinds specified above, it is possible to select multiple items to open all at once. Selected items are shown in a different colour to the cursor.
+However, using the `s` keybinds specified above, it is possible to select multiple items to open all at once. Selected items are shown in a different colour to the cursor.
+When in multiselect mode the cursor changes colour and scrolling up and down the list will drag the current selection. If the original item was unselected, then dragging will select items, if the original item was selected, then dragging will unselect items.
+
 When multiple items are selected using the open or append commands will add all selected files to the playlist in the order they appear on the screen.
 The currently selected (with the cursor) file will be ignored, instead the first multi-selected item in the folder will follow replace/append behaviour as normal, and following selected items will be appended to the playlist afterwards in the order that they appear on the screen.
 
