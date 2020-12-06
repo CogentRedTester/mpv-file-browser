@@ -150,10 +150,10 @@ list.format_line = function(this, i, v)
 end
 
 --standardises filepaths across systems
-local function fix_path(str, directory)
+local function fix_path(str, is_directory)
     str = str:gsub([[\]],[[/]])
     str = str:gsub([[/./]], [[/]])
-    if directory and str:sub(-1) ~= '/' then str = str..'/' end
+    if is_directory and str:sub(-1) ~= '/' then str = str..'/' end
     return str
 end
 
@@ -846,6 +846,7 @@ end)
 
 --allows keybinds/other scripts to auto-open specific directories
 mp.register_script_message('browse-directory', function(directory)
+    directory = fix_path(directory, true)
     msg.verbose('recieved directory from script message: '..directory)
 
     state.directory = directory
