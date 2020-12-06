@@ -237,10 +237,12 @@ local function select_prev_directory()
         end
     end
 
-    for i,item in ipairs(list.list) do
-        if highlight_entry(item) then
-            list.selected = i
-            return
+    if state.current_file.directory:find(state.directory, 1, true) == 1 then
+        for i,item in ipairs(list.list) do
+            if highlight_entry(item) then
+                list.selected = i
+                return
+            end
         end
     end
 end
