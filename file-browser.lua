@@ -77,19 +77,19 @@ local list = require "scroll-list"
 list.num_entries = o.num_entries
 list.header_style = o.ass_header
 
+list.directory = nil
+list.selection = {}
+list.prev_directory = ""
+list.dvd_device = nil
+list.parser = "file-browser"
+
 local cache = {}
 local extensions = nil
 local sub_extensions = {}
-local state = {
+
+local current_file = {
     directory = nil,
-    selection = {},
-    prev_directory = "",
-    current_file = {
-        directory = nil,
-        name = nil
-    },
-    dvd_device = nil,
-    parser = "file-browser"
+    name = nil
 }
 local root = nil
 local open_dvd_browser
@@ -117,9 +117,9 @@ end
 --detects whether or not to highlight the given entry as being played
 local function highlight_entry(v)
     if v.type == "dir" then
-        return state.current_file.directory:find(state.directory .. v.name, 1, true)
+        return current_file.directory:find(list.directory .. v.name, 1, true)
     else
-        return state.current_file.directory == state.directory and state.current_file.name == v.name
+        return current_file.directory == list.directory and current_file.name == v.name
     end
 end
 
@@ -133,7 +133,7 @@ list.format_line = function(this, i, v)
     else this:append([[\h\h\h\h]]) end
 
     --sets the selection colour scheme
-    local multiselected = state.selection[i]
+    local multiselected = list.selection[i]
     if multiselected then this:append(o.ass_multiselect)
     elseif i == list.selected then this:append(o.ass_selected) end
 
@@ -227,10 +227,10 @@ end
 --chooses the folder that the script just moved out of
 --or, otherwise, the item highlighted as currently playing
 local function select_prev_directory()
-    if state.prev_directory:find(state.directory, 1, true) == 1 then
+    if list.prev_directory:find(list.directory, 1, true) == 1 then
         local i = 1
         while (list.list[i] and list.list[i].type == "dir") do
-            if state.prev_directory:find(state.directory..list.list[i].name, 1, true) then
+            if list.prev_directory:find(list.directory..list.list[i].name, 1, true) then
                 list.selected = i
                 return
             end
@@ -238,7 +238,7 @@ local function select_prev_directory()
         end
     end
 
-    if state.current_file.directory:find(state.directory, 1, true) == 1 then
+    if current_file.directory:find(list.directory, 1, true) == 1 then
         for i,item in ipairs(list.list) do
             if highlight_entry(item) then
                 list.selected = i
@@ -270,21 +270,21 @@ end
 local function update_current_directory(_, filepath)
     --if we're in idle mode then we want to open to the root
     if filepath == nil then 
-        state.current_file.directory = ""
+        current_file.directory = ""
         return
     elseif filepath:find("dvd://") == 1 then
-        filepath = state.dvd_device
+        filepath = list.dvd_device
     end
 
     local workingDirectory = mp.get_property('working-directory', '')
     local exact_path = filepath:find(":") and filepath or utils.join_path(workingDirectory, filepath)
     exact_path = fix_path(exact_path, false)
-    state.current_file.directory, state.current_file.name = utils.split_path(exact_path)
+    current_file.directory, current_file.name = utils.split_path(exact_path)
 end
 
 --updates the header with the current directory
 local function update_header()
-    local dir_name = state.directory
+    local dir_name = list.directory
     if dir_name == "" then dir_name = "ROOT" end
     list.header = dir_name..'\\N ----------------------------------------------------'
 end
@@ -298,13 +298,13 @@ local function goto_root()
 
     --if moving to root from one of the connected locations,
     --then select that location
-    state.directory = ""
+    list.directory = ""
     select_prev_directory()
 
-    state.parser = ""
-    state.prev_directory = ""
+    list.parser = ""
+    list.prev_directory = ""
     cache = {}
-    state.selection = {}
+    list.selection = {}
     update_header()
     list:update()
 end
@@ -357,16 +357,16 @@ end
 
 --sends update requests to the different parsers
 local function update_list()
-    msg.verbose('loading contents of ' .. state.directory)
+    msg.verbose('loading contents of ' .. list.directory)
 
     list.selected = 1
-    state.selection = {}
+    list.selection = {}
     if extensions == nil then setup_extensions_list() end
 
     --dvd browser has special behaviour, so it is called seperately from the other add-ons
     if o.dvd_browser then
-        if state.directory == state.dvd_device then
-            state.parser = "dvd"
+        if list.directory == list.dvd_device then
+            list.parser = "dvd"
             open_dvd_browser()
             return
         end
@@ -377,36 +377,36 @@ local function update_list()
     --the cache is in the form of a stack, items are taken off the stack when the dir moves up
     if #cache > 0 then
         local cache = cache[#cache]
-        if cache.directory == state.directory then
+        if cache.directory == list.directory then
             msg.verbose('found directory in cache')
             list.list = cache.table
 
             --sets the cursor to the previously opened file and resets the prev_directory in
             --case we move above the cache source
             list.selected = cache.cursor
-            state.prev_directory = state.directory
+            list.prev_directory = list.directory
             list:update()
             return
         end
     end
 
-    if state.directory == "" then
+    if list.directory == "" then
         goto_root()
-    elseif o.http_browser and state.directory:find("https?://") == 1 then
-        state.parser = "http"
-        mp.commandv("script-message", "http/browse-dir", state.directory, "callback/browse-dir")
-    elseif o.ftp_browser and state.directory:sub(1, 6) == "ftp://" then
-        state.parser = "ftp"
-        mp.commandv("script-message", "ftp/browse-dir", state.directory, "callback/browse-dir")
+    elseif o.http_browser and list.directory:find("https?://") == 1 then
+        list.parser = "http"
+        mp.commandv("script-message", "http/browse-dir", list.directory, "callback/browse-dir")
+    elseif o.ftp_browser and list.directory:sub(1, 6) == "ftp://" then
+        list.parser = "ftp"
+        mp.commandv("script-message", "ftp/browse-dir", list.directory, "callback/browse-dir")
     else
-        state.parser = "file"
-        list.list = scan_directory(state.directory)
+        list.parser = "file"
+        list.list = scan_directory(list.directory)
         if not list.list then goto_root() end
         select_prev_directory()
 
         --saves cache information
-        cache[#cache+1] = {directory = state.directory, table = list.list}
-        state.prev_directory = state.directory
+        cache[#cache+1] = {directory = list.directory, table = list.list}
+        list.prev_directory = list.directory
         list:update()
     end
 end
@@ -424,14 +424,15 @@ end
 --switches to the directory of the currently playing file
 local function goto_current_dir()
     --splits the directory and filename apart
-    state.directory = state.current_file.directory
+    list.directory = current_file.directory
+    cache = {}
     list.selected = 1
     update()
 end
 
 --moves up a directory
 local function up_dir()
-    local dir = state.directory:reverse()
+    local dir = list.directory:reverse()
     local index = dir:find("[/\\]")
 
     while index == 1 do
@@ -439,8 +440,8 @@ local function up_dir()
         index = dir:find("[/\\]")
     end
 
-    if index == nil then state.directory = ""
-    else state.directory = dir:sub(index):reverse() end
+    if index == nil then list.directory = ""
+    else list.directory = dir:sub(index):reverse() end
 
     cache[#cache] = nil
     update()
@@ -450,7 +451,7 @@ end
 local function down_dir()
     if not list.list[list.selected] or list.list[list.selected].type ~= 'dir' then return end
 
-    state.directory = state.directory..list.list[list.selected].name
+    list.directory = list.directory..list.list[list.selected].name
     if #cache > 0 then cache[#cache].cursor = list.selected end
     update()
 end
@@ -458,10 +459,10 @@ end
 --toggles the selection
 local function toggle_selection()
     if list.list[list.selected] then
-        if state.selection[list.selected] then
-            state.selection[list.selected] = nil
+        if list.selection[list.selected] then
+            list.selection[list.selected] = nil
         else
-            state.selection[list.selected] = true
+            list.selection[list.selected] = true
         end
     end
     list:update()
@@ -469,18 +470,22 @@ end
 
 --drags the selection down
 local function drag_down()
-    state.selection[list.selected] = true
+    list.selection[list.selected] = true
     list:scroll_down()
-    state.selection[list.selected] = true
+    list.selection[list.selected] = true
     list:update()
 end
 
 --drags the selection up
 local function drag_up()
-    state.selection[list.selected] = true
+    list.selection[list.selected] = true
     list:scroll_up()
-    state.selection[list.selected] = true
+    list.selection[list.selected] = true
     list:update()
+end
+
+local function set_select_flags(complex)
+
 end
 
 --sortes a table into an array of its key values
@@ -514,11 +519,11 @@ local directory_parser = {
 
     --queue an item to be opened
     queue_directory = function(this, item, flags)
-        local dir = state.directory..item.name
+        local dir = list.directory..item.name
 
         table.insert(this.queue, {
             directory = dir,
-            parser = item.parser or state.parser,
+            parser = item.parser or list.parser,
             flags = flags
         })
         msg.trace("queuing " .. dir .. " for opening")
@@ -602,12 +607,12 @@ mp.register_script_message("callback/custom-loadlist", function(...) directory_p
 
 --loads lists or defers the command to add-ons
 local function loadlist(item, flags)
-    local parser = item.parser or state.parser
+    local parser = item.parser or list.parser
     if parser == "file" or parser == "dvd" then
-        mp.commandv('loadlist', state.directory..item.name, flags == "append-play" and "append" or flags)
+        mp.commandv('loadlist', list.directory..item.name, flags == "append-play" and "append" or flags)
         if flags == "append-play" and mp.get_property_bool("core-idle") then mp.commandv("playlist-play-index", 0) end
     elseif parser ~= "" then
-        mp.commandv("script-message", parser.."/open-dir", state.directory..item.name, flags)
+        mp.commandv("script-message", parser.."/open-dir", list.directory..item.name, flags)
     end
 end
 
@@ -617,7 +622,7 @@ local function autoload_dir(path)
     local file_count = 0
     for _,item in ipairs(list.list) do
         if item.type == "file" then
-            local p = state.directory..item.name
+            local p = list.directory..item.name
             if p == path then pos = file_count
             else mp.commandv("loadfile", p, "append") end
             file_count = file_count + 1
@@ -628,8 +633,8 @@ end
 
 --runs the loadfile or loadlist command
 local function loadfile(item, flags, autoload)
-    local path = state.directory..item.name
-    if (path == state.dvd_device) then path = "dvd://"
+    local path = list.directory..item.name
+    if (path == list.dvd_device) then path = "dvd://"
     elseif item.type == "dir" then 
         if o.custom_dir_loading then return directory_parser:queue_directory(item, flags)
         else return loadlist(item, flags) end
@@ -648,8 +653,8 @@ local function open_file(flags, autoload)
     if flags == 'replace' then list:close() end
 
     --handles multi-selection behaviour
-    if next(state.selection) then
-        local selection = sort_keys(state.selection)
+    if next(list.selection) then
+        local selection = sort_keys(list.selection)
 
         --the currently selected file will be loaded according to the flag
         --the remaining files will be appended
@@ -660,7 +665,7 @@ local function open_file(flags, autoload)
         end
 
         --reset the selection after
-        state.selection = {}
+        list.selection = {}
         list:update()
 
     elseif flags == 'replace' then
@@ -679,7 +684,7 @@ list.open = function(this)
     this:add_keybinds()
 
     list.hidden = false
-    if state.directory == nil then
+    if list.directory == nil then
         update_current_directory(nil, mp.get_property('path'))
         goto_current_dir()
         return
@@ -695,7 +700,7 @@ end
 --otherwise passes the request to the lists toggle function
 local function toggle_browser()
     --if we're in the dvd-device then pass the request on to dvd-browser
-    if o.dvd_browser and state.directory == state.dvd_device then
+    if o.dvd_browser and list.directory == list.dvd_device then
         mp.commandv('script-message-to', 'dvd_browser', 'dvd-browser')
     else
         list:toggle()
@@ -706,8 +711,8 @@ end
 local function escape()
     --if multiple items are selection cancel the
     --selection instead of closing the browser
-    if next(state.selection) then
-        state.selection = {}
+    if next(list.selection) then
+        list.selection = {}
         list:update()
         return
     end
@@ -722,14 +727,14 @@ local function format_command_table(t, index)
     for i = 1, #t do
         copy[i] = t[i]:gsub("%%.", {
             ["%%"] = "%",
-            ["%f"] = l[index] and state.directory..l[index].name or "",
-            ["%F"] = string.format("%q", l[index] and state.directory..l[index].name or ""),
+            ["%f"] = l[index] and list.directory..l[index].name or "",
+            ["%F"] = string.format("%q", l[index] and list.directory..l[index].name or ""),
             ["%n"] = l[index] and (l[index].label or l[index].name) or "",
             ["%N"] = string.format("%q", l[index] and (l[index].label or l[index].name) or ""),
-            ["%p"] = state.directory or "",
-            ["%P"] = string.format("%q", state.directory or ""),
-            ["%d"] = state.directory:match("([^/]+)/$") or "",
-            ["%D"] = string.format("q", state.directory:match("([^/]+)/$") or "")
+            ["%p"] = list.directory or "",
+            ["%P"] = string.format("%q", list.directory or ""),
+            ["%d"] = list.directory:match("([^/]+)/$") or "",
+            ["%D"] = string.format("q", list.directory:match("([^/]+)/$") or "")
         })
     end
     return copy
@@ -760,8 +765,8 @@ local function custom_command(cmd)
     end
 
     --runs the command on all multi-selected items
-    if cmd.multiselect and next(state.selection) then
-        local selection = sort_keys(state.selection)
+    if cmd.multiselect and next(list.selection) then
+        local selection = sort_keys(list.selection)
         for i = 1, #selection do
             run_custom_command(cmd.command, selection[i])
         end
@@ -772,7 +777,7 @@ end
 
 --passes control to DVD browser
 open_dvd_browser = function()
-    state.prev_directory = state.dvd_device
+    list.prev_directory = list.dvd_device
     list:close()
     mp.commandv('script-message', 'browse-dvd')
 end
@@ -782,19 +787,20 @@ list.keybinds = {
     {'ENTER', 'open', function() open_file('replace', false) end, {}},
     {'Shift+ENTER', 'open_append', function() open_file('append-play', false) end, {}},
     {'Alt+ENTER', 'open_autoload', function() open_file('replace', true) end, {}},
-    {'ESC', 'close', function() escape() end, {}},
-    {'RIGHT', 'down_dir', function() down_dir() end, {}},
-    {'LEFT', 'up_dir', function() up_dir() end, {}},
+    {'ESC', 'close', escape, {}},
+    {'RIGHT', 'down_dir', down_dir, {}},
+    {'LEFT', 'up_dir', up_dir, {}},
     {'DOWN', 'scroll_down', function() list:scroll_down() end, {repeatable = true}},
     {'UP', 'scroll_up', function() list:scroll_up() end, {repeatable = true}},
-    {'HOME', 'goto_current', function() cache = {}; goto_current_dir() end, {}},
-    {'Shift+HOME', 'goto_root', function() goto_root() end, {}},
+    {'HOME', 'goto_current', goto_current_dir, {}},
+    {'Shift+HOME', 'goto_root', goto_root, {}},
     {'Ctrl+r', 'reload', function() cache={}; update() end, {}},
-    {'Ctrl+ENTER', 'select', function() toggle_selection() end, {}},
-    {'Ctrl+DOWN', 'select_down', function() drag_down() end, {repeatable = true}},
-    {'Ctrl+UP', 'select_up', function() drag_up() end, {repeatable = true}},
-    {'Ctrl+RIGHT', 'select_yes', function() state.selection[list.selected] = true ; list:update() end, {}},
-    {'Ctrl+LEFT', 'select_no', function() state.selection[list.selected] = nil ; list:update() end, {}}
+    {'s', 'select',  }
+    -- {'Ctrl+ENTER', 'select', function() toggle_selection() end, {}},
+    -- {'Ctrl+DOWN', 'select_down', function() drag_down() end, {repeatable = true}},
+    -- {'Ctrl+UP', 'select_up', function() drag_up() end, {repeatable = true}},
+    -- {'Ctrl+RIGHT', 'select_yes', function() list.selection[list.selected] = true ; list:update() end, {}},
+    -- {'Ctrl+LEFT', 'select_no', function() list.selection[list.selected] = nil ; list:update() end, {}}
 }
 
 --loading the custom keybinds
@@ -826,7 +832,7 @@ end)
 --updates the dvd_device
 mp.observe_property('dvd-device', 'string', function(_, device)
     if device == "" then device = "/dev/dvd/" end
-    state.dvd_device = fix_path(device, true)
+    list.dvd_device = fix_path(device, true)
 end)
 
 --declares the keybind to open the browser
@@ -849,7 +855,7 @@ mp.register_script_message('browse-directory', function(directory)
     directory = fix_path(directory, true)
     msg.verbose('recieved directory from script message: '..directory)
 
-    state.directory = directory
+    list.directory = directory
     cache = {}
     update()
     list:open()
@@ -864,7 +870,7 @@ mp.register_script_message('callback/browse-dir', function(json)
     select_prev_directory()
 
     --setting up the cache stuff
-    cache[#cache+1] = {directory = state.directory, table = list.list}
-    state.prev_directory = state.directory
+    cache[#cache+1] = {directory = list.directory, table = list.list}
+    list.prev_directory = list.directory
     list:update()
 end)
