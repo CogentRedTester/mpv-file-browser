@@ -149,8 +149,8 @@ function list:format_line(i, v)
     if v.type == 'dir' then self:append([[🖿\h]]) end
 
     --adds the actual name of the item
-    if v.label then self:append(v.label.."\\N")
-    else self:append(v.name.."\\N") end
+    self:append(v.ass or v.label or v.name)
+    self:newline()
 end
 
 --standardises filepaths across systems
@@ -182,6 +182,13 @@ local function setup_extensions_list()
     --removing extensions that are in the blacklist
     for str in string.gmatch(o.extension_blacklist, "([^"..o.root_seperators.."]+)") do
         extensions[str] = nil
+    end
+end
+
+--escapes ass characters - better to do it once then calculate it on the fly every time the list updates
+local function escape_ass(t)
+    for i = 1, #t do
+        t[i].ass = t[i].ass or list.ass_escape(t[i].label or t[i].name)
     end
 end
 
@@ -295,7 +302,7 @@ end
 local function update_header()
     local dir_name = list.directory_label or list.directory
     if dir_name == "" then dir_name = "ROOT" end
-    list.header = dir_name..'\\N ----------------------------------------------------'
+    list.header = list.ass_escape(dir_name)..'\\N ----------------------------------------------------'
 end
 
 --loads the root list
@@ -339,7 +346,7 @@ local function scan_directory(directory)
         if o.filter_dot_dirs and item:sub(1,1) == "." then goto continue end
 
         msg.debug(item..'/')
-        table.insert(new_list, {name = item..'/', type = 'dir'})
+        table.insert(new_list, {name = item..'/', ass = list.ass_escape(item..'/'), type = 'dir'})
 
         ::continue::
     end
@@ -357,7 +364,7 @@ local function scan_directory(directory)
         if o.filter_dot_files and item:sub(1,1) == "." then goto continue end
 
         msg.debug(item)
-        table.insert(new_list, {name = item, type = 'file'})
+        table.insert(new_list, {name = item, ass = list.ass_escape(item), type = 'file'})
 
         ::continue::
     end
@@ -899,6 +906,7 @@ mp.register_script_message('callback/browse-dir', function(response)
     list.list = items
     if o.filter_files or o.filter_dot_dirs or o.filter_dot_files then filter(list.list) end
     sort(list.list)
+    escape_ass(list.list)
     select_prev_directory()
 
     --setting up the cache stuff
