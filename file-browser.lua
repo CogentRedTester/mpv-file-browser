@@ -111,7 +111,9 @@ function cache:push()
     table.insert(self.stack, {
         directory = list.directory,
         directory_label = list.directory_label,
-        list = list.list
+        list = list.list,
+        parser = list.parser,
+        selected = list.selected
     })
 end
 
@@ -425,15 +427,13 @@ local function update_list()
     --loads the current directry from the cache to save loading time
     --there will be a way to forcibly reload the current directory at some point
     --the cache is in the form of a stack, items are taken off the stack when the dir moves up
-    if #cache > 0 then
-        if cache.stack[#cache].directory == list.directory then
-            msg.verbose('found directory in cache')
-            cache:apply()
+    if #cache > 0 and cache.stack[#cache].directory == list.directory then
+        msg.verbose('found directory in cache')
+        cache:apply()
 
-            list.prev_directory = list.directory
-            list:update()
-            return
-        end
+        list.prev_directory = list.directory
+        list:update()
+        return
     end
 
     if list.directory == "" then
@@ -453,8 +453,7 @@ local function update_list()
         if not list.list then goto_root() end
         select_prev_directory()
 
-        --saves cache information
-        cache:push()
+        --saves previous directory information
         list.prev_directory = list.directory
         list:update()
     end
@@ -493,16 +492,16 @@ local function up_dir()
     if index == nil then list.directory = ""
     else list.directory = dir:sub(index):reverse() end
 
-    cache:pop()
     update()
+    cache:pop()
 end
 
 --moves down a directory
 local function down_dir()
     if not list.list[list.selected] or list.list[list.selected].type ~= 'dir' then return end
 
+    cache:push()
     list.directory = list.directory..list.list[list.selected].name
-    if #cache > 0 then cache.stack[#cache].selected = list.selected end
     update()
 end
 
@@ -915,9 +914,8 @@ mp.register_script_message('callback/browse-dir', function(response)
     --changes the text displayed when the directory is empty
     if response.empty_text then list.empty_text = response.empty_text end
 
-    --setting up the cache stuff
+    --setting up the previous directory stuff
     select_prev_directory()
-    cache:push()
     list.prev_directory = list.directory
     list:update()
 end)
