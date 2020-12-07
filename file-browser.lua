@@ -128,29 +128,29 @@ local function highlight_entry(v)
 end
 
 --creating the custom formatting function
-list.format_line = function(this, i, v)
+function list:format_line(i, v)
     local playing_file = highlight_entry(v)
-    this:append(o.ass_body)
+    self:append(o.ass_body)
 
     --handles custom styles for different entries
-    if i == list.selected then this:append(list.cursor_style..[[➤\h]]..o.ass_body)
-    else this:append([[\h\h\h\h]]) end
+    if i == list.selected then self:append(list.cursor_style..[[➤\h]]..o.ass_body)
+    else self:append([[\h\h\h\h]]) end
 
     --sets the selection colour scheme
     local multiselected = list.selection[i]
-    if multiselected then this:append(o.ass_multiselect)
-    elseif i == list.selected then this:append(o.ass_selected) end
+    if multiselected then self:append(o.ass_multiselect)
+    elseif i == list.selected then self:append(o.ass_selected) end
 
     --prints the currently-playing icon and style
-    if playing_file and multiselected then this:append(o.ass_playingselected)
-    elseif playing_file then this:append(o.ass_playing) end
+    if playing_file and multiselected then self:append(o.ass_playingselected)
+    elseif playing_file then self:append(o.ass_playing) end
 
     --sets the folder icon
-    if v.type == 'dir' then this:append([[🖿\h]]) end
+    if v.type == 'dir' then self:append([[🖿\h]]) end
 
     --adds the actual name of the item
-    if v.label then this:append(v.label.."\\N")
-    else this:append(v.name.."\\N") end
+    if v.label then self:append(v.label.."\\N")
+    else self:append(v.name.."\\N") end
 end
 
 --standardises filepaths across systems
@@ -532,21 +532,21 @@ local directory_parser = {
     queue = {},
 
     --continue with the next directory in the queue/stack
-    continue = function(this)
-        if this.stack[1] then return this:open_directory()
-        elseif this.queue[1] then
-            local front = this.queue[1]
-            this:setup_parse(front.directory, front.parser, front.flags)
-            table.remove(this.queue, 1)
-            return this:open_directory()
+    continue = function(self)
+        if self.stack[1] then return self:open_directory()
+        elseif self.queue[1] then
+            local front = self.queue[1]
+            self:setup_parse(front.directory, front.parser, front.flags)
+            table.remove(self.queue, 1)
+            return self:open_directory()
         end
     end,
 
     --queue an item to be opened
-    queue_directory = function(this, item, flags)
+    queue_directory = function(self, item, flags)
         local dir = list.directory..item.name
 
-        table.insert(this.queue, {
+        table.insert(self.queue, {
             directory = dir,
             parser = item.parser or list.parser,
             flags = flags
@@ -555,37 +555,38 @@ local directory_parser = {
     end,
 
     --setup the variables to start opening from a specific directory
-    setup_parse = function(this, directory, parser, flags)
-        this.stack[1] = {
+    setup_parse = function(self, directory, parser, flags)
+        self.stack[1] = {
             pos = 0,
             directory = directory,
             files = nil
         }
-        this.flags = flags
-        this.parser = parser
+        self.flags = flags
+        self.parser = parser
     end,
 
     --parse the response from an add-on
+    callback = function(self, response)
+        local top = self.stack[#self.stack]
         response = utils.parse_json(response)
         local files = response.list
 
         if not files then
             msg.warn("could not open "..top.directory)
-            this.stack[#this.stack] = nil
-            return this:continue()
+            self.stack[#self.stack] = nil
+            return self:continue()
         end
 
-        local files = utils.parse_json(json)
         if o.filter_files or o.filter_dot_dirs or o.filter_dot_files then filter(files) end
         sort(files)
         top.files = files
-        return this:open_directory()
+        return self:open_directory()
     end,
 
     --scan for files in the specific directory
-    scan_files = function(this)
-        local top = this.stack[#this.stack]
-        local parser = this.parser
+    scan_files = function(self)
+        local top = self.stack[#self.stack]
+        local parser = self.parser
         local directory = top.directory
         msg.debug("parsing files in '"..directory.."'")
 
@@ -593,18 +594,18 @@ local directory_parser = {
             mp.commandv("script-message", parser.."/browse-dir", directory, "callback/custom-loadlist")
         else
             top.files = scan_directory(directory)
-            return this:open_directory()
+            return self:open_directory()
         end
     end,
 
     --open the files in a directory
-    open_directory = function(this)
-        local top = this.stack[#this.stack]
+    open_directory = function(self)
+        local top = self.stack[#self.stack]
         local files = top.files
         local directory = top.directory
         msg.verbose("opening " .. directory)
 
-        if not files then return this:scan_files()
+        if not files then return self:scan_files()
         else msg.debug("loading '"..directory.."' into playlist") end
 
         --the position to iterate from is saved in case an asynchronous request needs to
@@ -612,18 +613,18 @@ local directory_parser = {
         for i = top.pos+1, #files do
             if not sub_extensions[ get_extension(files[i].name) ] then
                 if files[i].type == "file" then
-                    mp.commandv("loadfile", directory..files[i].name, this.flags)
-                    this.flags = "append"
+                    mp.commandv("loadfile", directory..files[i].name, self.flags)
+                    self.flags = "append"
                 else
                     top.pos = i
-                    table.insert(this.stack, { pos = 0, directory = directory..files[i].name, files = nil})
-                    return this:scan_files()
+                    table.insert(self.stack, { pos = 0, directory = directory..files[i].name, files = nil})
+                    return self:scan_files()
                 end
             end
         end
 
-        this.stack[#this.stack] = nil
-        return this:continue()
+        self.stack[#self.stack] = nil
+        return self:continue()
     end
 }
 
@@ -706,8 +707,8 @@ local function open_file(flags, autoload)
 end
 
 --opens the browser
-list.open = function(this)
-    this:add_keybinds()
+function list:open()
+    self:add_keybinds()
 
     list.hidden = false
     if list.directory == nil then
