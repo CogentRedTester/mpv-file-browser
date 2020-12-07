@@ -86,7 +86,6 @@ list.prev_directory = ""
 list.dvd_device = nil
 list.parser = "file-browser"
 
-local cache = {}
 local extensions = nil
 local sub_extensions = {}
 
@@ -96,6 +95,42 @@ local current_file = {
 }
 
 local root = nil
+
+local cache = {
+    stack = {}
+}
+local meta = {
+    __len = function(self)
+        return #self.stack
+    end
+}
+cache = setmetatable(cache, meta)
+
+--push current settings onto the stack
+function cache:push()
+    table.insert(self.stack, {
+        directory = list.directory,
+        directory_label = list.directory_label,
+        list = list.list
+    })
+end
+
+--remove latest directory from the stack
+function cache:pop()
+    table.remove(self.stack)
+end
+
+--apply the settings in the cache
+function cache:apply()
+    for key, value in pairs(self.stack[#self.stack]) do
+        list[key] = value
+    end
+end
+
+--empty the cache
+function cache:clear()
+    self.stack = {}
+end
 
 --default list of compatible file extensions
 --adding an item to this list is a valid request on github
@@ -155,6 +190,15 @@ function list:format_line(i, v)
 
     --adds the actual name of the item
     self:append(v.ass or v.label or v.name)
+    self:newline()
+end
+
+--updates the header with the current directory
+function list:format_header()
+    local dir_name = list.directory_label or list.directory
+    if dir_name == "" then dir_name = "ROOT" end
+    self:append(list.header_style)
+    self:append(list.ass_escape(dir_name)..'\\N ----------------------------------------------------')
     self:newline()
 end
 
@@ -304,13 +348,6 @@ local function update_current_directory(_, filepath)
     current_file.directory, current_file.name = utils.split_path(exact_path)
 end
 
---updates the header with the current directory
-local function update_header()
-    local dir_name = list.directory_label or list.directory
-    if dir_name == "" then dir_name = "ROOT" end
-    list.header = list.ass_escape(dir_name)..'\\N ----------------------------------------------------'
-end
-
 --loads the root list
 local function goto_root()
     if root == nil then setup_root() end
@@ -325,10 +362,9 @@ local function goto_root()
 
     list.parser = ""
     list.prev_directory = ""
-    cache = {}
+    cache:clear()
     list.selection = {}
     disable_select_mode()
-    update_header()
     list:update()
 end
 
@@ -390,14 +426,10 @@ local function update_list()
     --there will be a way to forcibly reload the current directory at some point
     --the cache is in the form of a stack, items are taken off the stack when the dir moves up
     if #cache > 0 then
-        local cache = cache[#cache]
-        if cache.directory == list.directory then
+        if cache.stack[#cache].directory == list.directory then
             msg.verbose('found directory in cache')
-            list.list = cache.table
+            cache:apply()
 
-            --sets the cursor to the previously opened file and resets the prev_directory in
-            --case we move above the cache source
-            list.selected = cache.cursor
             list.prev_directory = list.directory
             list:update()
             return
@@ -422,7 +454,7 @@ local function update_list()
         select_prev_directory()
 
         --saves cache information
-        cache[#cache+1] = {directory = list.directory, table = list.list}
+        cache:push()
         list.prev_directory = list.directory
         list:update()
     end
@@ -430,7 +462,6 @@ end
 
 --rescans the folder and updates the list
 local function update()
-    update_header()
     list.empty_text = "~"
     list.list = {}
     list.directory_label = nil
@@ -444,7 +475,7 @@ end
 local function goto_current_dir()
     --splits the directory and filename apart
     list.directory = current_file.directory
-    cache = {}
+    cache:clear()
     list.selected = 1
     update()
 end
@@ -462,7 +493,7 @@ local function up_dir()
     if index == nil then list.directory = ""
     else list.directory = dir:sub(index):reverse() end
 
-    cache[#cache] = nil
+    cache:pop()
     update()
 end
 
@@ -471,7 +502,7 @@ local function down_dir()
     if not list.list[list.selected] or list.list[list.selected].type ~= 'dir' then return end
 
     list.directory = list.directory..list.list[list.selected].name
-    if #cache > 0 then cache[#cache].cursor = list.selected end
+    if #cache > 0 then cache.stack[#cache].selected = list.selected end
     update()
 end
 
@@ -812,7 +843,7 @@ list.keybinds = {
     {'UP', 'scroll_up', scroll_up, {repeatable = true}},
     {'HOME', 'goto_current', goto_current_dir, {}},
     {'Shift+HOME', 'goto_root', goto_root, {}},
-    {'Ctrl+r', 'reload', function() cache={}; update() end, {}},
+    {'Ctrl+r', 'reload', function() cache:clear(); update() end, {}},
     {'s', 'select_mode', toggle_select_mode, {}},
     {'S', 'select', toggle_selection, {}}
 }
@@ -858,7 +889,7 @@ mp.register_script_message('browse-directory', function(directory)
     msg.verbose('recieved directory from script message: '..directory)
 
     list.directory = directory
-    cache = {}
+    cache:clear()
     update()
     list:open()
 end)
@@ -879,16 +910,14 @@ mp.register_script_message('callback/browse-dir', function(response)
     if response.ass_escape ~= false then escape_ass(list.list) end
 
     --changes the display name of the directory
-    if response.directory_label then
-        list.directory_label = response.directory_label
-        update_header()
-    end
+    list.directory_label = response.directory_label
 
     --changes the text displayed when the directory is empty
     if response.empty_text then list.empty_text = response.empty_text end
 
     --setting up the cache stuff
     select_prev_directory()
+    cache:push()
     list.prev_directory = list.directory
     list:update()
 end)
