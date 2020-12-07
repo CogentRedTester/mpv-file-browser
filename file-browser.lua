@@ -96,7 +96,6 @@ local current_file = {
 }
 
 local root = nil
-local open_dvd_browser
 
 --default list of compatible file extensions
 --adding an item to this list is a valid request on github
@@ -118,10 +117,16 @@ for i = 1, #subtitle_extensions do
     sub_extensions[subtitle_extensions[i]] = true
 end
 
+--get the full path for the current file
+local function get_full_path(item, dir)
+    if item.path then return item.path end
+    return (dir or list.directory)..item.name
+end
+
 --detects whether or not to highlight the given entry as being played
 local function highlight_entry(v)
     if v.type == "dir" then
-        return current_file.directory:find(list.directory .. v.name, 1, true)
+        return current_file.directory:find(get_full_path(v), 1, true)
     else
         return current_file.directory == list.directory and current_file.name == v.name
     end
@@ -241,7 +246,7 @@ local function select_prev_directory()
     if list.prev_directory:find(list.directory, 1, true) == 1 then
         local i = 1
         while (list.list[i] and list.list[i].type == "dir") do
-            if list.prev_directory:find(list.directory..list.list[i].name, 1, true) then
+            if list.prev_directory:find(get_full_path(list.list[i]), 1, true) then
                 list.selected = i
                 return
             end
@@ -276,6 +281,7 @@ local function setup_root()
         --setting up the addon handlers
         if o.http_browser and path:find("https://") == 1 then temp.parser = "http"
         elseif o.ftp_browser and path:sub(1,6) == "ftp://" then temp.parser = "ftp"
+        elseif o.dvd_browser and path == list.dvd_device then temp.parser = "dvd"
         else temp.parser = "file" end
 
         root[#root+1] = temp
@@ -289,11 +295,11 @@ local function update_current_directory(_, filepath)
         current_file.directory = ""
         return
     elseif filepath:find("dvd://") == 1 then
-        filepath = list.dvd_device
+        filepath = list.dvd_device..filepath:match("dvd://(.+)")
     end
 
     local workingDirectory = mp.get_property('working-directory', '')
-    local exact_path = filepath:find(":") and filepath or utils.join_path(workingDirectory, filepath)
+    local exact_path = filepath:find("^[^/\\]+://") and filepath or utils.join_path(workingDirectory, filepath)
     exact_path = fix_path(exact_path, false)
     current_file.directory, current_file.name = utils.split_path(exact_path)
 end
@@ -380,15 +386,6 @@ local function update_list()
     list.selection = {}
     if extensions == nil then setup_extensions_list() end
 
-    --dvd browser has special behaviour, so it is called seperately from the other add-ons
-    if o.dvd_browser then
-        if list.directory == list.dvd_device then
-            list.parser = "dvd"
-            open_dvd_browser()
-            return
-        end
-    end
-
     --loads the current directry from the cache to save loading time
     --there will be a way to forcibly reload the current directory at some point
     --the cache is in the form of a stack, items are taken off the stack when the dir moves up
@@ -409,6 +406,9 @@ local function update_list()
 
     if list.directory == "" then
         goto_root()
+    elseif o.dvd_browser and list.directory == list.dvd_device then
+        list.parser = "dvd"
+        mp.commandv("script-message", "dvd/browse-dir", list.directory, "callback/browse-dir")
     elseif o.http_browser and list.directory:find("https?://") == 1 then
         list.parser = "http"
         mp.commandv("script-message", "http/browse-dir", list.directory, "callback/browse-dir")
@@ -584,8 +584,10 @@ local directory_parser = {
             return self:continue()
         end
 
-        if o.filter_files or o.filter_dot_dirs or o.filter_dot_files then filter(files) end
-        sort(files)
+        if response.filter ~= false and (o.filter_files or o.filter_dot_dirs or o.filter_dot_files) then
+            filter(list.list)
+        end
+        if response.sort ~= false then sort(list.list) end
         top.files = files
         return self:open_directory()
     end,
@@ -620,11 +622,11 @@ local directory_parser = {
         for i = top.pos+1, #files do
             if not sub_extensions[ get_extension(files[i].name) ] then
                 if files[i].type == "file" then
-                    mp.commandv("loadfile", directory..files[i].name, self.flags)
+                    mp.commandv("loadfile", get_full_path(files[i], directory), self.flags)
                     self.flags = "append"
                 else
                     top.pos = i
-                    table.insert(self.stack, { pos = 0, directory = directory..files[i].name, files = nil})
+                    table.insert(self.stack, { pos = 0, directory = get_full_path(files[i], directory), files = nil})
                     return self:scan_files()
                 end
             end
@@ -641,11 +643,11 @@ mp.register_script_message("callback/custom-loadlist", function(...) directory_p
 --loads lists or defers the command to add-ons
 local function loadlist(item, flags)
     local parser = item.parser or list.parser
-    if parser == "file" or parser == "dvd" then
-        mp.commandv('loadlist', list.directory..item.name, flags == "append-play" and "append" or flags)
+    if parser == "file" then
+        mp.commandv('loadlist', get_full_path(item), flags == "append-play" and "append" or flags)
         if flags == "append-play" and mp.get_property_bool("core-idle") then mp.commandv("playlist-play-index", 0) end
     elseif parser ~= "" then
-        mp.commandv("script-message", parser.."/open-dir", list.directory..item.name, flags)
+        mp.commandv("script-message", parser.."/open-dir", get_full_path(item), flags)
     end
 end
 
@@ -655,7 +657,7 @@ local function autoload_dir(path)
     local file_count = 0
     for _,item in ipairs(list.list) do
         if item.type == "file" then
-            local p = list.directory..item.name
+            local p = get_full_path(item)
             if p == path then pos = file_count
             else mp.commandv("loadfile", p, "append") end
             file_count = file_count + 1
@@ -666,9 +668,8 @@ end
 
 --runs the loadfile or loadlist command
 local function loadfile(item, flags, autoload)
-    local path = list.directory..item.name
-    if (path == list.dvd_device) then path = "dvd://"
-    elseif item.type == "dir" then 
+    local path = get_full_path(item)
+    if item.type == "dir" then 
         if o.custom_dir_loading then return directory_parser:queue_directory(item, flags)
         else return loadlist(item, flags) end
     end
@@ -730,17 +731,6 @@ function list:open()
     list:open_list()
 end
 
---intercepts toggles when in an addons domain
---otherwise passes the request to the lists toggle function
-local function toggle_browser()
-    --if we're in the dvd-device then pass the request on to dvd-browser
-    if o.dvd_browser and list.directory == list.dvd_device then
-        mp.commandv('script-message-to', 'dvd_browser', 'dvd-browser')
-    else
-        list:toggle()
-    end
-end
-
 --run when the escape key is used
 local function escape()
     --if multiple items are selection cancel the
@@ -762,8 +752,8 @@ local function format_command_table(t, index)
     for i = 1, #t do
         copy[i] = t[i]:gsub("%%.", {
             ["%%"] = "%",
-            ["%f"] = l[index] and list.directory..l[index].name or "",
-            ["%F"] = string.format("%q", l[index] and list.directory..l[index].name or ""),
+            ["%f"] = l[index] and get_full_path(l[index]) or "",
+            ["%F"] = string.format("%q", l[index] and get_full_path(l[index]) or ""),
             ["%n"] = l[index] and (l[index].label or l[index].name) or "",
             ["%N"] = string.format("%q", l[index] and (l[index].label or l[index].name) or ""),
             ["%p"] = list.directory or "",
@@ -808,13 +798,6 @@ local function custom_command(cmd)
     else
         run_custom_command(cmd.command, list.selected)
     end
-end
-
---passes control to DVD browser
-open_dvd_browser = function()
-    list.prev_directory = list.dvd_device
-    list:close()
-    mp.commandv('script-message', 'browse-dvd')
 end
 
 --dynamic keybinds to set while the browser is open
@@ -867,19 +850,7 @@ mp.observe_property('dvd-device', 'string', function(_, device)
 end)
 
 --declares the keybind to open the browser
-mp.add_key_binding('MENU','browse-files', toggle_browser)
-
---opens the root directory
-mp.register_script_message('goto-root-directory',function()
-    goto_root()
-    list:open()
-end)
-
---opens the directory of the currently playing file
-mp.register_script_message('goto-current-directory', function()
-    goto_current_dir()
-    list:open()
-end)
+mp.add_key_binding('MENU','browse-files', function() list:toggle() end)
 
 --allows keybinds/other scripts to auto-open specific directories
 mp.register_script_message('browse-directory', function(directory)
@@ -894,19 +865,22 @@ end)
 
 --a callback function for addon scripts to return the results of their filesystem processing
 mp.register_script_message('callback/browse-dir', function(response)
+    msg.trace("callback response = "..response)
     response = utils.parse_json(response)
     local items = response.list
     if not items then goto_root(); return end
 
-    --changes 
+    --changes the display name of the directory
     if response.directory_label then
         list.directory_label = response.directory_label
         update_header()
     end
     list.list = items
-    if o.filter_files or o.filter_dot_dirs or o.filter_dot_files then filter(list.list) end
-    sort(list.list)
-    escape_ass(list.list)
+    if response.filter ~= false and (o.filter_files or o.filter_dot_dirs or o.filter_dot_files) then
+        filter(list.list)
+    end
+    if response.sort ~= false then sort(list.list) end
+    if response.ass_escape ~= false then escape_ass(list.list) end
     select_prev_directory()
 
     --setting up the cache stuff

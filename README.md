@@ -133,23 +133,17 @@ Requires `curl` in the system PATH.
 ### [ftp-browser](addons/ftp-browser.lua)
 Implements support for ftp file servers. Requires `curl` in the system path.
 
-### [DVD Browser](https://github.com/CogentRedTester/mpv-dvd-browser)
-This add-on is a little different from the others. dvd-browser is actually standalone, and has a number of other dvd related features that don't
-require the browser at all. However, there is a compatability mode that makes it act a lot like a normal addon.
+### [dvd-browser](https://github.com/CogentRedTester/mpv-dvd-browser)
+This script implements support for DVD titles using the `lsdvd` commandline utility.
+When playing a dvd, or when moving into the `--dvd-device` directory, the add-on loads up the DVD titles.
 
-The script uses the `lsdvd` commandline utility to read and display the titles of DVDs in an interractive browser extremely similar to this one.
-The script also has numerous options to make DVD playback more enjoyable, such as automatic playlist management.
+This add-on is a little different from the others; dvd-browser is actually standalone, and has a number of other dvd related features that don't
+require the browser at all to make DVD playback more enjoyable, such as automatic playlist management.
 
-To enable compatability mode enable the option `dvd_browser` in `file_browser.conf`, and the associated `file_browser` option in `dvd_browser.conf`.
-When both scripts are active attempting to enter the `--dvd-device` directory will automatically pass control to dvd-browser.
-Similarly, moving up a directory from dvd-browser will pass control back to file-browser.
-It is also important to always use the file-browser activation keybind. Both scripts use `MENU` as the default toggle command, so it will be necessary to explicitly specify which to use by putting `MENU script-binding browse-files` in input.conf.
+It also has it's own, more limitted, browser, but overwriting the default keybind to open file-browser instead effectively disables it.
+Both scripts use `MENU` as the default toggle command, so it will be necessary to explicitly specify which to use by putting `MENU script-binding browse-files` in input.conf.
 
-
-
-With the exception of the multi-select behaviour all file-browser keybinds should work from within dvd-browser, and with identical behaviour. 
-
-Note: unlike file-browser, dvd-browser only works on Linux or WSL
+Note that `lsdvd` is only available on linux, but the script has special support for WSL on windows 10.
 
 ## Configuration
 See [file_browser.conf](file_browser.conf) for the full list of options and their default values.
