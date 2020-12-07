@@ -425,6 +425,7 @@ local function update_list()
     list.selected = 1
     list.selection = {}
     if extensions == nil then setup_extensions_list() end
+    if list.directory == "" then return goto_root() end
 
     --loads the current directry from the cache to save loading time
     --there will be a way to forcibly reload the current directory at some point
@@ -437,8 +438,6 @@ local function update_list()
         list:update()
         return
     end
-
-    if list.directory == "" then goto_root() end
 
     list.parser = choose_parser(list.directory)
 
