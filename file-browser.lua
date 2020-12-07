@@ -271,7 +271,7 @@ local function setup_root()
         local path = mp.command_native({'expand-path', str})
         path = fix_path(path, true)
 
-        local temp = {name = path, type = 'dir', label = str}
+        local temp = {name = path, type = 'dir', label = str, ass = list.ass_escape(str)}
 
         --setting up the addon handlers
         if o.http_browser and path:find("https://") == 1 then temp.parser = "http"
