@@ -21,7 +21,7 @@
     },
     {
         "key": "KP6",
-        "command": ["print-text", "full filepath via concatenation: %d%n"]
+        "command": ["print-text", "full filepath via concatenation: %p%n"]
     },
     {
         "key": "KP7",
