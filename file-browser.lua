@@ -79,6 +79,7 @@ list.header_style = o.ass_header
 list.cursor_style = o.ass_cursor
 
 list.directory = nil
+list.directory_label = nil
 list.selection = {}
 list.multiselect = nil
 list.prev_directory = ""
@@ -292,7 +293,7 @@ end
 
 --updates the header with the current directory
 local function update_header()
-    local dir_name = list.directory
+    local dir_name = list.directory_label or list.directory
     if dir_name == "" then dir_name = "ROOT" end
     list.header = dir_name..'\\N ----------------------------------------------------'
 end
@@ -425,6 +426,7 @@ local function update()
     update_header()
     list.empty_text = "~"
     list.list = {}
+    list.directory_label = nil
     disable_select_mode()
     list:update()
     list.empty_text = "empty directory"
@@ -564,10 +566,10 @@ local directory_parser = {
     end,
 
     --parse the response from an add-on
-    callback = function(this, json)
-        local top = this.stack[#this.stack]
+        response = utils.parse_json(response)
+        local files = response.list
 
-        if not json or json == "" then 
+        if not files then
             msg.warn("could not open "..top.directory)
             this.stack[#this.stack] = nil
             return this:continue()
@@ -883,9 +885,17 @@ mp.register_script_message('browse-directory', function(directory)
 end)
 
 --a callback function for addon scripts to return the results of their filesystem processing
-mp.register_script_message('callback/browse-dir', function(json)
-    if not json or json == "" then goto_root(); return end
-    list.list = utils.parse_json(json)
+mp.register_script_message('callback/browse-dir', function(response)
+    response = utils.parse_json(response)
+    local items = response.list
+    if not items then goto_root(); return end
+
+    --changes 
+    if response.directory_label then
+        list.directory_label = response.directory_label
+        update_header()
+    end
+    list.list = items
     if o.filter_files or o.filter_dot_dirs or o.filter_dot_files then filter(list.list) end
     sort(list.list)
     select_prev_directory()

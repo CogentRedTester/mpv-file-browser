@@ -72,9 +72,10 @@ end
 
 --custom parsing of directories
 mp.register_script_message("http/browse-dir", function(dir, callback, ...)
-    local json = parse_http(dir)
-    if json then json = utils.format_json(json) end
-    mp.commandv("script-message", callback, json or "", ...)
+    local response = {}
+    response.list = parse_http(dir)
+    response.directory_label = decodeURI(dir)
+    mp.commandv("script-message", callback, utils.format_json(response), ...)
 end)
 
 --custom handling for opening directories
