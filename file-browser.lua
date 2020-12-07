@@ -84,7 +84,7 @@ list.selection = {}
 list.multiselect = nil
 list.prev_directory = ""
 list.dvd_device = nil
-list.parser = "file-browser"
+list.parser = "file"
 
 local extensions = nil
 local sub_extensions = {}
@@ -152,6 +152,14 @@ local subtitle_extensions = {
 }
 for i = 1, #subtitle_extensions do
     sub_extensions[subtitle_extensions[i]] = true
+end
+
+--chooses which parser to use for the specific path
+local function choose_parser(path)
+    if o.dvd_browser and path == list.dvd_device then return "dvd"
+    elseif o.http_browser and path:find("https?://") == 1 then return "http"
+    elseif o.ftp_browser and path:sub(1, 6) == "ftp://" then return "ftp"
+    else return "file" end
 end
 
 --get the full path for the current file
@@ -322,13 +330,7 @@ local function setup_root()
         local path = mp.command_native({'expand-path', str})
         path = fix_path(path, true)
 
-        local temp = {name = path, type = 'dir', label = str, ass = list.ass_escape(str)}
-
-        --setting up the addon handlers
-        if o.http_browser and path:find("https://") == 1 then temp.parser = "http"
-        elseif o.ftp_browser and path:sub(1,6) == "ftp://" then temp.parser = "ftp"
-        elseif o.dvd_browser and path == list.dvd_device then temp.parser = "dvd"
-        else temp.parser = "file" end
+        local temp = {name = path, type = 'dir', label = str, ass = list.ass_escape(str), parser = choose_parser(path)}
 
         root[#root+1] = temp
     end
@@ -436,19 +438,13 @@ local function update_list()
         return
     end
 
-    if list.directory == "" then
-        goto_root()
-    elseif o.dvd_browser and list.directory == list.dvd_device then
-        list.parser = "dvd"
-        mp.commandv("script-message", "dvd/browse-dir", list.directory, "callback/browse-dir")
-    elseif o.http_browser and list.directory:find("https?://") == 1 then
-        list.parser = "http"
-        mp.commandv("script-message", "http/browse-dir", list.directory, "callback/browse-dir")
-    elseif o.ftp_browser and list.directory:sub(1, 6) == "ftp://" then
-        list.parser = "ftp"
-        mp.commandv("script-message", "ftp/browse-dir", list.directory, "callback/browse-dir")
+    if list.directory == "" then goto_root() end
+
+    list.parser = choose_parser(list.directory)
+
+    if list.parser ~= "file" then
+        mp.commandv("script-message", list.parser.."/browse-dir", list.directory, "callback/browse-dir")
     else
-        list.parser = "file"
         list.list = scan_directory(list.directory)
         if not list.list then goto_root() end
         select_prev_directory()
