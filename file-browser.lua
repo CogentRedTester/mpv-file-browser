@@ -790,7 +790,7 @@ local function format_command_table(t, index)
             ["%p"] = list.directory or "",
             ["%P"] = string.format("%q", list.directory or ""),
             ["%d"] = (list.directory_label or list.directory):match("([^/]+)/$") or "",
-            ["%D"] = string.format("q", (list.directory_label or list.directory):match("([^/]+)/$") or "")
+            ["%D"] = string.format("%q", (list.directory_label or list.directory):match("([^/]+)/$") or "")
         })
     end
     return copy
