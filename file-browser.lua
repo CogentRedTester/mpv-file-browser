@@ -869,22 +869,26 @@ mp.register_script_message('callback/browse-dir', function(response)
     response = utils.parse_json(response)
     local items = response.list
     if not items then goto_root(); return end
+    list.list = items
+
+    if response.filter ~= false and (o.filter_files or o.filter_dot_dirs or o.filter_dot_files) then
+        filter(list.list)
+    end
+
+    if response.sort ~= false then sort(list.list) end
+    if response.ass_escape ~= false then escape_ass(list.list) end
 
     --changes the display name of the directory
     if response.directory_label then
         list.directory_label = response.directory_label
         update_header()
     end
-    list.list = items
-    if response.filter ~= false and (o.filter_files or o.filter_dot_dirs or o.filter_dot_files) then
-        filter(list.list)
-    end
-    if response.sort ~= false then sort(list.list) end
-    if response.ass_escape ~= false then escape_ass(list.list) end
-    select_prev_directory()
+
+    --changes the text displayed when the directory is empty
+    if response.empty_text then list.empty_text = response.empty_text end
 
     --setting up the cache stuff
-    cache[#cache+1] = {directory = list.directory, table = list.list}
+    select_prev_directory()
     list.prev_directory = list.directory
     list:update()
 end)
