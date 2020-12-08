@@ -710,7 +710,7 @@ end
 
 --opens the selelected file(s)
 local function open_file(flags, autoload)
-    if list.selected > #list or list.selected < 1 then return end
+    if not list[list.selected] then return end
     if flags == 'replace' then list:close() end
 
     --handles multi-selection behaviour
