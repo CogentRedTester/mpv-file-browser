@@ -307,8 +307,8 @@ end
 local function select_prev_directory()
     if list.prev_directory:find(list.directory, 1, true) == 1 then
         local i = 1
-        while (list.list[i] and list.list[i].type == "dir") do
-            if list.prev_directory:find(get_full_path(list.list[i]), 1, true) then
+        while (list[i] and list[i].type == "dir") do
+            if list.prev_directory:find(get_full_path(list[i]), 1, true) then
                 list.selected = i
                 return
             end
@@ -317,7 +317,7 @@ local function select_prev_directory()
     end
 
     if current_file.directory:find(list.directory, 1, true) == 1 then
-        for i,item in ipairs(list.list) do
+        for i,item in ipairs(list) do
             if highlight_entry(item) then
                 list.selected = i
                 return
@@ -459,7 +459,7 @@ end
 --rescans the folder and updates the list
 local function update()
     list.empty_text = "~"
-    list.list = {}
+    list:clear()
     list.directory_label = nil
     disable_select_mode()
     list:update()
@@ -495,10 +495,10 @@ end
 
 --moves down a directory
 local function down_dir()
-    if not list.list[list.selected] or list.list[list.selected].type ~= 'dir' then return end
+    if not list[list.selected] or list[list.selected].type ~= 'dir' then return end
 
     cache:push()
-    list.directory = list.directory..list.list[list.selected].name
+    list.directory = list.directory..list[list.selected].name
     update()
 end
 
@@ -529,7 +529,7 @@ end
 
 --toggles the selection
 local function toggle_selection()
-    if list.list[list.selected] then
+    if list[list.selected] then
         list.selection[list.selected] = not list.selection[list.selected] or nil
     end
     list:update()
@@ -612,9 +612,9 @@ local directory_parser = {
         end
 
         if response.filter ~= false and (o.filter_files or o.filter_dot_dirs or o.filter_dot_files) then
-            filter(list.list)
+            filter(list)
         end
-        if response.sort ~= false then sort(list.list) end
+        if response.sort ~= false then sort(list) end
         top.files = files
         return self:open_directory()
     end,
@@ -682,7 +682,7 @@ end
 local function autoload_dir(path)
     local pos = 1
     local file_count = 0
-    for _,item in ipairs(list.list) do
+    for _,item in ipairs(list) do
         if item.type == "file" then
             local p = get_full_path(item)
             if p == path then pos = file_count
@@ -710,7 +710,7 @@ end
 
 --opens the selelected file(s)
 local function open_file(flags, autoload)
-    if list.selected > #list.list or list.selected < 1 then return end
+    if list.selected > #list or list.selected < 1 then return end
     if flags == 'replace' then list:close() end
 
     --handles multi-selection behaviour
@@ -719,10 +719,10 @@ local function open_file(flags, autoload)
 
         --the currently selected file will be loaded according to the flag
         --the remaining files will be appended
-        loadfile(list.list[selection[1]], flags)
+        loadfile(list[selection[1]], flags)
 
         for i=2, #selection do
-            loadfile(list.list[selection[i]], "append")
+            loadfile(list[selection[i]], "append")
         end
 
         --reset the selection after
@@ -731,11 +731,11 @@ local function open_file(flags, autoload)
         list:update()
 
     elseif flags == 'replace' then
-        loadfile(list.list[list.selected], flags, autoload ~= o.autoload)
+        loadfile(list[list.selected], flags, autoload ~= o.autoload)
         down_dir()
         list:close()
     else
-        loadfile(list.list[list.selected], flags)
+        loadfile(list[list.selected], flags)
     end
 
     if o.custom_dir_loading then directory_parser:continue() end
@@ -774,15 +774,14 @@ end
 --iterates through the command table and substitutes special
 --character codes for the correct strings used for custom functions
 local function format_command_table(t, index)
-    local l = list.list
     local copy = {}
     for i = 1, #t do
         copy[i] = t[i]:gsub("%%.", {
             ["%%"] = "%",
-            ["%f"] = l[index] and get_full_path(l[index]) or "",
-            ["%F"] = string.format("%q", l[index] and get_full_path(l[index]) or ""),
-            ["%n"] = l[index] and (l[index].label or l[index].name) or "",
-            ["%N"] = string.format("%q", l[index] and (l[index].label or l[index].name) or ""),
+            ["%f"] = list[index] and get_full_path(list[index]) or "",
+            ["%F"] = string.format("%q", list[index] and get_full_path(list[index]) or ""),
+            ["%n"] = list[index] and (list[index].label or list[index].name) or "",
+            ["%N"] = string.format("%q", list[index] and (list[index].label or list[index].name) or ""),
             ["%p"] = list.directory or "",
             ["%P"] = string.format("%q", list.directory or ""),
             ["%d"] = (list.directory_label or list.directory):match("([^/]+)/$") or "",
@@ -810,7 +809,7 @@ end
 local function custom_command(cmd)
     --filtering commands
     if cmd.filter then
-        if list.list[list.selected] and list.list[list.selected].type ~= cmd.filter then
+        if list[list.selected] and list[list.selected].type ~= cmd.filter then
             msg.verbose("cancelling custom command")
             return
         end
@@ -896,16 +895,15 @@ mp.register_script_message('callback/browse-dir', function(response)
     response = utils.parse_json(response)
     local items = response.list
     if not items then goto_root(); return end
-    list.list = items
 
     if response.filter ~= false and (o.filter_files or o.filter_dot_dirs or o.filter_dot_files) then
-        filter(list.list)
+        filter(items)
     end
 
-    if response.sort ~= false then sort(list.list) end
-    if response.ass_escape ~= false then escape_ass(list.list) end
+    if response.sort ~= false then sort(items) end
+    if response.ass_escape ~= false then escape_ass(items) end
 
-    --changes the display name of the directory
+    list.list = items
     list.directory_label = response.directory_label
 
     --changes the text displayed when the directory is empty
