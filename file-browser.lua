@@ -52,6 +52,10 @@ local o = {
     --when enabled the keybind disables autoload for the file
     autoload = false,
 
+    --allows custom icons be set to fix incompatabilities with some fonts
+    folder_icon = "🖿",
+    cursor_icon = "➤",
+
     --enable addons
     dvd_browser = false,
     http_browser = false,
@@ -183,7 +187,7 @@ function list:format_line(i, v)
     self:append(o.ass_body)
 
     --handles custom styles for different entries
-    if i == list.selected then self:append(list.cursor_style..[[➤\h]]..o.ass_body)
+    if i == list.selected then self:append(list.cursor_style..o.cursor_icon.."\\h"..o.ass_body)
     else self:append([[\h\h\h\h]]) end
 
     --sets the selection colour scheme
@@ -196,7 +200,7 @@ function list:format_line(i, v)
     elseif playing_file then self:append(o.ass_playing) end
 
     --sets the folder icon
-    if v.type == 'dir' then self:append([[🖿\h]]) end
+    if v.type == 'dir' then self:append(o.folder_icon.."\\h") end
 
     --adds the actual name of the item
     self:append(v.ass or v.label or v.name)
