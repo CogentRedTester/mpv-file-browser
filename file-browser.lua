@@ -207,9 +207,13 @@ function list:format_line(i, v)
     if v.type == 'dir' then self:append(o.folder_icon.."\\h") end
 
     --adds the actual name of the item
+    self:append("{\\fn"..list.font.."}")
     self:append(v.ass or v.label or v.name)
     self:newline()
 end
+
+--track the osd-font property without needing to grab it every list update
+mp.observe_property("osd-font", "string", function(_,font) list.font = font end)
 
 --updates the header with the current directory
 function list:format_header()
@@ -287,7 +291,7 @@ local function filter(t)
         local temp = t[i]
         t[i] = nil
 
-        if  ( temp.type == "dir" and not ( o.filter_dot_dirs and temp.name:sub(1,1) == ".") ) or
+        if  ( temp.type == "dir"    and not ( o.filter_dot_dirs and temp.name:sub(1,1) == ".") ) or
             ( temp.type == "file"   and not ( o.filter_dot_files and (temp.name:sub(1,1) == ".") )
                                     and not ( o.filter_files and not extensions[ get_extension(temp.name) ] ) )
         then
@@ -405,8 +409,8 @@ local function scan_directory(directory)
         local item = list2[i]
 
         --only adds whitelisted files to the browser
-        if  not ( o.filter_files and not extensions[ get_extension(item) ] )
-            and not (o.filter_dot_files and item:sub(1,1) == ".")
+        if  not ( o.filter_files and not extensions[ get_extension(item) ] ) and
+            not (o.filter_dot_files and item:sub(1,1) == ".")
         then
             msg.debug(item)
             table.insert(new_list, {name = item, ass = list.ass_escape(item), type = 'file'})
