@@ -279,17 +279,13 @@ local function filter(t)
         local temp = t[i]
         t[i] = nil
 
-        if temp.type == "dir" and (o.filter_dot_dirs and temp.name:sub(1,1) == ".") then goto continue end
-
-        if temp.type == "file"  then
-            if o.filter_dot_files and (temp.name:sub(1,1) == ".") then goto continue end
-            if o.filter_files and not extensions[ get_extension(temp.name) ] then goto continue end
+        if  ( temp.type == "dir" and not ( o.filter_dot_dirs and temp.name:sub(1,1) == ".") ) or
+            ( temp.type == "file"   and not ( o.filter_dot_files and (temp.name:sub(1,1) == ".") )
+                                    and not ( o.filter_files and not extensions[ get_extension(temp.name) ] ) )
+        then
+            t[top] = temp
+            top = top+1
         end
-
-        t[top] = temp
-        top = top+1
-
-        ::continue::
     end
 end
 
@@ -389,12 +385,10 @@ local function scan_directory(directory)
         local item = list1[i]
 
         --filters hidden dot directories for linux
-        if o.filter_dot_dirs and item:sub(1,1) == "." then goto continue end
-
-        msg.debug(item..'/')
-        table.insert(new_list, {name = item..'/', ass = list.ass_escape(item..'/'), type = 'dir'})
-
-        ::continue::
+        if not (o.filter_dot_dirs and item:sub(1,1) == ".") then
+            msg.debug(item..'/')
+            table.insert(new_list, {name = item..'/', ass = list.ass_escape(item..'/'), type = 'dir'})
+        end
     end
 
     --appends files to the list of directory items
@@ -403,16 +397,12 @@ local function scan_directory(directory)
         local item = list2[i]
 
         --only adds whitelisted files to the browser
-        if o.filter_files then
-            if not extensions[ get_extension(item) ] then goto continue end
+        if  not ( o.filter_files and not extensions[ get_extension(item) ] )
+            and not (o.filter_dot_files and item:sub(1,1) == ".")
+        then
+            msg.debug(item)
+            table.insert(new_list, {name = item, ass = list.ass_escape(item), type = 'file'})
         end
-
-        if o.filter_dot_files and item:sub(1,1) == "." then goto continue end
-
-        msg.debug(item)
-        table.insert(new_list, {name = item, ass = list.ass_escape(item), type = 'file'})
-
-        ::continue::
     end
     sort(new_list)
     return new_list
