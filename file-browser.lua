@@ -53,8 +53,10 @@ local o = {
     autoload = false,
 
     --allows custom icons be set to fix incompatabilities with some fonts
+    --the `\h` character is a hard space to add padding between the symbol and the text
     folder_icon = "🖿",
     cursor_icon = "➤",
+    indent_icon = [[\h\h\h]],
 
     --enable addons
     dvd_browser = false,
@@ -81,6 +83,8 @@ local list = require "scroll-list"
 list.num_entries = o.num_entries
 list.header_style = o.ass_header
 list.cursor_style = o.ass_cursor
+list.cursor = o.cursor_icon
+list.indent = o.indent_icon
 
 list.directory = nil
 list.directory_label = nil
@@ -187,8 +191,8 @@ function list:format_line(i, v)
     self:append(o.ass_body)
 
     --handles custom styles for different entries
-    if i == list.selected then self:append(list.cursor_style..o.cursor_icon.."\\h"..o.ass_body)
-    else self:append([[\h\h\h\h]]) end
+    if i == list.selected then self:append(list.cursor_style..list.cursor.."\\h"..o.ass_body)
+    else self:append(list.indent.."\\h") end
 
     --sets the selection colour scheme
     local multiselected = list.selection[i]
