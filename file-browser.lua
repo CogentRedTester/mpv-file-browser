@@ -52,6 +52,12 @@ local o = {
     --when enabled the keybind disables autoload for the file
     autoload = false,
 
+    --allows custom icons be set to fix incompatabilities with some fonts
+    --the `\h` character is a hard space to add padding between the symbol and the text
+    folder_icon = "🖿",
+    cursor_icon = "➤",
+    indent_icon = [[\h\h\h]],
+
     --enable addons
     dvd_browser = false,
     http_browser = false,
@@ -77,6 +83,8 @@ local list = require "scroll-list"
 list.num_entries = o.num_entries
 list.header_style = o.ass_header
 list.cursor_style = o.ass_cursor
+list.cursor = o.cursor_icon
+list.indent = o.indent_icon
 
 list.directory = nil
 list.directory_label = nil
@@ -183,8 +191,8 @@ function list:format_line(i, v)
     self:append(o.ass_body)
 
     --handles custom styles for different entries
-    if i == list.selected then self:append(list.cursor_style..[[➤\h]]..o.ass_body)
-    else self:append([[\h\h\h\h]]) end
+    if i == list.selected then self:append(list.cursor_style..list.cursor.."\\h"..o.ass_body)
+    else self:append(list.indent.."\\h") end
 
     --sets the selection colour scheme
     local multiselected = list.selection[i]
@@ -196,12 +204,16 @@ function list:format_line(i, v)
     elseif playing_file then self:append(o.ass_playing) end
 
     --sets the folder icon
-    if v.type == 'dir' then self:append([[🖿\h]]) end
+    if v.type == 'dir' then self:append(o.folder_icon.."\\h") end
 
     --adds the actual name of the item
+    self:append("{\\fn"..list.font.."}")
     self:append(v.ass or v.label or v.name)
     self:newline()
 end
+
+--track the osd-font property without needing to grab it every list update
+mp.observe_property("osd-font", "string", function(_,font) list.font = font end)
 
 --updates the header with the current directory
 function list:format_header()
@@ -279,17 +291,13 @@ local function filter(t)
         local temp = t[i]
         t[i] = nil
 
-        if temp.type == "dir" and (o.filter_dot_dirs and temp.name:sub(1,1) == ".") then goto continue end
-
-        if temp.type == "file"  then
-            if o.filter_dot_files and (temp.name:sub(1,1) == ".") then goto continue end
-            if o.filter_files and not extensions[ get_extension(temp.name) ] then goto continue end
+        if  ( temp.type == "dir"    and not ( o.filter_dot_dirs and temp.name:sub(1,1) == ".") ) or
+            ( temp.type == "file"   and not ( o.filter_dot_files and (temp.name:sub(1,1) == ".") )
+                                    and not ( o.filter_files and not extensions[ get_extension(temp.name) ] ) )
+        then
+            t[top] = temp
+            top = top+1
         end
-
-        t[top] = temp
-        top = top+1
-
-        ::continue::
     end
 end
 
@@ -389,12 +397,10 @@ local function scan_directory(directory)
         local item = list1[i]
 
         --filters hidden dot directories for linux
-        if o.filter_dot_dirs and item:sub(1,1) == "." then goto continue end
-
-        msg.debug(item..'/')
-        table.insert(new_list, {name = item..'/', ass = list.ass_escape(item..'/'), type = 'dir'})
-
-        ::continue::
+        if not (o.filter_dot_dirs and item:sub(1,1) == ".") then
+            msg.debug(item..'/')
+            table.insert(new_list, {name = item..'/', ass = list.ass_escape(item..'/'), type = 'dir'})
+        end
     end
 
     --appends files to the list of directory items
@@ -403,16 +409,12 @@ local function scan_directory(directory)
         local item = list2[i]
 
         --only adds whitelisted files to the browser
-        if o.filter_files then
-            if not extensions[ get_extension(item) ] then goto continue end
+        if  not ( o.filter_files and not extensions[ get_extension(item) ] ) and
+            not (o.filter_dot_files and item:sub(1,1) == ".")
+        then
+            msg.debug(item)
+            table.insert(new_list, {name = item, ass = list.ass_escape(item), type = 'file'})
         end
-
-        if o.filter_dot_files and item:sub(1,1) == "." then goto continue end
-
-        msg.debug(item)
-        table.insert(new_list, {name = item, ass = list.ass_escape(item), type = 'file'})
-
-        ::continue::
     end
     sort(new_list)
     return new_list
@@ -870,7 +872,7 @@ end)
 
 --updates the dvd_device
 mp.observe_property('dvd-device', 'string', function(_, device)
-    if device == "" then device = "/dev/dvd/" end
+    if not device or device == "" then device = "/dev/dvd/" end
     list.dvd_device = fix_path(device, true)
 end)
 
