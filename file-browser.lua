@@ -860,7 +860,7 @@ end)
 
 --updates the dvd_device
 mp.observe_property('dvd-device', 'string', function(_, device)
-    if device == "" then device = "/dev/dvd/" end
+    if not device or device == "" then device = "/dev/dvd/" end
     list.dvd_device = fix_path(device, true)
 end)
 
