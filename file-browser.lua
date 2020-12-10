@@ -459,7 +459,7 @@ end
 --rescans the folder and updates the list
 local function update()
     list.empty_text = "~"
-    list:clear()
+    list.list = {}
     list.directory_label = nil
     disable_select_mode()
     list:update()
