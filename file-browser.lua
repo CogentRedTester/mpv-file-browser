@@ -535,6 +535,14 @@ local function toggle_selection()
     list:update()
 end
 
+--select all items in the list
+local function select_all()
+    for i,_ in list:ipairs() do
+        list.selection[i] = true
+    end
+    list:update()
+end
+
 --toggles select mode
 local function toggle_select_mode()
     if list.multiselect == nil then
@@ -856,7 +864,8 @@ list.keybinds = {
     {'Shift+HOME', 'goto_root', goto_root, {}},
     {'Ctrl+r', 'reload', function() cache:clear(); update() end, {}},
     {'s', 'select_mode', toggle_select_mode, {}},
-    {'S', 'select', toggle_selection, {}}
+    {'S', 'select', toggle_selection, {}},
+    {'Ctrl+a', 'select_all', select_all, {}}
 }
 
 --loading the custom keybinds

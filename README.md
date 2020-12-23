@@ -28,6 +28,7 @@ The following keybinds are only set while the browser is open:
     Ctrl+r          reload directory and reset cache
     s               toggles multiselect mode
     S               toggles selection for the current item
+    Ctrl+a          select all items in the current directory
 
 When attempting to play or append a subtitle file the script will instead load the subtitle track into the existing video.
 
