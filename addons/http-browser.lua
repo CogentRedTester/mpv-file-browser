@@ -28,11 +28,13 @@ local function parse_http(directory)
         playback_only = false,
         capture_stdout = true,
         capture_stderr = true,
-        args = {"curl", "-k", "-l", "-m", "5", directory}
+        args = {"curl", "-k", "-l", "-m", "20", directory}
     })
-    html = html.stdout
-    if not html:find("%[PARENTDIR%]") then return end
+    if html.status == 6 or html.status == 3 then return nil
+    elseif html.status ~= 0 then return {}, "curl error: "..tostring(html.status)
+    elseif not html.stdout:find("%[PARENTDIR%]") then return nil end
 
+    html = html.stdout
     local list = {}
     for str in string.gmatch(html, "[^\r\n]+") do
         if str:sub(1,4) ~= "<tr>" then goto continue end
@@ -73,7 +75,7 @@ end
 --custom parsing of directories
 mp.register_script_message("http/browse-dir", function(dir, callback, ...)
     local response = {}
-    response.list = parse_http(dir)
+    response.list, response.empty_text = parse_http(dir)
     response.directory_label = decodeURI(dir)
     mp.commandv("script-message", callback, utils.format_json(response), ...)
 end)
