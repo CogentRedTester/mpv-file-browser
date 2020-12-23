@@ -547,12 +547,16 @@ local function toggle_select_mode()
     end
 end
 
---sortes a table into an array of its key values
+--sorts a table into an array of selected items in the correct order
 local function sort_keys(t)
     local keys = {}
-    for k in pairs(t) do keys[#keys+1] = k end
+    for k in pairs(t) do
+        local item = list[k]
+        item.index = k
+        keys[#keys+1] = item
+    end
 
-    table.sort(keys)
+    table.sort(keys, function(a,b) return a.index < b.index end)
     return keys
 end
 
@@ -719,10 +723,10 @@ local function open_file(flags, autoload)
 
         --the currently selected file will be loaded according to the flag
         --the remaining files will be appended
-        loadfile(list[selection[1]], flags)
+        loadfile(selection[1], flags)
 
         for i=2, #selection do
-            loadfile(list[selection[i]], "append")
+            loadfile(selection[i], "append")
         end
 
         --reset the selection after
@@ -773,19 +777,19 @@ end
 
 --iterates through the command table and substitutes special
 --character codes for the correct strings used for custom functions
-local function format_command_table(t, index)
+local function format_command_table(t, item, directory, directory_label)
     local copy = {}
     for i = 1, #t do
         copy[i] = t[i]:gsub("%%.", {
             ["%%"] = "%",
-            ["%f"] = list[index] and get_full_path(list[index]) or "",
-            ["%F"] = string.format("%q", list[index] and get_full_path(list[index]) or ""),
-            ["%n"] = list[index] and (list[index].label or list[index].name) or "",
-            ["%N"] = string.format("%q", list[index] and (list[index].label or list[index].name) or ""),
-            ["%p"] = list.directory or "",
-            ["%P"] = string.format("%q", list.directory or ""),
-            ["%d"] = (list.directory_label or list.directory):match("([^/]+)/$") or "",
-            ["%D"] = string.format("%q", (list.directory_label or list.directory):match("([^/]+)/$") or "")
+            ["%f"] = item and get_full_path(item) or "",
+            ["%F"] = string.format("%q", item and get_full_path(item) or ""),
+            ["%n"] = item and (item.label or item.name) or "",
+            ["%N"] = string.format("%q", item and (item.label or item.name) or ""),
+            ["%p"] = directory or "",
+            ["%P"] = string.format("%q", directory or ""),
+            ["%d"] = (directory_label or directory):match("([^/]+)/$") or "",
+            ["%D"] = string.format("%q", (directory_label or directory):match("([^/]+)/$") or "")
         })
     end
     return copy
@@ -793,36 +797,48 @@ end
 
 --runs all of the commands in the command table
 --recurses to handle nested tables of commands
-local function run_custom_command(t, index)
+local function run_custom_command(t, ...)
     if type(t[1]) == "table" then
         for i = 1, #t do
-            run_custom_command(t[i], index)
+            run_custom_command(t[i], ...)
         end
     else
-        local custom_cmd = format_command_table(t, index)
+        local custom_cmd = format_command_table(t, ...)
         msg.debug("running command: " .. utils.to_string(custom_cmd))
         mp.command_native(custom_cmd)
     end
 end
 
---runs one of the custom commands
-local function custom_command(cmd)
+--runs commands for multiple selected items
+local function recursive_multi_command(cmd, i, length, selection)
+    if i > length then return end
+
     --filtering commands
-    if cmd.filter then
-        if list[list.selected] and list[list.selected].type ~= cmd.filter then
-            msg.verbose("cancelling custom command")
-            return
-        end
+    if cmd.filter and selection[i].type ~= cmd.filter then
+        msg.verbose("skipping command for selection ")
+    else
+        run_custom_command(cmd.command, selection[i], selection.directory, selection.directory_label)
     end
 
+    --delay running the next command if the delay option is set
+    if not cmd.delay then return recursive_multi_command(cmd, i+1, length, selection)
+    else mp.add_timeout(cmd.delay, function() recursive_multi_command(cmd, i+1, length, selection) end) end
+end
+
+--runs one of the custom commands
+local function custom_command(cmd)
     --runs the command on all multi-selected items
     if cmd.multiselect and next(list.selection) then
         local selection = sort_keys(list.selection)
-        for i = 1, #selection do
-            run_custom_command(cmd.command, selection[i])
-        end
+        selection.directory = list.directory
+        selection.directory_label = list.directory_label
+
+        recursive_multi_command(cmd, 1, #selection, selection)
     else
-        run_custom_command(cmd.command, list.selected)
+        --filtering commands
+        if cmd.filter and list[list.selected] and list[list.selected].type ~= cmd.filter then
+            return msg.verbose("cancelling custom command") end
+        run_custom_command(cmd.command, list[list.selected], list.directory, list.directory_label)
     end
 end
 

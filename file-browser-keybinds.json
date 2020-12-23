@@ -37,7 +37,8 @@
         "command": [
             ["run", "powershell", "-command", "Set-Clipboard", "%F"],
             ["print-text", "copied filepath to clipboard"]
-        ]
+        ],
+        "delay": 0.3
     },
     {
         "key": "Ctrl+o",

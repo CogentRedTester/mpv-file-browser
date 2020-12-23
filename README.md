@@ -64,6 +64,7 @@ Keybinds are declared in the `~~/script-opts/file-browser-keybinds.json` file, t
     command         a json array of commands and arguments
     filter          optional - run the command on just a file or folder
     multiselect     optional - command is run on all commands selected (default true)
+    delay           optional - time to wait between sending multi-selected commands
 
 Example:
 ```
@@ -107,13 +108,15 @@ Example of a command to add an audio track:
 {
     "key": "Alt+ENTER",
     "command": ["audio-add", "%f"],
-    "filter": "file"
+    "filter": "file",
+    "delay": 0.5
 }
 ```
 
 When multiple items are selected the command will be run on every item in the order they appear on the screen.
 This can be controlled by the `multiselect` flag, which takes a boolean value.
 When not set the flag defaults to `true`.
+If time is needed between running commands of multiple selected items (for example, due to file handlers) then the `delay` option can be used to set a duration (in seconds) between commands.
 
 Examples can be found [here](/file-browser-keybinds.json).
 
