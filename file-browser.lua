@@ -447,7 +447,7 @@ local function update_list()
         mp.commandv("script-message", list.parser.."/browse-dir", list.directory, "callback/browse-dir")
     else
         list.list = scan_directory(list.directory)
-        if not list.list then goto_root() end
+        if not list.list then return goto_root() end
         select_prev_directory()
 
         --saves previous directory information
