@@ -23,15 +23,25 @@ local function parse_http(directory)
     msg.verbose(directory)
     msg.trace("curl -k -l -m 5 "..string.format("%q", directory))
 
+    local test = mp.command_native({
+        name = "subprocess",
+        playback_only = false,
+        capture_stdout = true,
+        capture_stderr = true,
+        args = {"curl", "-k", "-l", "-I", directory}
+    })
+    local response = test.stdout:match("(%d%d%d [^\n\r]+)")
+    if test.stdout:match("Content%-Type: ([^\r\n/]+)") ~= "text" then return nil end
+    if response ~= "200 OK" then return {}, "curl error: "..response end
+
     local html = mp.command_native({
         name = "subprocess",
         playback_only = false,
         capture_stdout = true,
         capture_stderr = true,
-        args = {"curl", "-k", "-l", "-m", "20", directory}
+        args = {"curl", "-k", "-l", directory}
     })
-    if html.status == 6 or html.status == 3 then return nil
-    elseif html.status ~= 0 then return {}, "curl error: "..tostring(html.status)
+    if html.status ~= 0 then return {}, "curl error: "..tostring(html.status)
     elseif not html.stdout:find("%[PARENTDIR%]") then return nil end
 
     html = html.stdout
