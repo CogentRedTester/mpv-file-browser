@@ -76,7 +76,7 @@ local o = {
 
 opt.read_options(o, 'file_browser')
 
-package.path = mp.command_native( {"expand-path", (mp.get_opt("scroll_list-directory") or "~~/scripts") } ) .. "/?.lua;" .. package.path
+package.path = mp.command_native( {"expand-path", "~~/scripts" } ) .. "/?.lua;" .. package.path
 local list = require "scroll-list"
 
 --setting ass styles for the list
