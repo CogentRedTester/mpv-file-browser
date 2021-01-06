@@ -65,7 +65,9 @@ Keybinds are declared in the `~~/script-opts/file-browser-keybinds.json` file, t
     command         a json array of commands and arguments
     filter          optional - run the command on just a file or folder
     multiselect     optional - command is run on all commands selected (default true)
-    delay           optional - time to wait between sending multi-selected commands
+    multi-type      optional - type of multi-command to send (default repeat)
+    delay           optional - time to wait between sending repeated multi-selected commands
+    append-string   optional - string to insert between items in commands (default " ")
 
 Example:
 ```
@@ -91,6 +93,7 @@ The command can also be an array of arrays, in order to send multiple commands a
 Filter should not be included unless one wants to limit what types of list entries the command should be run on.
 To only run the command for directories use `dir`, to only run the command for files use `file`.
 
+### Codes
 The script will scan every string in the command for the special substitution strings, they are:
 
     %f      filepath of the selected item
@@ -114,10 +117,21 @@ Example of a command to add an audio track:
 }
 ```
 
-When multiple items are selected the command will be run on every item in the order they appear on the screen.
+### Multiselect commands
+When multiple items are selected the command can be run for all items in the order they appear on the screen.
 This can be controlled by the `multiselect` flag, which takes a boolean value.
 When not set the flag defaults to `true`.
+
+There are two different multiselect modes, controlled by the `multi-type` option. There are two options:
+
+#### `repeat`
+The default mode that sends the commands once for each item that is selected
 If time is needed between running commands of multiple selected items (for example, due to file handlers) then the `delay` option can be used to set a duration (in seconds) between commands.
+
+#### `append`
+Run a single command, but replace item specific codes with the corresponding string from each selected item.
+For example `["print-text", "%n" ]` would print the name of each item selected separated by ` `.
+The string appended between each character is determined by the `append-string` option, but ` ` is the default.
 
 Examples can be found [here](/file-browser-keybinds.json).
 

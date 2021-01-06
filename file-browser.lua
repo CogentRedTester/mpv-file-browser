@@ -783,21 +783,33 @@ local function escape()
     list:close()
 end
 
+--format the item string for either single or multiple items
+local function create_item_string(cmd, items, funct)
+    if not items[1] then return funct(items) end
+
+    local str = funct(items[1])
+    for i = 2, #items do
+        str = str .. ( cmd["append-string"] or " " ) .. funct(items[i])
+    end
+    return str
+end
+
 --iterates through the command table and substitutes special
 --character codes for the correct strings used for custom functions
-local function format_command_table(t, item, directory, directory_label)
+local function format_command_table(cmd, items)
+    local t = cmd.command
     local copy = {}
     for i = 1, #t do
         copy[i] = t[i]:gsub("%%.", {
             ["%%"] = "%",
-            ["%f"] = item and get_full_path(item) or "",
-            ["%F"] = string.format("%q", item and get_full_path(item) or ""),
-            ["%n"] = item and (item.label or item.name) or "",
-            ["%N"] = string.format("%q", item and (item.label or item.name) or ""),
-            ["%p"] = directory or "",
-            ["%P"] = string.format("%q", directory or ""),
-            ["%d"] = (directory_label or directory):match("([^/]+)/$") or "",
-            ["%D"] = string.format("%q", (directory_label or directory):match("([^/]+)/$") or "")
+            ["%f"] = create_item_string(cmd, items, function(item) return item and get_full_path(item, cmd.directory) or "" end),
+            ["%F"] = create_item_string(cmd, items, function(item) return string.format("%q", item and get_full_path(item, cmd.directory) or "") end),
+            ["%n"] = create_item_string(cmd, items, function(item) return item and (item.label or item.name) or "" end),
+            ["%N"] = create_item_string(cmd, items, function(item) return string.format("%q", item and (item.label or item.name) or "") end),
+            ["%p"] = cmd.directory or "",
+            ["%P"] = string.format("%q", cmd.directory or ""),
+            ["%d"] = (cmd.directory_label or cmd.directory):match("([^/]+)/$") or "",
+            ["%D"] = string.format("%q", (cmd.directory_label or cmd.directory):match("([^/]+)/$") or "")
         })
     end
     return copy
@@ -805,48 +817,54 @@ end
 
 --runs all of the commands in the command table
 --recurses to handle nested tables of commands
-local function run_custom_command(t, ...)
+local function run_custom_command(cmd, item)
+    local t = cmd.command
     if type(t[1]) == "table" then
         for i = 1, #t do
-            run_custom_command(t[i], ...)
+            run_custom_command(t[i])
         end
     else
-        local custom_cmd = format_command_table(t, ...)
+        local custom_cmd = format_command_table(cmd, item)
         msg.debug("running command: " .. utils.to_string(custom_cmd))
         mp.command_native(custom_cmd)
     end
 end
 
 --runs commands for multiple selected items
-local function recursive_multi_command(cmd, i, length, selection)
+local function recursive_multi_command(cmd, i, length)
     if i > length then return end
 
     --filtering commands
-    if cmd.filter and selection[i].type ~= cmd.filter then
+    if cmd.filter and cmd.selection[i].type ~= cmd.filter then
         msg.verbose("skipping command for selection ")
     else
-        run_custom_command(cmd.command, selection[i], selection.directory, selection.directory_label)
+        run_custom_command(cmd, cmd.selection[i])
     end
 
     --delay running the next command if the delay option is set
-    if not cmd.delay then return recursive_multi_command(cmd, i+1, length, selection)
-    else mp.add_timeout(cmd.delay, function() recursive_multi_command(cmd, i+1, length, selection) end) end
+    if not cmd.delay then return recursive_multi_command(cmd, i+1, length)
+    else mp.add_timeout(cmd.delay, function() recursive_multi_command(cmd, i+1, length) end) end
 end
 
 --runs one of the custom commands
 local function custom_command(cmd)
+        cmd.directory = list.directory
+        cmd.directory_label = list.directory_label
+
     --runs the command on all multi-selected items
     if cmd.multiselect and next(list.selection) then
-        local selection = sort_keys(list.selection)
-        selection.directory = list.directory
-        selection.directory_label = list.directory_label
+        cmd.selection = sort_keys(list.selection)
 
-        recursive_multi_command(cmd, 1, #selection, selection)
+        if not cmd["multi-type"] or cmd["multi-type"] == "repeat" then
+            recursive_multi_command(cmd, 1, #cmd.selection)
+        elseif cmd["multi-type"] == "append" then
+            run_custom_command(cmd, cmd.selection)
+        end
     else
         --filtering commands
         if cmd.filter and list[list.selected] and list[list.selected].type ~= cmd.filter then
             return msg.verbose("cancelling custom command") end
-        run_custom_command(cmd.command, list[list.selected], list.directory, list.directory_label)
+        run_custom_command(cmd, list[list.selected])
     end
 end
 

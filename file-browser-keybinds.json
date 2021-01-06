@@ -30,7 +30,8 @@
     {
         "key": "Alt+DEL",
         "command": ["run", "rm", "%F"],
-        "filter": "file"
+        "filter": "file",
+        "multi-type": "append"
     },
     {
         "key": "Ctrl+c",
@@ -58,5 +59,11 @@
             ["script-message", "type", "script-message browse-directory \"\" \n; script-binding console/_console_1", "34"]
         ],
         "multiselect": false
+    },
+    {
+        "key": "INS",
+        "command": ["run", "powershell", "-command", "Set-Content", "-LiteralPath", "( %P + '/.ordered-chapters.m3u' )", "-Value", "( %N )"],
+        "multi-type": "append",
+        "append-string": "+ '\n' +"
     }
 ]
