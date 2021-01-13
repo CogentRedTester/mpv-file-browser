@@ -317,7 +317,7 @@ local function select_prev_directory()
     end
 
     if current_file.directory:find(list.directory, 1, true) == 1 then
-        for i,item in ipairs(list) do
+        for i,item in list:ipairs() do
             if highlight_entry(item) then
                 list.selected = i
                 return
@@ -694,7 +694,7 @@ end
 local function autoload_dir(path)
     local pos = 1
     local file_count = 0
-    for _,item in ipairs(list) do
+    for _,item in list:ipairs() do
         if item.type == "file" then
             local p = get_full_path(item)
             if p == path then pos = file_count
