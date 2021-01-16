@@ -624,9 +624,9 @@ local directory_parser = {
         end
 
         if response.filter ~= false and (o.filter_files or o.filter_dot_dirs or o.filter_dot_files) then
-            filter(list)
+            filter(files)
         end
-        if response.sort ~= false then sort(list) end
+        if response.sort ~= false then sort(files) end
         top.files = files
         return self:open_directory()
     end,
