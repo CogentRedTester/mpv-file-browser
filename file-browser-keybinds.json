@@ -34,6 +34,11 @@
         "multi-type": "append"
     },
     {
+        "key": "Ctrl+ENTER",
+        "command": ["run", "mpv", "%F"],
+        "multi-type": "append"
+    },
+    {
         "key": "Ctrl+c",
         "command": [
             ["run", "powershell", "-command", "Set-Clipboard", "%F"],
