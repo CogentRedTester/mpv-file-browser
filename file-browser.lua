@@ -104,43 +104,34 @@ local current_file = {
 
 local root = nil
 
-local cache = {
-    stack = {}
-}
-local meta = {
-    __len = function(self)
-        return #self.stack
+--metatable of methods to manage the cache 
+local __cache = {
+    push = function(self)
+        table.insert(self, {
+            directory = list.directory,
+            directory_label = list.directory_label,
+            list = list.list,
+            parser = list.parser,
+            selected = list.selected
+        })
+    end,
+
+    pop = function(self) table.remove(self) end,
+
+    apply = function(self)
+        for key, value in pairs(self[#self]) do
+            list[key] = value
+        end
+    end,
+
+    clear = function(self)
+        for i = 1, #self do
+            self[i] = nil
+        end
     end
 }
-cache = setmetatable(cache, meta)
 
---push current settings onto the stack
-function cache:push()
-    table.insert(self.stack, {
-        directory = list.directory,
-        directory_label = list.directory_label,
-        list = list.list,
-        parser = list.parser,
-        selected = list.selected
-    })
-end
-
---remove latest directory from the stack
-function cache:pop()
-    table.remove(self.stack)
-end
-
---apply the settings in the cache
-function cache:apply()
-    for key, value in pairs(self.stack[#self.stack]) do
-        list[key] = value
-    end
-end
-
---empty the cache
-function cache:clear()
-    self.stack = {}
-end
+local cache = setmetatable({}, { __index = __cache })
 
 --default list of compatible file extensions
 --adding an item to this list is a valid request on github
@@ -432,7 +423,7 @@ local function update_list()
     --loads the current directry from the cache to save loading time
     --there will be a way to forcibly reload the current directory at some point
     --the cache is in the form of a stack, items are taken off the stack when the dir moves up
-    if #cache > 0 and cache.stack[#cache].directory == list.directory then
+    if #cache > 0 and cache[#cache].directory == list.directory then
         msg.verbose('found directory in cache')
         cache:apply()
 
