@@ -787,8 +787,7 @@ end
 
 --iterates through the command table and substitutes special
 --character codes for the correct strings used for custom functions
-local function format_command_table(cmd, items)
-    local t = cmd.command
+local function format_command_table(t, cmd, items)
     local copy = {}
     for i = 1, #t do
         copy[i] = t[i]:gsub("%%.", {
@@ -808,14 +807,13 @@ end
 
 --runs all of the commands in the command table
 --recurses to handle nested tables of commands
-local function run_custom_command(cmd, item)
-    local t = cmd.command
+local function run_custom_command(t, cmd, item)
     if type(t[1]) == "table" then
         for i = 1, #t do
-            run_custom_command(t[i])
+            run_custom_command(t[i], cmd, item)
         end
     else
-        local custom_cmd = format_command_table(cmd, item)
+        local custom_cmd = format_command_table(t, cmd, item)
         msg.debug("running command: " .. utils.to_string(custom_cmd))
         mp.command_native(custom_cmd)
     end
@@ -829,7 +827,7 @@ local function recursive_multi_command(cmd, i, length)
     if cmd.filter and cmd.selection[i].type ~= cmd.filter then
         msg.verbose("skipping command for selection ")
     else
-        run_custom_command(cmd, cmd.selection[i])
+        run_custom_command(cmd.command, cmd, cmd.selection[i])
     end
 
     --delay running the next command if the delay option is set
@@ -849,13 +847,13 @@ local function custom_command(cmd)
         if not cmd["multi-type"] or cmd["multi-type"] == "repeat" then
             recursive_multi_command(cmd, 1, #cmd.selection)
         elseif cmd["multi-type"] == "append" then
-            run_custom_command(cmd, cmd.selection)
+            run_custom_command(cmd.command, cmd, cmd.selection)
         end
     else
         --filtering commands
         if cmd.filter and list[list.selected] and list[list.selected].type ~= cmd.filter then
             return msg.verbose("cancelling custom command") end
-        run_custom_command(cmd, list[list.selected])
+        run_custom_command(cmd.command, cmd, list[list.selected])
     end
 end
 
