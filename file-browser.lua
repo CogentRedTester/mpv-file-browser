@@ -910,16 +910,20 @@ end)
 --declares the keybind to open the browser
 mp.add_key_binding('MENU','browse-files', function() list:toggle() end)
 
---allows keybinds/other scripts to auto-open specific directories
-mp.register_script_message('browse-directory', function(directory)
+--opens a specific directory
+local function browse_directory(directory)
+    if not directory then return end
     if directory ~= "" then directory = fix_path(directory, true) end
     msg.verbose('recieved directory from script message: '..directory)
 
     list.directory = directory
     cache:clear()
-    update()
     list:open()
-end)
+    update()
+end
+
+--allows keybinds/other scripts to auto-open specific directories
+mp.register_script_message('browse-directory', browse_directory)
 
 --a callback function for addon scripts to return the results of their filesystem processing
 mp.register_script_message('callback/browse-dir', function(response)
@@ -945,4 +949,38 @@ mp.register_script_message('callback/browse-dir', function(response)
     select_prev_directory()
     list.prev_directory = list.directory
     list:update()
+end)
+
+-----------------------------------------------
+-- Function to interface with mpv-user-input --
+-----------------------------------------------
+local counter = 1
+local function get_user_input(funct, options)
+    local name = mp.get_script_name()
+    options = options or {}
+    options.id = options.id or name
+    options.text = options.text or (name.." is requesting user input:")
+
+    local response_string = name.."/__user_input_request/"..counter
+    options.response = response_string
+
+    options = utils.format_json(options)
+    if not options then error("table cannot be converted to json string") ; return end
+
+    -- create a callback for user-input to respond to
+    counter = counter + 1
+    mp.register_script_message(response_string, function(response)
+        mp.unregister_script_message(response_string)
+        response = utils.parse_json(response)
+        funct(response.input, response.err)
+    end)
+
+    mp.commandv("script-message-to", "user_input", "request-user-input", options)
+end
+-----------------------------------------------
+-----------------------------------------------
+-----------------------------------------------
+
+mp.add_key_binding("Alt+o", "browse-directory/get-user-input", function()
+    get_user_input(browse_directory, {text = "open directory:"})
 end)

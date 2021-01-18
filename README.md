@@ -163,5 +163,10 @@ Both scripts use `MENU` as the default toggle command, so it will be necessary t
 
 Note that `lsdvd` is only available on linux, but the script has special support for WSL on windows 10.
 
+## [mpv-user-input](https://github.com/CogentRedTester/mpv-user-input)
+mpv-user-input is a script that provides an API to request text input from the user over the OSD.
+It was built using `console.lua` as a base, so supports almost all the same text input commands.
+If `user-input.lua` is loaded by mpv, then using `Alt+o` will open an input box that can be used to directly enter directories for file-browser to open.
+
 ## Configuration
 See [file_browser.conf](file_browser.conf) for the full list of options and their default values.
