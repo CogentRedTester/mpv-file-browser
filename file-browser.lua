@@ -958,7 +958,7 @@ local counter = 1
 local function get_user_input(funct, options)
     local name = mp.get_script_name()
     options = options or {}
-    options.id = options.id or name
+    options.id = name .. '/' .. (options.id or "")
     options.text = options.text or (name.." is requesting user input:")
 
     local response_string = name.."/__user_input_request/"..counter
