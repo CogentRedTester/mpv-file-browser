@@ -337,9 +337,9 @@ end
 
 --saves the directory and name of the currently playing file
 local function update_current_directory(_, filepath)
-    --if we're in idle mode then we want to open to the root
+    --if we're in idle mode then we want to open the working directory
     if filepath == nil then 
-        current_file.directory = ""
+        current_file.directory = mp.get_property("working-directory", "")
         return
     elseif filepath:find("dvd://") == 1 then
         filepath = list.dvd_device..filepath:match("dvd://(.+)")
