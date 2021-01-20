@@ -913,6 +913,7 @@ mp.add_key_binding('MENU','browse-files', function() list:toggle() end)
 --opens a specific directory
 local function browse_directory(directory)
     if not directory then return end
+    directory = mp.command_native({"expand-path", directory}, "")
     if directory ~= "" then directory = fix_path(directory, true) end
     msg.verbose('recieved directory from script message: '..directory)
 
