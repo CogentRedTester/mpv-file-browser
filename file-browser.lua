@@ -339,7 +339,7 @@ end
 local function update_current_directory(_, filepath)
     --if we're in idle mode then we want to open the working directory
     if filepath == nil then 
-        current_file.directory = mp.get_property("working-directory", "")
+        current_file.directory = fix_path( mp.get_property("working-directory", ""), true)
         return
     elseif filepath:find("dvd://") == 1 then
         filepath = list.dvd_device..filepath:match("dvd://(.+)")
