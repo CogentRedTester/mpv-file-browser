@@ -81,23 +81,32 @@ local o = {
 
 opt.read_options(o, 'file_browser')
 
-package.path = mp.command_native( {"expand-path", "~~/scripts" } ) .. "/?.lua;" .. package.path
-local list = require "scroll-list"
+-- package.path = mp.command_native( {"expand-path", "~~/scripts" } ) .. "/?.lua;" .. package.path
+-- local list = require "scroll-list"
+local list = {
+    ass = mp.create_osd_overlay("ass-events"),
+    selected = 1,
+    hidden = true,
+    flag_update = false,
+    cursor_style = o.ass_cursor,
 
---setting ass styles for the list
-list.num_entries = o.num_entries
-list.header_style = o.ass_header
-list.cursor_style = o.ass_cursor
-list.cursor = o.cursor_icon
-list.indent = o.indent_icon
+    directory = nil,
+    directory_label = nil,
+    selection = {},
+    multiselect = nil,
+    prev_directory = "",
+    dvd_device = nil,
+    parser = "file",
 
-list.directory = nil
-list.directory_label = nil
-list.selection = {}
-list.multiselect = nil
-list.prev_directory = ""
-list.dvd_device = nil
-list.parser = "file"
+    --functions stored inside the list
+    --this is due
+    append = nil,
+    newline = nil,
+    update = nil,
+    open = nil,
+    close = nil,
+    toggle = nil
+}
 
 local extensions = nil
 local sub_extensions = {}
@@ -172,6 +181,32 @@ local function get_full_path(item, dir)
     return (dir or list.directory)..item.name
 end
 
+--formats strings for ass handling
+--this function is taken from https://github.com/mpv-player/mpv/blob/master/player/lua/console.lua#L110
+local function ass_escape(str)
+    str = str:gsub('\\', '\\\239\187\191')
+    str = str:gsub('{', '\\{')
+    str = str:gsub('}', '\\}')
+    -- Precede newlines with a ZWNBSP to prevent ASS's weird collapsing of
+    -- consecutive newlines
+    str = str:gsub('\n', '\239\187\191\\N')
+    -- Turn leading spaces into hard spaces to prevent ASS from stripping them
+    str = str:gsub('\\N ', '\\N\\h')
+    str = str:gsub('^ ', '\\h')
+    return str
+end
+
+--appends the entered text to the overlay
+function list:append(text)
+        if text == nil then return end
+        self.ass.data = self.ass.data .. text
+    end
+
+--appends a newline character to the osd
+function list:newline()
+    self.ass.data = self.ass.data .. '\\N'
+end
+
 --detects whether or not to highlight the given entry as being played
 local function highlight_entry(v)
     if current_file.name == nil then return false end
@@ -182,43 +217,83 @@ local function highlight_entry(v)
     end
 end
 
---creating the custom formatting function
-function list:format_line(i, v)
-    local playing_file = highlight_entry(v)
-    self:append(o.ass_body)
+--refreshes the ass text using the contents of the list
+local function update_ass()
+    list.ass.data = ""
 
-    --handles custom styles for different entries
-    if i == list.selected then self:append(list.cursor_style..list.cursor.."\\h"..o.ass_body)
-    else self:append(list.indent.."\\h") end
-
-    --sets the selection colour scheme
-    local multiselected = list.selection[i]
-    if multiselected then self:append(o.ass_multiselect)
-    elseif i == list.selected then self:append(o.ass_selected) end
-
-    --prints the currently-playing icon and style
-    if playing_file and multiselected then self:append(o.ass_playingselected)
-    elseif playing_file then self:append(o.ass_playing) end
-
-    --sets the folder icon
-    if v.type == 'dir' then self:append(o.folder_icon.."\\h") end
-
-    --adds the actual name of the item
-    self:append("{\\fn"..list.font.."}")
-    self:append(v.ass or v.label or v.name)
-    self:newline()
-end
-
---track the osd-font property without needing to grab it every list update
-mp.observe_property("osd-font", "string", function(_,font) list.font = font end)
-
---updates the header with the current directory
-function list:format_header()
     local dir_name = list.directory_label or list.directory
     if dir_name == "" then dir_name = "ROOT" end
-    self:append(list.header_style)
-    self:append(list.ass_escape(dir_name)..'\\N ----------------------------------------------------')
-    self:newline()
+    list:append(o.ass_header)
+    list:append(ass_escape(dir_name)..'\\N ----------------------------------------------------')
+    list:newline()
+
+    if #list.list < 1 then
+        list:append(list.empty_text)
+        list.ass:update()
+        return
+    end
+
+    local start = 1
+    local finish = start+o.num_entries-1
+
+    --handling cursor positioning
+    local mid = math.ceil(o.num_entries/2)+1
+    if list.selected+mid > finish then
+        local offset = list.selected - finish + mid
+
+        --if we've overshot the end of the list then undo some of the offset
+        if finish + offset > #list.list then
+            offset = offset - ((finish+offset) - #list.list)
+        end
+
+        start = start + offset
+        finish = finish + offset
+    end
+
+    --making sure that we don't overstep the boundaries
+    if start < 1 then start = 1 end
+    local overflow = finish < #list.list
+    --this is necessary when the number of items in the dir is less than the max
+    if not overflow then finish = #list.list end
+
+    --adding a header to show there are items above in the list
+    if start > 1 then list:append(o.ass_footerheader..(start-1)..' item(s) above\\N\\N') end
+
+    for i=start, finish do
+        local v = list.list[i]
+        local playing_file = highlight_entry(v)
+        list:append(o.ass_body)
+
+        --handles custom styles for different entries
+        if i == list.selected then list:append(list.cursor_style..o.cursor_icon.."\\h"..o.ass_body)
+        else list:append(o.indent_icon.."\\h") end
+
+        --sets the selection colour scheme
+        local multiselected = list.selection[i]
+        if multiselected then list:append(o.ass_multiselect)
+        elseif i == list.selected then list:append(o.ass_selected) end
+
+        --prints the currently-playing icon and style
+        if playing_file and multiselected then list:append(o.ass_playingselected)
+        elseif playing_file then list:append(o.ass_playing) end
+
+        --sets the folder icon
+        if v.type == 'dir' then list:append(o.folder_icon.."\\h") end
+
+        --adds the actual name of the item
+        list:append(v.ass or v.label or v.name)
+        list:newline()
+    end
+
+    if overflow then list:append('\\N'..o.ass_footerheader..#list.list-finish..' item(s) remaining') end
+    list.ass:update()
+end
+
+--re-parses the list into an ass string
+--if the list is closed then it flags an update on the next open
+function list:update()
+    if self.hidden then self.flag_update = true
+    else update_ass() end
 end
 
 --standardises filepaths across systems
@@ -256,7 +331,7 @@ end
 --escapes ass characters - better to do it once then calculate it on the fly every time the list updates
 local function escape_ass(t)
     for i = 1, #t do
-        t[i].ass = t[i].ass or list.ass_escape(t[i].label or t[i].name)
+        t[i].ass = t[i].ass or ass_escape(t[i].label or t[i].name)
     end
 end
 
@@ -304,8 +379,8 @@ end
 local function select_prev_directory()
     if list.prev_directory:find(list.directory, 1, true) == 1 then
         local i = 1
-        while (list[i] and list[i].type == "dir") do
-            if list.prev_directory:find(get_full_path(list[i]), 1, true) then
+        while (list.list[i] and list.list[i].type == "dir") do
+            if list.prev_directory:find(get_full_path(list.list[i]), 1, true) then
                 list.selected = i
                 return
             end
@@ -314,7 +389,7 @@ local function select_prev_directory()
     end
 
     if current_file.directory:find(list.directory, 1, true) == 1 then
-        for i,item in list:ipairs() do
+        for i,item in ipairs(list.list) do
             if highlight_entry(item) then
                 list.selected = i
                 return
@@ -335,7 +410,7 @@ local function setup_root()
         local path = mp.command_native({'expand-path', str})
         path = fix_path(path, true)
 
-        local temp = {name = path, type = 'dir', label = str, ass = list.ass_escape(str), parser = choose_parser(path)}
+        local temp = {name = path, type = 'dir', label = str, ass = ass_escape(str), parser = choose_parser(path)}
 
         root[#root+1] = temp
     end
@@ -397,7 +472,7 @@ local function scan_directory(directory)
         --filters hidden dot directories for linux
         if not (o.filter_dot_dirs and item:sub(1,1) == ".") then
             msg.debug(item..'/')
-            table.insert(new_list, {name = item..'/', ass = list.ass_escape(item..'/'), type = 'dir'})
+            table.insert(new_list, {name = item..'/', ass = ass_escape(item..'/'), type = 'dir'})
         end
     end
 
@@ -411,7 +486,7 @@ local function scan_directory(directory)
             not (o.filter_dot_files and item:sub(1,1) == ".")
         then
             msg.debug(item)
-            table.insert(new_list, {name = item, ass = list.ass_escape(item), type = 'file'})
+            table.insert(new_list, {name = item, ass = ass_escape(item), type = 'file'})
         end
     end
     sort(new_list)
@@ -433,7 +508,6 @@ local function update_list()
     if #cache > 0 and cache[#cache].directory == list.directory then
         msg.verbose('found directory in cache')
         cache:apply()
-
         list.prev_directory = list.directory
         list:update()
         return
@@ -492,10 +566,10 @@ end
 
 --moves down a directory
 local function down_dir()
-    if not list[list.selected] or list[list.selected].type ~= 'dir' then return end
+    if not list.list[list.selected] or list.list[list.selected].type ~= 'dir' then return end
 
     cache:push()
-    list.directory = list.directory..list[list.selected].name
+    list.directory = list.directory..list.list[list.selected].name
     update()
 end
 
@@ -512,21 +586,33 @@ local function drag_select(direction)
     list:update()
 end
 
---wrapper for list:scroll_down() which runs the multiselect drag behaviour when required
+--moves the selector down the list
 local function scroll_down()
-    list:scroll_down()
+    if list.selected < #list.list then
+        list.selected = list.selected + 1
+        update_ass()
+    elseif list.wrap then
+        list.selected = 1
+        update_ass()
+    end
     if list.multiselect then drag_select(1) end
 end
 
---wrapper for list:scroll_up() which runs the multiselect drag behaviour when required
+--moves the selector up the list
 local function scroll_up()
-    list:scroll_up()
+    if list.selected > 1 then
+        list.selected = list.selected - 1
+        update_ass()
+    elseif list.wrap then
+        list.selected = #list.list
+        update_ass()
+    end
     if list.multiselect then drag_select(-1) end
 end
 
 --toggles the selection
 local function toggle_selection()
-    if list[list.selected] then
+    if list.list[list.selected] then
         list.selection[list.selected] = not list.selection[list.selected] or nil
     end
     list:update()
@@ -534,7 +620,7 @@ end
 
 --select all items in the list
 local function select_all()
-    for i,_ in list:ipairs() do
+    for i,_ in ipairs(list.list) do
         list.selection[i] = true
     end
     list:update()
@@ -556,7 +642,7 @@ end
 local function sort_keys(t)
     local keys = {}
     for k in pairs(t) do
-        local item = list[k]
+        local item = list.list[k]
         item.index = k
         keys[#keys+1] = item
     end
@@ -691,7 +777,7 @@ end
 local function autoload_dir(path)
     local pos = 1
     local file_count = 0
-    for _,item in list:ipairs() do
+    for _,item in ipairs(list.list) do
         if item.type == "file" then
             local p = get_full_path(item)
             if p == path then pos = file_count
@@ -719,7 +805,7 @@ end
 
 --opens the selelected file(s)
 local function open_file(flags, autoload)
-    if not list[list.selected] then return end
+    if not list.list[list.selected] then return end
     if flags == 'replace' then list:close() end
 
     --handles multi-selection behaviour
@@ -740,11 +826,11 @@ local function open_file(flags, autoload)
         list:update()
 
     elseif flags == 'replace' then
-        loadfile(list[list.selected], flags, autoload ~= o.autoload)
+        loadfile(list.list[list.selected], flags, autoload ~= o.autoload)
         down_dir()
         list:close()
     else
-        loadfile(list[list.selected], flags)
+        loadfile(list.list[list.selected], flags)
     end
 
     if o.custom_dir_loading then directory_parser:continue() end
@@ -752,7 +838,9 @@ end
 
 --opens the browser
 function list:open()
-    self:add_keybinds()
+    for _,v in ipairs(self.keybinds) do
+        mp.add_forced_key_binding(v[1], '__file-browser/'..v[2], v[3], v[4])
+    end
 
     list.hidden = false
     if list.directory == nil then
@@ -762,10 +850,26 @@ function list:open()
         return
     end
 
-    if list.flag_update then
-        update_current_directory(nil, mp.get_property('path'))
+    if list.flag_update then update_current_directory(nil, mp.get_property('path')) end
+    self.hidden = false
+    if not self.flag_update then self.ass:update()
+    else self.flag_update = false ; update_ass() end
+end
+
+--closes the list and sets the hidden flag
+function list:close()
+    for _,v in ipairs(self.keybinds) do
+        mp.remove_key_binding('__file-browser/'..v[2])
     end
-    list:open_list()
+
+    self.hidden = true
+    self.ass:remove()
+end
+
+--toggles the list
+function list:toggle()
+    if self.hidden then self:open()
+    else self:close() end
 end
 
 --run when the escape key is used
@@ -858,9 +962,9 @@ local function custom_command(cmd)
         end
     else
         --filtering commands
-        if cmd.filter and list[list.selected] and list[list.selected].type ~= cmd.filter then
+        if cmd.filter and list.list[list.selected] and list.list[list.selected].type ~= cmd.filter then
             return msg.verbose("cancelling custom command") end
-        run_custom_command(cmd.command, cmd, list[list.selected])
+        run_custom_command(cmd.command, cmd, list.list[list.selected])
     end
 end
 
@@ -945,7 +1049,11 @@ mp.register_script_message('callback/browse-dir', function(response)
     end
 
     if response.sort ~= false then sort(items) end
-    if response.ass_escape ~= false then escape_ass(items) end
+    if response.ass_escape ~= false then
+        for i = 1, #items do
+            items[i].ass = items[i].ass or ass_escape(items[i].label or items[i].name)
+        end
+    end
 
     list.list = items
     list.directory_label = response.directory_label
