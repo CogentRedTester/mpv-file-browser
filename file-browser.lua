@@ -102,6 +102,7 @@ local extensions = nil
 local sub_extensions = {}
 
 local dvd_device = nil
+local osd_font = ""
 local current_file = {
     directory = nil,
     name = nil
@@ -443,6 +444,9 @@ local function update_ass()
         if v.type == 'dir' then append(o.folder_icon.."\\h") end
 
         --adds the actual name of the item
+        --the osd font is explicitly set to counterract users
+        --changing the font to support custom icons
+        append("{\\fn"..osd_font.."}")
         append(v.ass or v.label or v.name)
         newline()
     end
@@ -1050,6 +1054,9 @@ end
 --------------------------------mpv API Callbacks-----------------------------------------
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
+
+--keeps track of the osd_font
+mp.observe_property("osd-font", "string", function(_,font) osd_font = font end)
 
 --we don't want to add any overhead when the browser isn't open
 mp.observe_property('path', 'string', function(_,path)
