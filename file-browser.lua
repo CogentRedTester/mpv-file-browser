@@ -81,8 +81,6 @@ local o = {
 
 opt.read_options(o, 'file_browser')
 
--- package.path = mp.command_native( {"expand-path", "~~/scripts" } ) .. "/?.lua;" .. package.path
--- local list = require "scroll-list"
 local list = {
     ass = mp.create_osd_overlay("ass-events"),
     selected = 1,
@@ -97,15 +95,6 @@ local list = {
     prev_directory = "",
     dvd_device = nil,
     parser = "file",
-
-    --functions stored inside the list
-    --this is due
-    append = nil,
-    newline = nil,
-    update = nil,
-    open = nil,
-    close = nil,
-    toggle = nil
 }
 
 local extensions = nil
@@ -117,6 +106,31 @@ local current_file = {
 }
 
 local root = nil
+
+--default list of compatible file extensions
+--adding an item to this list is a valid request on github
+local compatible_file_extensions = {
+    "264","265","3g2","3ga","3ga2","3gp","3gp2","3gpp","3iv","a52","aac","adt","adts","ahn","aif","aifc","aiff","amr","ape","asf","au","avc","avi","awb","ay",
+    "bmp","cue","divx","dts","dtshd","dts-hd","dv","dvr","dvr-ms","eac3","evo","evob","f4a","flac","flc","fli","flic","flv","gbs","gif","gxf","gym",
+    "h264","h265","hdmov","hdv","hes","hevc","jpeg","jpg","kss","lpcm","m1a","m1v","m2a","m2t","m2ts","m2v","m3u","m3u8","m4a","m4v","mid","mk3d","mka","mkv",
+    "mlp","mod","mov","mp1","mp2","mp2v","mp3","mp4","mp4v","mp4v","mpa","mpe","mpeg","mpeg2","mpeg4","mpg","mpg4","mpv","mpv2","mts","mtv","mxf","nsf",
+    "nsfe","nsv","nut","oga","ogg","ogm","ogv","ogx","opus","pcm","pls","png","qt","ra","ram","rm","rmvb","sap","snd","spc","spx","svg","thd","thd+ac3",
+    "tif","tiff","tod","trp","truehd","true-hd","ts","tsa","tsv","tta","tts","vfw","vgm","vgz","vob","vro","wav","weba","webm","webp","wm","wma","wmv","wtv",
+    "wv","x264","x265","xvid","y4m","yuv"
+}
+
+--creating a set of subtitle extensions for custom subtitle loading behaviour
+local subtitle_extensions = {
+    "etf","etf8","utf-8","idx","sub","srt","rt","ssa","ass","mks","vtt","sup","scc","smi","lrc",'pgs'
+}
+for i = 1, #subtitle_extensions do
+    sub_extensions[subtitle_extensions[i]] = true
+end
+
+--------------------------------------------------------------------------------------------------------
+--------------------------------------Cache Implementation----------------------------------------------
+--------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------
 
 --metatable of methods to manage the cache 
 local __cache = {
@@ -147,25 +161,12 @@ local __cache = {
 
 local cache = setmetatable({}, { __index = __cache })
 
---default list of compatible file extensions
---adding an item to this list is a valid request on github
-local compatible_file_extensions = {
-    "264","265","3g2","3ga","3ga2","3gp","3gp2","3gpp","3iv","a52","aac","adt","adts","ahn","aif","aifc","aiff","amr","ape","asf","au","avc","avi","awb","ay",
-    "bmp","cue","divx","dts","dtshd","dts-hd","dv","dvr","dvr-ms","eac3","evo","evob","f4a","flac","flc","fli","flic","flv","gbs","gif","gxf","gym",
-    "h264","h265","hdmov","hdv","hes","hevc","jpeg","jpg","kss","lpcm","m1a","m1v","m2a","m2t","m2ts","m2v","m3u","m3u8","m4a","m4v","mid","mk3d","mka","mkv",
-    "mlp","mod","mov","mp1","mp2","mp2v","mp3","mp4","mp4v","mp4v","mpa","mpe","mpeg","mpeg2","mpeg4","mpg","mpg4","mpv","mpv2","mts","mtv","mxf","nsf",
-    "nsfe","nsv","nut","oga","ogg","ogm","ogv","ogx","opus","pcm","pls","png","qt","ra","ram","rm","rmvb","sap","snd","spc","spx","svg","thd","thd+ac3",
-    "tif","tiff","tod","trp","truehd","true-hd","ts","tsa","tsv","tta","tts","vfw","vgm","vgz","vob","vro","wav","weba","webm","webp","wm","wma","wmv","wtv",
-    "wv","x264","x265","xvid","y4m","yuv"
-}
 
---creating a set of subtitle extensions for custom subtitle loading behaviour
-local subtitle_extensions = {
-    "etf","etf8","utf-8","idx","sub","srt","rt","ssa","ass","mks","vtt","sup","scc","smi","lrc",'pgs'
-}
-for i = 1, #subtitle_extensions do
-    sub_extensions[subtitle_extensions[i]] = true
-end
+
+--------------------------------------------------------------------------------------------------------
+-----------------------------------------Utility Functions----------------------------------------------
+--------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------
 
 --chooses which parser to use for the specific path
 local function choose_parser(path)
@@ -197,14 +198,14 @@ local function ass_escape(str)
 end
 
 --appends the entered text to the overlay
-function list:append(text)
+local function append(text)
         if text == nil then return end
-        self.ass.data = self.ass.data .. text
+        list.ass.data = list.ass.data .. text
     end
 
 --appends a newline character to the osd
-function list:newline()
-    self.ass.data = self.ass.data .. '\\N'
+local function newline()
+    list.ass.data = list.ass.data .. '\\N'
 end
 
 --detects whether or not to highlight the given entry as being played
@@ -217,122 +218,12 @@ local function highlight_entry(v)
     end
 end
 
---refreshes the ass text using the contents of the list
-local function update_ass()
-    list.ass.data = ""
-
-    local dir_name = list.directory_label or list.directory
-    if dir_name == "" then dir_name = "ROOT" end
-    list:append(o.ass_header)
-    list:append(ass_escape(dir_name)..'\\N ----------------------------------------------------')
-    list:newline()
-
-    if #list.list < 1 then
-        list:append(list.empty_text)
-        list.ass:update()
-        return
-    end
-
-    local start = 1
-    local finish = start+o.num_entries-1
-
-    --handling cursor positioning
-    local mid = math.ceil(o.num_entries/2)+1
-    if list.selected+mid > finish then
-        local offset = list.selected - finish + mid
-
-        --if we've overshot the end of the list then undo some of the offset
-        if finish + offset > #list.list then
-            offset = offset - ((finish+offset) - #list.list)
-        end
-
-        start = start + offset
-        finish = finish + offset
-    end
-
-    --making sure that we don't overstep the boundaries
-    if start < 1 then start = 1 end
-    local overflow = finish < #list.list
-    --this is necessary when the number of items in the dir is less than the max
-    if not overflow then finish = #list.list end
-
-    --adding a header to show there are items above in the list
-    if start > 1 then list:append(o.ass_footerheader..(start-1)..' item(s) above\\N\\N') end
-
-    for i=start, finish do
-        local v = list.list[i]
-        local playing_file = highlight_entry(v)
-        list:append(o.ass_body)
-
-        --handles custom styles for different entries
-        if i == list.selected then list:append(list.cursor_style..o.cursor_icon.."\\h"..o.ass_body)
-        else list:append(o.indent_icon.."\\h") end
-
-        --sets the selection colour scheme
-        local multiselected = list.selection[i]
-        if multiselected then list:append(o.ass_multiselect)
-        elseif i == list.selected then list:append(o.ass_selected) end
-
-        --prints the currently-playing icon and style
-        if playing_file and multiselected then list:append(o.ass_playingselected)
-        elseif playing_file then list:append(o.ass_playing) end
-
-        --sets the folder icon
-        if v.type == 'dir' then list:append(o.folder_icon.."\\h") end
-
-        --adds the actual name of the item
-        list:append(v.ass or v.label or v.name)
-        list:newline()
-    end
-
-    if overflow then list:append('\\N'..o.ass_footerheader..#list.list-finish..' item(s) remaining') end
-    list.ass:update()
-end
-
---re-parses the list into an ass string
---if the list is closed then it flags an update on the next open
-function list:update()
-    if self.hidden then self.flag_update = true
-    else update_ass() end
-end
-
 --standardises filepaths across systems
 local function fix_path(str, is_directory)
     str = str:gsub([[\]],[[/]])
     str = str:gsub([[/./]], [[/]])
     if is_directory and str:sub(-1) ~= '/' then str = str..'/' end
     return str
-end
-
---sets up the compatible extensions list
-local function setup_extensions_list()
-    extensions = {}
-    if not o.filter_files then return end
-
-    --adding file extensions to the set
-    for i=1, #compatible_file_extensions do
-        extensions[compatible_file_extensions[i]] = true
-    end
-    for i = 1, #subtitle_extensions do
-        extensions[subtitle_extensions[i]] = true
-    end
-
-    --adding extra extensions on the whitelist
-    for str in string.gmatch(o.extension_whitelist, "([^"..o.root_seperators.."]+)") do
-        extensions[str] = true
-    end
-
-    --removing extensions that are in the blacklist
-    for str in string.gmatch(o.extension_blacklist, "([^"..o.root_seperators.."]+)") do
-        extensions[str] = nil
-    end
-end
-
---escapes ass characters - better to do it once then calculate it on the fly every time the list updates
-local function escape_ass(t)
-    for i = 1, #t do
-        t[i].ass = t[i].ass or ass_escape(t[i].label or t[i].name)
-    end
 end
 
 --sorts the table lexicographically ignoring case and accounting for leading/non-leading zeroes
@@ -373,6 +264,70 @@ local function filter(t)
     end
 end
 
+--sorts a table into an array of selected items in the correct order
+local function sort_keys(t)
+    local keys = {}
+    for k in pairs(t) do
+        local item = list.list[k]
+        item.index = k
+        keys[#keys+1] = item
+    end
+
+    table.sort(keys, function(a,b) return a.index < b.index end)
+    return keys
+end
+
+
+
+--------------------------------------------------------------------------------------------------------
+-----------------------------------------Setup Functions------------------------------------------------
+--------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------
+
+--sets up the compatible extensions list
+local function setup_extensions_list()
+    extensions = {}
+    if not o.filter_files then return end
+
+    --adding file extensions to the set
+    for i=1, #compatible_file_extensions do
+        extensions[compatible_file_extensions[i]] = true
+    end
+    for i = 1, #subtitle_extensions do
+        extensions[subtitle_extensions[i]] = true
+    end
+
+    --adding extra extensions on the whitelist
+    for str in string.gmatch(o.extension_whitelist, "([^"..o.root_seperators.."]+)") do
+        extensions[str] = true
+    end
+
+    --removing extensions that are in the blacklist
+    for str in string.gmatch(o.extension_blacklist, "([^"..o.root_seperators.."]+)") do
+        extensions[str] = nil
+    end
+end
+
+--splits the string into a table on the semicolons
+local function setup_root()
+    root = {}
+    for str in string.gmatch(o.root, "([^"..o.root_seperators.."]+)") do
+        local path = mp.command_native({'expand-path', str})
+        path = fix_path(path, true)
+
+        local temp = {name = path, type = 'dir', label = str, ass = ass_escape(str), parser = choose_parser(path)}
+
+        root[#root+1] = temp
+    end
+end
+
+
+
+--------------------------------------------------------------------------------------------------------
+-----------------------------------------List Formatting------------------------------------------------
+--------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------
+
 --scans the list for which item to select by default
 --chooses the folder that the script just moved out of
 --or, otherwise, the item highlighted as currently playing
@@ -403,19 +358,6 @@ local function disable_select_mode()
     list.multiselect = nil
 end
 
---splits the string into a table on the semicolons
-local function setup_root()
-    root = {}
-    for str in string.gmatch(o.root, "([^"..o.root_seperators.."]+)") do
-        local path = mp.command_native({'expand-path', str})
-        path = fix_path(path, true)
-
-        local temp = {name = path, type = 'dir', label = str, ass = ass_escape(str), parser = choose_parser(path)}
-
-        root[#root+1] = temp
-    end
-end
-
 --saves the directory and name of the currently playing file
 local function update_current_directory(_, filepath)
     --if we're in idle mode then we want to open the working directory
@@ -432,6 +374,87 @@ local function update_current_directory(_, filepath)
     exact_path = fix_path(exact_path, false)
     current_file.directory, current_file.name = utils.split_path(exact_path)
 end
+
+--refreshes the ass text using the contents of the list
+local function update_ass()
+    if list.hidden then list.flag_update = true ; return end
+
+    list.ass.data = ""
+
+    local dir_name = list.directory_label or list.directory
+    if dir_name == "" then dir_name = "ROOT" end
+    append(o.ass_header)
+    append(ass_escape(dir_name)..'\\N ----------------------------------------------------')
+    newline()
+
+    if #list.list < 1 then
+        append(list.empty_text)
+        list.ass:update()
+        return
+    end
+
+    local start = 1
+    local finish = start+o.num_entries-1
+
+    --handling cursor positioning
+    local mid = math.ceil(o.num_entries/2)+1
+    if list.selected+mid > finish then
+        local offset = list.selected - finish + mid
+
+        --if we've overshot the end of the list then undo some of the offset
+        if finish + offset > #list.list then
+            offset = offset - ((finish+offset) - #list.list)
+        end
+
+        start = start + offset
+        finish = finish + offset
+    end
+
+    --making sure that we don't overstep the boundaries
+    if start < 1 then start = 1 end
+    local overflow = finish < #list.list
+    --this is necessary when the number of items in the dir is less than the max
+    if not overflow then finish = #list.list end
+
+    --adding a header to show there are items above in the list
+    if start > 1 then append(o.ass_footerheader..(start-1)..' item(s) above\\N\\N') end
+
+    for i=start, finish do
+        local v = list.list[i]
+        local playing_file = highlight_entry(v)
+        append(o.ass_body)
+
+        --handles custom styles for different entries
+        if i == list.selected then append(list.cursor_style..o.cursor_icon.."\\h"..o.ass_body)
+        else append(o.indent_icon.."\\h") end
+
+        --sets the selection colour scheme
+        local multiselected = list.selection[i]
+        if multiselected then append(o.ass_multiselect)
+        elseif i == list.selected then append(o.ass_selected) end
+
+        --prints the currently-playing icon and style
+        if playing_file and multiselected then append(o.ass_playingselected)
+        elseif playing_file then append(o.ass_playing) end
+
+        --sets the folder icon
+        if v.type == 'dir' then append(o.folder_icon.."\\h") end
+
+        --adds the actual name of the item
+        append(v.ass or v.label or v.name)
+        newline()
+    end
+
+    if overflow then append('\\N'..o.ass_footerheader..#list.list-finish..' item(s) remaining') end
+    list.ass:update()
+end
+
+
+
+--------------------------------------------------------------------------------------------------------
+-----------------------------------------Directory Parsing----------------------------------------------
+--------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------
 
 --loads the root list
 local function goto_root()
@@ -450,7 +473,7 @@ local function goto_root()
     cache:clear()
     list.selection = {}
     disable_select_mode()
-    list:update()
+    update_ass()
 end
 
 --scans the current directory and updates the directory table
@@ -509,7 +532,7 @@ local function update_list()
         msg.verbose('found directory in cache')
         cache:apply()
         list.prev_directory = list.directory
-        list:update()
+        update_ass()
         return
     end
 
@@ -524,7 +547,7 @@ local function update_list()
 
         --saves previous directory information
         list.prev_directory = list.directory
-        list:update()
+        update_ass()
     end
 end
 
@@ -534,7 +557,7 @@ local function update()
     list.list = {}
     list.directory_label = nil
     disable_select_mode()
-    list:update()
+    update_ass()
     list.empty_text = "empty directory"
     update_list()
 end
@@ -573,6 +596,13 @@ local function down_dir()
     update()
 end
 
+
+
+--------------------------------------------------------------------------------------------------------
+--------------------------------Scroll/Select Implementation--------------------------------------------
+--------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------
+
 --calculates what drag behaviour is required for that specific movement
 local function drag_select(direction)
     local setting = list.selection[list.multiselect]
@@ -583,7 +613,7 @@ local function drag_select(direction)
     elseif setting then
         list.selection[list.selected - direction] = nil
     end
-    list:update()
+    update_ass()
 end
 
 --moves the selector down the list
@@ -615,7 +645,7 @@ local function toggle_selection()
     if list.list[list.selected] then
         list.selection[list.selected] = not list.selection[list.selected] or nil
     end
-    list:update()
+    update_ass()
 end
 
 --select all items in the list
@@ -623,7 +653,7 @@ local function select_all()
     for i,_ in ipairs(list.list) do
         list.selection[i] = true
     end
-    list:update()
+    update_ass()
 end
 
 --toggles select mode
@@ -634,22 +664,16 @@ local function toggle_select_mode()
         toggle_selection()
     else
         disable_select_mode()
-        list:update()
+        update_ass()
     end
 end
 
---sorts a table into an array of selected items in the correct order
-local function sort_keys(t)
-    local keys = {}
-    for k in pairs(t) do
-        local item = list.list[k]
-        item.index = k
-        keys[#keys+1] = item
-    end
 
-    table.sort(keys, function(a,b) return a.index < b.index end)
-    return keys
-end
+
+------------------------------------------------------------------------------------------
+---------------------------Custom Directory Loading---------------------------------------
+------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
 --an object for custom directory loading and parsing
 --this is written specifically for handling asynchronous playback from add-ons
@@ -762,6 +786,13 @@ local directory_parser = {
 --filters and sorts the response from the addons
 mp.register_script_message("callback/custom-loadlist", function(...) directory_parser:callback(...) end)
 
+
+
+------------------------------------------------------------------------------------------
+---------------------------------File/Playlist Opening------------------------------------
+------------------------------------Browser Controls--------------------------------------
+------------------------------------------------------------------------------------------
+
 --loads lists or defers the command to add-ons
 local function loadlist(item, flags)
     local parser = item.parser or list.parser
@@ -803,10 +834,59 @@ local function loadfile(item, flags, autoload)
     end
 end
 
+--opens the browser
+local function open()
+    for _,v in ipairs(list.keybinds) do
+        mp.add_forced_key_binding(v[1], '__file-browser/'..v[2], v[3], v[4])
+    end
+
+    list.hidden = false
+    if list.directory == nil then
+        local path = mp.get_property('path')
+        update_current_directory(nil, path)
+        if path or o.default_to_working_directory then goto_current_dir() else goto_root() end
+        return
+    end
+
+    if list.flag_update then update_current_directory(nil, mp.get_property('path')) end
+    list.hidden = false
+    if not list.flag_update then list.ass:update()
+    else list.flag_update = false ; update_ass() end
+end
+
+--closes the list and sets the hidden flag
+local function close()
+    for _,v in ipairs(list.keybinds) do
+        mp.remove_key_binding('__file-browser/'..v[2])
+    end
+
+    list.hidden = true
+    list.ass:remove()
+end
+
+--toggles the list
+local function toggle()
+    if list.hidden then open()
+    else close() end
+end
+
+--run when the escape key is used
+local function escape()
+    --if multiple items are selection cancel the
+    --selection instead of closing the browser
+    if next(list.selection) or list.multiselect then
+        list.selection = {}
+        disable_select_mode()
+        update_ass()
+        return
+    end
+    close()
+end
+
 --opens the selelected file(s)
 local function open_file(flags, autoload)
     if not list.list[list.selected] then return end
-    if flags == 'replace' then list:close() end
+    if flags == 'replace' then close() end
 
     --handles multi-selection behaviour
     if next(list.selection) then
@@ -823,12 +903,12 @@ local function open_file(flags, autoload)
         --reset the selection after
         list.selection = {}
         disable_select_mode()
-        list:update()
+        update_ass()
 
     elseif flags == 'replace' then
         loadfile(list.list[list.selected], flags, autoload ~= o.autoload)
         down_dir()
-        list:close()
+        close()
     else
         loadfile(list.list[list.selected], flags)
     end
@@ -836,54 +916,12 @@ local function open_file(flags, autoload)
     if o.custom_dir_loading then directory_parser:continue() end
 end
 
---opens the browser
-function list:open()
-    for _,v in ipairs(self.keybinds) do
-        mp.add_forced_key_binding(v[1], '__file-browser/'..v[2], v[3], v[4])
-    end
 
-    list.hidden = false
-    if list.directory == nil then
-        local path = mp.get_property('path')
-        update_current_directory(nil, path)
-        if path or o.default_to_working_directory then goto_current_dir() else goto_root() end
-        return
-    end
 
-    if list.flag_update then update_current_directory(nil, mp.get_property('path')) end
-    self.hidden = false
-    if not self.flag_update then self.ass:update()
-    else self.flag_update = false ; update_ass() end
-end
-
---closes the list and sets the hidden flag
-function list:close()
-    for _,v in ipairs(self.keybinds) do
-        mp.remove_key_binding('__file-browser/'..v[2])
-    end
-
-    self.hidden = true
-    self.ass:remove()
-end
-
---toggles the list
-function list:toggle()
-    if self.hidden then self:open()
-    else self:close() end
-end
-
---run when the escape key is used
-local function escape()
-    --if multiple items are selection cancel the
-    --selection instead of closing the browser
-    if next(list.selection) or list.multiselect then
-        list.selection = {}
-        disable_select_mode()
-        list:update()
-        return
-    end
-    list:close()
-end
+------------------------------------------------------------------------------------------
+----------------------------------Keybind Implementation----------------------------------
+------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 
 --format the item string for either single or multiple items
 local function create_item_string(cmd, items, funct)
@@ -1004,11 +1042,18 @@ if o.custom_keybinds then
     end
 end
 
+
+
+------------------------------------------------------------------------------------------
+--------------------------------mpv API Callbacks-----------------------------------------
+------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+
 --we don't want to add any overhead when the browser isn't open
 mp.observe_property('path', 'string', function(_,path)
     if not list.hidden then 
         update_current_directory(_,path)
-        list:update()
+        update_ass()
     else list.flag_update = true end
 end)
 
@@ -1019,7 +1064,7 @@ mp.observe_property('dvd-device', 'string', function(_, device)
 end)
 
 --declares the keybind to open the browser
-mp.add_key_binding('MENU','browse-files', function() list:toggle() end)
+mp.add_key_binding('MENU','browse-files', toggle)
 
 --opens a specific directory
 local function browse_directory(directory)
@@ -1030,7 +1075,7 @@ local function browse_directory(directory)
 
     list.directory = directory
     cache:clear()
-    list:open()
+    open()
     update()
 end
 
@@ -1064,12 +1109,16 @@ mp.register_script_message('callback/browse-dir', function(response)
     --setting up the previous directory stuff
     select_prev_directory()
     list.prev_directory = list.directory
-    list:update()
+    update_ass()
 end)
 
------------------------------------------------
--- Function to interface with mpv-user-input --
------------------------------------------------
+
+
+------------------------------------------------------------------------------------------
+----------------------------mpv-user-input Compatability----------------------------------
+------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+
 local counter = 1
 local function get_user_input(funct, options)
     local name = mp.get_script_name()
@@ -1093,9 +1142,6 @@ local function get_user_input(funct, options)
 
     mp.commandv("script-message-to", "user_input", "request-user-input", options)
 end
------------------------------------------------
------------------------------------------------
------------------------------------------------
 
 mp.add_key_binding("Alt+o", "browse-directory/get-user-input", function()
     get_user_input(browse_directory, {text = "open directory:"})
