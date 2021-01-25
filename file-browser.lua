@@ -174,6 +174,7 @@ end
 
 --detects whether or not to highlight the given entry as being played
 local function highlight_entry(v)
+    if current_file.name == nil then return false end
     if v.type == "dir" then
         return current_file.directory:find(get_full_path(v), 1, true)
     else
@@ -345,6 +346,7 @@ local function update_current_directory(_, filepath)
     --if we're in idle mode then we want to open the working directory
     if filepath == nil then 
         current_file.directory = fix_path( mp.get_property("working-directory", ""), true)
+        current_file.name = nil
         return
     elseif filepath:find("dvd://") == 1 then
         filepath = list.dvd_device..filepath:match("dvd://(.+)")
