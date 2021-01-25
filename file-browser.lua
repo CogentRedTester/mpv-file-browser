@@ -80,9 +80,10 @@ local o = {
 }
 
 opt.read_options(o, 'file_browser')
+local ass = mp.create_osd_overlay("ass-events")
 
-local list = {
-    ass = mp.create_osd_overlay("ass-events"),
+local state = {
+    list = {},
     selected = 1,
     hidden = true,
     flag_update = false,
@@ -90,16 +91,17 @@ local list = {
 
     directory = nil,
     directory_label = nil,
-    selection = {},
-    multiselect = nil,
     prev_directory = "",
-    dvd_device = nil,
     parser = "file",
+
+    multiselect_start = nil,
+    selection = {}
 }
 
 local extensions = nil
 local sub_extensions = {}
 
+local dvd_device = nil
 local current_file = {
     directory = nil,
     name = nil
@@ -136,11 +138,11 @@ end
 local __cache = {
     push = function(self)
         table.insert(self, {
-            directory = list.directory,
-            directory_label = list.directory_label,
-            list = list.list,
-            parser = list.parser,
-            selected = list.selected
+            directory = state.directory,
+            directory_label = state.directory_label,
+            list = state.list,
+            parser = state.parser,
+            selected = state.selected
         })
     end,
 
@@ -148,7 +150,7 @@ local __cache = {
 
     apply = function(self)
         for key, value in pairs(self[#self]) do
-            list[key] = value
+            state[key] = value
         end
     end,
 
@@ -170,7 +172,7 @@ local cache = setmetatable({}, { __index = __cache })
 
 --chooses which parser to use for the specific path
 local function choose_parser(path)
-    if o.dvd_browser and path == list.dvd_device then return "dvd"
+    if o.dvd_browser and path == dvd_device then return "dvd"
     elseif o.http_browser and path:find("https?://") == 1 then return "http"
     elseif o.ftp_browser and path:sub(1, 6) == "ftp://" then return "ftp"
     else return "file" end
@@ -179,7 +181,7 @@ end
 --get the full path for the current file
 local function get_full_path(item, dir)
     if item.path then return item.path end
-    return (dir or list.directory)..item.name
+    return (dir or state.directory)..item.name
 end
 
 --formats strings for ass handling
@@ -200,12 +202,12 @@ end
 --appends the entered text to the overlay
 local function append(text)
         if text == nil then return end
-        list.ass.data = list.ass.data .. text
+        ass.data = ass.data .. text
     end
 
 --appends a newline character to the osd
 local function newline()
-    list.ass.data = list.ass.data .. '\\N'
+    ass.data = ass.data .. '\\N'
 end
 
 --detects whether or not to highlight the given entry as being played
@@ -214,7 +216,7 @@ local function highlight_entry(v)
     if v.type == "dir" then
         return current_file.directory:find(get_full_path(v), 1, true)
     else
-        return current_file.directory == list.directory and current_file.name == v.name
+        return current_file.directory == state.directory and current_file.name == v.name
     end
 end
 
@@ -268,7 +270,7 @@ end
 local function sort_keys(t)
     local keys = {}
     for k in pairs(t) do
-        local item = list.list[k]
+        local item = state.list[k]
         item.index = k
         keys[#keys+1] = item
     end
@@ -332,21 +334,21 @@ end
 --chooses the folder that the script just moved out of
 --or, otherwise, the item highlighted as currently playing
 local function select_prev_directory()
-    if list.prev_directory:find(list.directory, 1, true) == 1 then
+    if state.prev_directory:find(state.directory, 1, true) == 1 then
         local i = 1
-        while (list.list[i] and list.list[i].type == "dir") do
-            if list.prev_directory:find(get_full_path(list.list[i]), 1, true) then
-                list.selected = i
+        while (state.list[i] and state.list[i].type == "dir") do
+            if state.prev_directory:find(get_full_path(state.list[i]), 1, true) then
+                state.selected = i
                 return
             end
             i = i+1
         end
     end
 
-    if current_file.directory:find(list.directory, 1, true) == 1 then
-        for i,item in ipairs(list.list) do
+    if current_file.directory:find(state.directory, 1, true) == 1 then
+        for i,item in ipairs(state.list) do
             if highlight_entry(item) then
-                list.selected = i
+                state.selected = i
                 return
             end
         end
@@ -354,8 +356,8 @@ local function select_prev_directory()
 end
 
 local function disable_select_mode()
-    list.cursor_style = o.ass_cursor
-    list.multiselect = nil
+    state.cursor_style = o.ass_cursor
+    state.multiselect_start = nil
 end
 
 --saves the directory and name of the currently playing file
@@ -366,7 +368,7 @@ local function update_current_directory(_, filepath)
         current_file.name = nil
         return
     elseif filepath:find("dvd://") == 1 then
-        filepath = list.dvd_device..filepath:match("dvd://(.+)")
+        filepath = dvd_device..filepath:match("dvd://(.+)")
     end
 
     local workingDirectory = mp.get_property('working-directory', '')
@@ -377,19 +379,19 @@ end
 
 --refreshes the ass text using the contents of the list
 local function update_ass()
-    if list.hidden then list.flag_update = true ; return end
+    if state.hidden then state.flag_update = true ; return end
 
-    list.ass.data = ""
+    ass.data = ""
 
-    local dir_name = list.directory_label or list.directory
+    local dir_name = state.directory_label or state.directory
     if dir_name == "" then dir_name = "ROOT" end
     append(o.ass_header)
     append(ass_escape(dir_name)..'\\N ----------------------------------------------------')
     newline()
 
-    if #list.list < 1 then
-        append(list.empty_text)
-        list.ass:update()
+    if #state.list < 1 then
+        append(state.empty_text)
+        ass:update()
         return
     end
 
@@ -398,12 +400,12 @@ local function update_ass()
 
     --handling cursor positioning
     local mid = math.ceil(o.num_entries/2)+1
-    if list.selected+mid > finish then
-        local offset = list.selected - finish + mid
+    if state.selected+mid > finish then
+        local offset = state.selected - finish + mid
 
         --if we've overshot the end of the list then undo some of the offset
-        if finish + offset > #list.list then
-            offset = offset - ((finish+offset) - #list.list)
+        if finish + offset > #state.list then
+            offset = offset - ((finish+offset) - #state.list)
         end
 
         start = start + offset
@@ -412,26 +414,26 @@ local function update_ass()
 
     --making sure that we don't overstep the boundaries
     if start < 1 then start = 1 end
-    local overflow = finish < #list.list
+    local overflow = finish < #state.list
     --this is necessary when the number of items in the dir is less than the max
-    if not overflow then finish = #list.list end
+    if not overflow then finish = #state.list end
 
     --adding a header to show there are items above in the list
     if start > 1 then append(o.ass_footerheader..(start-1)..' item(s) above\\N\\N') end
 
     for i=start, finish do
-        local v = list.list[i]
+        local v = state.list[i]
         local playing_file = highlight_entry(v)
         append(o.ass_body)
 
         --handles custom styles for different entries
-        if i == list.selected then append(list.cursor_style..o.cursor_icon.."\\h"..o.ass_body)
+        if i == state.selected then append(state.cursor_style..o.cursor_icon.."\\h"..o.ass_body)
         else append(o.indent_icon.."\\h") end
 
         --sets the selection colour scheme
-        local multiselected = list.selection[i]
+        local multiselected = state.selection[i]
         if multiselected then append(o.ass_multiselect)
-        elseif i == list.selected then append(o.ass_selected) end
+        elseif i == state.selected then append(o.ass_selected) end
 
         --prints the currently-playing icon and style
         if playing_file and multiselected then append(o.ass_playingselected)
@@ -445,8 +447,8 @@ local function update_ass()
         newline()
     end
 
-    if overflow then append('\\N'..o.ass_footerheader..#list.list-finish..' item(s) remaining') end
-    list.ass:update()
+    if overflow then append('\\N'..o.ass_footerheader..#state.list-finish..' item(s) remaining') end
+    ass:update()
 end
 
 
@@ -460,18 +462,18 @@ end
 local function goto_root()
     if root == nil then setup_root() end
     msg.verbose('loading root')
-    list.selected = 1
-    list.list = root
+    state.selected = 1
+    state.list = root
 
     --if moving to root from one of the connected locations,
     --then select that location
-    list.directory = ""
+    state.directory = ""
     select_prev_directory()
 
-    list.parser = ""
-    list.prev_directory = ""
+    state.parser = ""
+    state.prev_directory = ""
     cache:clear()
-    list.selection = {}
+    state.selection = {}
     disable_select_mode()
     update_ass()
 end
@@ -518,61 +520,61 @@ end
 
 --sends update requests to the different parsers
 local function update_list()
-    msg.verbose('loading contents of ' .. list.directory)
+    msg.verbose('loading contents of ' .. state.directory)
 
-    list.selected = 1
-    list.selection = {}
+    state.selected = 1
+    state.selection = {}
     if extensions == nil then setup_extensions_list() end
-    if list.directory == "" then return goto_root() end
+    if state.directory == "" then return goto_root() end
 
     --loads the current directry from the cache to save loading time
     --there will be a way to forcibly reload the current directory at some point
     --the cache is in the form of a stack, items are taken off the stack when the dir moves up
-    if #cache > 0 and cache[#cache].directory == list.directory then
+    if #cache > 0 and cache[#cache].directory == state.directory then
         msg.verbose('found directory in cache')
         cache:apply()
-        list.prev_directory = list.directory
+        state.prev_directory = state.directory
         update_ass()
         return
     end
 
-    list.parser = choose_parser(list.directory)
+    state.parser = choose_parser(state.directory)
 
-    if list.parser ~= "file" then
-        mp.commandv("script-message", list.parser.."/browse-dir", list.directory, "callback/browse-dir")
+    if state.parser ~= "file" then
+        mp.commandv("script-message", state.parser.."/browse-dir", state.directory, "callback/browse-dir")
     else
-        list.list = scan_directory(list.directory)
-        if not list.list then return goto_root() end
+        state.list = scan_directory(state.directory)
+        if not state.list then return goto_root() end
         select_prev_directory()
 
         --saves previous directory information
-        list.prev_directory = list.directory
+        state.prev_directory = state.directory
         update_ass()
     end
 end
 
 --rescans the folder and updates the list
 local function update()
-    list.empty_text = "~"
-    list.list = {}
-    list.directory_label = nil
+    state.empty_text = "~"
+    state.list = {}
+    state.directory_label = nil
     disable_select_mode()
     update_ass()
-    list.empty_text = "empty directory"
+    state.empty_text = "empty directory"
     update_list()
 end
 
 --switches to the directory of the currently playing file
 local function goto_current_dir()
-    list.directory = current_file.directory
+    state.directory = current_file.directory
     cache:clear()
-    list.selected = 1
+    state.selected = 1
     update()
 end
 
 --moves up a directory
 local function up_dir()
-    local dir = list.directory:reverse()
+    local dir = state.directory:reverse()
     local index = dir:find("[/\\]")
 
     while index == 1 do
@@ -580,8 +582,8 @@ local function up_dir()
         index = dir:find("[/\\]")
     end
 
-    if index == nil then list.directory = ""
-    else list.directory = dir:sub(index):reverse() end
+    if index == nil then state.directory = ""
+    else state.directory = dir:sub(index):reverse() end
 
     update()
     cache:pop()
@@ -589,10 +591,10 @@ end
 
 --moves down a directory
 local function down_dir()
-    if not list.list[list.selected] or list.list[list.selected].type ~= 'dir' then return end
+    if not state.list[state.selected] or state.list[state.selected].type ~= 'dir' then return end
 
     cache:push()
-    list.directory = list.directory..list.list[list.selected].name
+    state.directory = state.directory..state.list[state.selected].name
     update()
 end
 
@@ -605,62 +607,62 @@ end
 
 --calculates what drag behaviour is required for that specific movement
 local function drag_select(direction)
-    local setting = list.selection[list.multiselect]
-    local below = (list.multiselect - list.selected) < 1
+    local setting = state.selection[state.multiselect_start]
+    local below = (state.multiselect_start - state.selected) < 1
 
-    if list.selected ~= list.multiselect and below == (direction == 1) then
-        list.selection[list.selected] = setting
+    if state.selected ~= state.multiselect_start and below == (direction == 1) then
+        state.selection[state.selected] = setting
     elseif setting then
-        list.selection[list.selected - direction] = nil
+        state.selection[state.selected - direction] = nil
     end
     update_ass()
 end
 
 --moves the selector down the list
 local function scroll_down()
-    if list.selected < #list.list then
-        list.selected = list.selected + 1
+    if state.selected < #state.list then
+        state.selected = state.selected + 1
         update_ass()
-    elseif list.wrap then
-        list.selected = 1
+    elseif state.wrap then
+        state.selected = 1
         update_ass()
     end
-    if list.multiselect then drag_select(1) end
+    if state.multiselect_start then drag_select(1) end
 end
 
 --moves the selector up the list
 local function scroll_up()
-    if list.selected > 1 then
-        list.selected = list.selected - 1
+    if state.selected > 1 then
+        state.selected = state.selected - 1
         update_ass()
-    elseif list.wrap then
-        list.selected = #list.list
+    elseif state.wrap then
+        state.selected = #state.list
         update_ass()
     end
-    if list.multiselect then drag_select(-1) end
+    if state.multiselect_start then drag_select(-1) end
 end
 
 --toggles the selection
 local function toggle_selection()
-    if list.list[list.selected] then
-        list.selection[list.selected] = not list.selection[list.selected] or nil
+    if state.list[state.selected] then
+        state.selection[state.selected] = not state.selection[state.selected] or nil
     end
     update_ass()
 end
 
 --select all items in the list
 local function select_all()
-    for i,_ in ipairs(list.list) do
-        list.selection[i] = true
+    for i,_ in ipairs(state.list) do
+        state.selection[i] = true
     end
     update_ass()
 end
 
 --toggles select mode
 local function toggle_select_mode()
-    if list.multiselect == nil then
-        list.multiselect = list.selected
-        list.cursor_style = o.ass_multiselect
+    if state.multiselect_start == nil then
+        state.multiselect_start = state.selected
+        state.cursor_style = o.ass_multiselect
         toggle_selection()
     else
         disable_select_mode()
@@ -697,11 +699,11 @@ local directory_parser = {
 
     --queue an item to be opened
     queue_directory = function(self, item, flags)
-        local dir = list.directory..item.name
+        local dir = state.directory..item.name
 
         table.insert(self.queue, {
             directory = dir,
-            parser = item.parser or list.parser,
+            parser = item.parser or state.parser,
             flags = flags
         })
         msg.trace("queuing " .. dir .. " for opening")
@@ -795,7 +797,7 @@ mp.register_script_message("callback/custom-loadlist", function(...) directory_p
 
 --loads lists or defers the command to add-ons
 local function loadlist(item, flags)
-    local parser = item.parser or list.parser
+    local parser = item.parser or state.parser
     if parser == "file" then
         mp.commandv('loadlist', get_full_path(item), flags == "append-play" and "append" or flags)
         if flags == "append-play" and mp.get_property_bool("core-idle") then mp.commandv("playlist-play-index", 0) end
@@ -808,7 +810,7 @@ end
 local function autoload_dir(path)
     local pos = 1
     local file_count = 0
-    for _,item in ipairs(list.list) do
+    for _,item in ipairs(state.list) do
         if item.type == "file" then
             local p = get_full_path(item)
             if p == path then pos = file_count
@@ -836,37 +838,37 @@ end
 
 --opens the browser
 local function open()
-    for _,v in ipairs(list.keybinds) do
+    for _,v in ipairs(state.keybinds) do
         mp.add_forced_key_binding(v[1], '__file-browser/'..v[2], v[3], v[4])
     end
 
-    list.hidden = false
-    if list.directory == nil then
+    state.hidden = false
+    if state.directory == nil then
         local path = mp.get_property('path')
         update_current_directory(nil, path)
         if path or o.default_to_working_directory then goto_current_dir() else goto_root() end
         return
     end
 
-    if list.flag_update then update_current_directory(nil, mp.get_property('path')) end
-    list.hidden = false
-    if not list.flag_update then list.ass:update()
-    else list.flag_update = false ; update_ass() end
+    if state.flag_update then update_current_directory(nil, mp.get_property('path')) end
+    state.hidden = false
+    if not state.flag_update then ass:update()
+    else state.flag_update = false ; update_ass() end
 end
 
 --closes the list and sets the hidden flag
 local function close()
-    for _,v in ipairs(list.keybinds) do
+    for _,v in ipairs(state.keybinds) do
         mp.remove_key_binding('__file-browser/'..v[2])
     end
 
-    list.hidden = true
-    list.ass:remove()
+    state.hidden = true
+    ass:remove()
 end
 
 --toggles the list
 local function toggle()
-    if list.hidden then open()
+    if state.hidden then open()
     else close() end
 end
 
@@ -874,8 +876,8 @@ end
 local function escape()
     --if multiple items are selection cancel the
     --selection instead of closing the browser
-    if next(list.selection) or list.multiselect then
-        list.selection = {}
+    if next(state.selection) or state.multiselect_start then
+        state.selection = {}
         disable_select_mode()
         update_ass()
         return
@@ -885,12 +887,12 @@ end
 
 --opens the selelected file(s)
 local function open_file(flags, autoload)
-    if not list.list[list.selected] then return end
+    if not state.list[state.selected] then return end
     if flags == 'replace' then close() end
 
     --handles multi-selection behaviour
-    if next(list.selection) then
-        local selection = sort_keys(list.selection)
+    if next(state.selection) then
+        local selection = sort_keys(state.selection)
 
         --the currently selected file will be loaded according to the flag
         --the remaining files will be appended
@@ -901,16 +903,16 @@ local function open_file(flags, autoload)
         end
 
         --reset the selection after
-        list.selection = {}
+        selection = {}
         disable_select_mode()
         update_ass()
 
     elseif flags == 'replace' then
-        loadfile(list.list[list.selected], flags, autoload ~= o.autoload)
+        loadfile(state.list[state.selected], flags, autoload ~= o.autoload)
         down_dir()
         close()
     else
-        loadfile(list.list[list.selected], flags)
+        loadfile(state.list[state.selected], flags)
     end
 
     if o.custom_dir_loading then directory_parser:continue() end
@@ -986,12 +988,12 @@ end
 
 --runs one of the custom commands
 local function custom_command(cmd)
-        cmd.directory = list.directory
-        cmd.directory_label = list.directory_label
+        cmd.directory = state.directory
+        cmd.directory_label = state.directory_label
 
     --runs the command on all multi-selected items
-    if cmd.multiselect and next(list.selection) then
-        cmd.selection = sort_keys(list.selection)
+    if cmd.multiselect and next(state.selection) then
+        cmd.selection = sort_keys(state.selection)
 
         if not cmd["multi-type"] or cmd["multi-type"] == "repeat" then
             recursive_multi_command(cmd, 1, #cmd.selection)
@@ -1000,14 +1002,14 @@ local function custom_command(cmd)
         end
     else
         --filtering commands
-        if cmd.filter and list.list[list.selected] and list.list[list.selected].type ~= cmd.filter then
+        if cmd.filter and state.list[state.selected] and state.list[state.selected].type ~= cmd.filter then
             return msg.verbose("cancelling custom command") end
-        run_custom_command(cmd.command, cmd, list.list[list.selected])
+        run_custom_command(cmd.command, cmd, state.list[state.selected])
     end
 end
 
 --dynamic keybinds to set while the browser is open
-list.keybinds = {
+state.keybinds = {
     {'ENTER', 'open', function() open_file('replace', false) end, {}},
     {'Shift+ENTER', 'open_append', function() open_file('append-play', false) end, {}},
     {'Alt+ENTER', 'open_autoload', function() open_file('replace', true) end, {}},
@@ -1037,7 +1039,7 @@ if o.custom_keybinds then
 
         for i = 1, #json do
             if json[i].multiselect == nil then json[i].multiselect = true end
-            table.insert(list.keybinds, { json[i].key, "custom"..tostring(i), function() custom_command(json[i]) end, {} })
+            table.insert(state.keybinds, { json[i].key, "custom"..tostring(i), function() custom_command(json[i]) end, {} })
         end
     end
 end
@@ -1051,16 +1053,16 @@ end
 
 --we don't want to add any overhead when the browser isn't open
 mp.observe_property('path', 'string', function(_,path)
-    if not list.hidden then 
+    if not state.hidden then 
         update_current_directory(_,path)
         update_ass()
-    else list.flag_update = true end
+    else state.flag_update = true end
 end)
 
 --updates the dvd_device
 mp.observe_property('dvd-device', 'string', function(_, device)
     if not device or device == "" then device = "/dev/dvd/" end
-    list.dvd_device = fix_path(device, true)
+    dvd_device = fix_path(device, true)
 end)
 
 --declares the keybind to open the browser
@@ -1073,7 +1075,7 @@ local function browse_directory(directory)
     if directory ~= "" then directory = fix_path(directory, true) end
     msg.verbose('recieved directory from script message: '..directory)
 
-    list.directory = directory
+    state.directory = directory
     cache:clear()
     open()
     update()
@@ -1100,15 +1102,15 @@ mp.register_script_message('callback/browse-dir', function(response)
         end
     end
 
-    list.list = items
-    list.directory_label = response.directory_label
+    state.list = items
+    state.directory_label = response.directory_label
 
     --changes the text displayed when the directory is empty
-    if response.empty_text then list.empty_text = response.empty_text end
+    if response.empty_text then state.empty_text = response.empty_text end
 
     --setting up the previous directory stuff
     select_prev_directory()
-    list.prev_directory = list.directory
+    state.prev_directory = state.directory
     update_ass()
 end)
 
