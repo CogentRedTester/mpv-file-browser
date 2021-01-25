@@ -903,7 +903,7 @@ local function open_file(flags, autoload)
         end
 
         --reset the selection after
-        selection = {}
+        state.selection = {}
         disable_select_mode()
         update_ass()
 
