@@ -52,6 +52,11 @@ local o = {
     --when enabled the keybind disables autoload for the file
     autoload = false,
 
+    --when opening the browser in idle mode prefer the current working directory over the root
+    --note that the working directory is set as the 'current' directory regardless, so `home` will
+    --move the browser there even if this option is set to false
+    default_to_working_directory = false,
+
     --allows custom icons be set to fix incompatabilities with some fonts
     --the `\h` character is a hard space to add padding between the symbol and the text
     folder_icon = "🖿",
@@ -460,7 +465,6 @@ end
 
 --switches to the directory of the currently playing file
 local function goto_current_dir()
-    --splits the directory and filename apart
     list.directory = current_file.directory
     cache:clear()
     list.selected = 1
@@ -750,8 +754,9 @@ function list:open()
 
     list.hidden = false
     if list.directory == nil then
-        update_current_directory(nil, mp.get_property('path'))
-        goto_current_dir()
+        local path = mp.get_property('path')
+        update_current_directory(nil, path)
+        if path or o.default_to_working_directory then goto_current_dir() else goto_root() end
         return
     end
 
