@@ -95,6 +95,7 @@ local state = {
     parser = "file",
 
     multiselect_start = nil,
+    initial_selection = {},
     selection = {}
 }
 
@@ -356,11 +357,6 @@ local function select_prev_directory()
     end
 end
 
-local function disable_select_mode()
-    state.cursor_style = o.ass_cursor
-    state.multiselect_start = nil
-end
-
 --saves the directory and name of the currently playing file
 local function update_current_directory(_, filepath)
     --if we're in idle mode then we want to open the working directory
@@ -453,6 +449,96 @@ local function update_ass()
 
     if overflow then append('\\N'..o.ass_footerheader..#state.list-finish..' item(s) remaining') end
     ass:update()
+end
+
+
+
+--------------------------------------------------------------------------------------------------------
+--------------------------------Scroll/Select Implementation--------------------------------------------
+--------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------
+
+--disables multiselect
+local function disable_select_mode()
+    state.cursor_style = o.ass_cursor
+    state.multiselect_start = nil
+    state.initial_selection = {}
+end
+
+--enables multiselect
+local function enable_select_mode()
+    state.multiselect_start = state.selected
+    state.cursor_style = o.ass_multiselect
+
+    --saving a copy of the original state
+    for key, value in pairs(state.selection) do
+        state.initial_selection[key] = value
+    end
+end
+
+--calculates what drag behaviour is required for that specific movement
+local function drag_select(direction)
+    local setting = state.selection[state.multiselect_start]
+    local offset = state.multiselect_start - state.selected
+    local below = offset < 0
+
+    if below == (direction == 1) and offset ~= 0 then
+        state.selection[state.selected] = setting
+    else
+        state.selection[state.selected - direction] = state.initial_selection[state.selected-direction]
+    end
+    update_ass()
+end
+
+--moves the selector down the list
+local function scroll_down()
+    if state.selected < #state.list then
+        state.selected = state.selected + 1
+        update_ass()
+    elseif state.wrap then
+        state.selected = 1
+        update_ass()
+    end
+    if state.multiselect_start then drag_select(1) end
+end
+
+--moves the selector up the list
+local function scroll_up()
+    if state.selected > 1 then
+        state.selected = state.selected - 1
+        update_ass()
+    elseif state.wrap then
+        state.selected = #state.list
+        update_ass()
+    end
+    if state.multiselect_start then drag_select(-1) end
+end
+
+--toggles the selection
+local function toggle_selection()
+    if state.list[state.selected] then
+        state.selection[state.selected] = not state.selection[state.selected] or nil
+    end
+    update_ass()
+end
+
+--select all items in the list
+local function select_all()
+    for i,_ in ipairs(state.list) do
+        state.selection[i] = true
+    end
+    update_ass()
+end
+
+--toggles select mode
+local function toggle_select_mode()
+    if state.multiselect_start == nil then
+        enable_select_mode()
+        toggle_selection()
+    else
+        disable_select_mode()
+        update_ass()
+    end
 end
 
 
@@ -600,78 +686,6 @@ local function down_dir()
     cache:push()
     state.directory = state.directory..state.list[state.selected].name
     update()
-end
-
-
-
---------------------------------------------------------------------------------------------------------
---------------------------------Scroll/Select Implementation--------------------------------------------
---------------------------------------------------------------------------------------------------------
---------------------------------------------------------------------------------------------------------
-
---calculates what drag behaviour is required for that specific movement
-local function drag_select(direction)
-    local setting = state.selection[state.multiselect_start]
-    local below = (state.multiselect_start - state.selected) < 1
-
-    if state.selected ~= state.multiselect_start and below == (direction == 1) then
-        state.selection[state.selected] = setting
-    elseif setting then
-        state.selection[state.selected - direction] = nil
-    end
-    update_ass()
-end
-
---moves the selector down the list
-local function scroll_down()
-    if state.selected < #state.list then
-        state.selected = state.selected + 1
-        update_ass()
-    elseif state.wrap then
-        state.selected = 1
-        update_ass()
-    end
-    if state.multiselect_start then drag_select(1) end
-end
-
---moves the selector up the list
-local function scroll_up()
-    if state.selected > 1 then
-        state.selected = state.selected - 1
-        update_ass()
-    elseif state.wrap then
-        state.selected = #state.list
-        update_ass()
-    end
-    if state.multiselect_start then drag_select(-1) end
-end
-
---toggles the selection
-local function toggle_selection()
-    if state.list[state.selected] then
-        state.selection[state.selected] = not state.selection[state.selected] or nil
-    end
-    update_ass()
-end
-
---select all items in the list
-local function select_all()
-    for i,_ in ipairs(state.list) do
-        state.selection[i] = true
-    end
-    update_ass()
-end
-
---toggles select mode
-local function toggle_select_mode()
-    if state.multiselect_start == nil then
-        state.multiselect_start = state.selected
-        state.cursor_style = o.ass_multiselect
-        toggle_selection()
-    else
-        disable_select_mode()
-        update_ass()
-    end
 end
 
 
