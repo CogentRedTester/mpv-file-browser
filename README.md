@@ -62,7 +62,7 @@ Keybinds are declared in the `~~/script-opts/file-browser-keybinds.json` file, t
     key             the key to bind the command to - same syntax as input.conf
     command         a json array of commands and arguments
     filter          optional - run the command on just a file or folder
-    multiselect     optional - command is run on all commands selected (default true)
+    multiselect     optional - command is run on all commands selected (default false)
     multi-type      optional - type of multi-command to send (default repeat)
     delay           optional - time to wait between sending repeated multi-selected commands
     append-string   optional - string to insert between items in commands (default " ")
@@ -118,7 +118,7 @@ Example of a command to add an audio track:
 ### Multiselect commands
 When multiple items are selected the command can be run for all items in the order they appear on the screen.
 This can be controlled by the `multiselect` flag, which takes a boolean value.
-When not set the flag defaults to `true`.
+When not set the flag defaults to `false`.
 
 There are two different multiselect modes, controlled by the `multi-type` option. There are two options:
 

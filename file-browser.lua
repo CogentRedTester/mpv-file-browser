@@ -1056,7 +1056,6 @@ if o.custom_keybinds then
         if not json then error("invalid json syntax for "..path) end
 
         for i = 1, #json do
-            if json[i].multiselect == nil then json[i].multiselect = true end
             table.insert(state.keybinds, { json[i].key, "custom"..tostring(i), function() custom_command(json[i]) end, {} })
         end
     end

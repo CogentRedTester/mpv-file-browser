@@ -1,11 +1,13 @@
 [
     {
         "key": "KP1",
-        "command": ["print-text", "file: %f"]
+        "command": ["print-text", "file: %f"],
+        "multiselect": true
     },
     {
         "key": "KP2",
-        "command": ["print-text", "name: %n"]
+        "command": ["print-text", "name: %n"],
+        "multiselect": true
     },
     {
         "key": "KP3",
@@ -17,25 +19,30 @@
     },
     {
         "key": "KP5",
-        "command": ["print-text", "escape the code: %%f"]
+        "command": ["print-text", "escape the code: %%f"],
+        "multiselect": true
     },
     {
         "key": "KP6",
-        "command": ["print-text", "full filepath via concatenation: %p%n"]
+        "command": ["print-text", "full filepath via concatenation: %p%n"],
+        "multiselect": true
     },
     {
         "key": "KP7",
-        "command": ["print-text", "quote/escape filepath: %F"]
+        "command": ["print-text", "quote/escape filepath: %F"],
+        "multiselect": true
     },
     {
         "key": "Alt+DEL",
         "command": ["run", "rm", "%F"],
         "filter": "file",
+        "multiselect": true,
         "multi-type": "append"
     },
     {
         "key": "Ctrl+ENTER",
         "command": ["run", "mpv", "%F"],
+        "multiselect": true,
         "multi-type": "append"
     },
     {
@@ -44,6 +51,7 @@
             ["run", "powershell", "-command", "Set-Clipboard", "%F"],
             ["print-text", "copied filepath to clipboard"]
         ],
+        "multiselect": true,
         "delay": 0.3
     },
     {
@@ -58,16 +66,9 @@
         "multiselect": true
     },
     {
-        "key": "Alt+o",
-        "command": [
-            ["script-binding", "file_browser/dynamic/1/close"],
-            ["script-message", "type", "script-message browse-directory \"\" \n; script-binding console/_console_1", "34"]
-        ],
-        "multiselect": false
-    },
-    {
         "key": "INS",
         "command": ["run", "powershell", "-command", "Set-Content", "-LiteralPath", "( %P + '/.ordered-chapters.m3u' )", "-Value", "( %N )"],
+        "multiselect": true,
         "multi-type": "append",
         "append-string": "+ '\n' +"
     }
