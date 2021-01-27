@@ -857,7 +857,7 @@ end
 --opens the browser
 local function open()
     for _,v in ipairs(state.keybinds) do
-        mp.add_forced_key_binding(v[1], '__file-browser/'..v[2], v[3], v[4])
+        mp.add_forced_key_binding(v[1], 'dynamic/'..v[2], v[3], v[4])
     end
 
     state.hidden = false
@@ -1028,9 +1028,9 @@ end
 
 --dynamic keybinds to set while the browser is open
 state.keybinds = {
-    {'ENTER', 'open', function() open_file('replace', false) end, {}},
-    {'Shift+ENTER', 'open_append', function() open_file('append-play', false) end, {}},
-    {'Alt+ENTER', 'open_autoload', function() open_file('replace', true) end, {}},
+    {'ENTER', 'play', function() open_file('replace', false) end, {}},
+    {'Shift+ENTER', 'play_append', function() open_file('append-play', false) end, {}},
+    {'Alt+ENTER', 'play_autoload', function() open_file('replace', true) end, {}},
     {'ESC', 'close', escape, {}},
     {'RIGHT', 'down_dir', down_dir, {}},
     {'LEFT', 'up_dir', up_dir, {}},

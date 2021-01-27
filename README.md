@@ -9,24 +9,28 @@ By default only file types compatible with mpv will be shown, but this can be ch
 ## Keybinds
 The following keybind is set by default
 
-    MENU            toggles the browser
+| Key         | Name          | Description                                                                   |
+|-------------|---------------|-------------------------------------------------------------------------------|
+| MENU        | browse-files  | toggles the browser                                                           |
 
 The following keybinds are only set while the browser is open:
 
-    ESC             closes the browser or clears the selection
-    ENTER           plays the currently selected file or folder
-    Shift+ENTER     appends the current file or folder to the playlist
-    Alt+ENTER       loads playlist entries before and after the selected file (like autoload.lua)
-    DOWN            move selector down the list
-    UP              move selector up the list
-    RIGHT           enter the currently selected directory
-    LEFT            move to the parent directory
-    HOME            move to the directory of the currently playing file
-    Shift+HOME      move to the root directory
-    Ctrl+r          reload directory and reset cache
-    s               toggles multiselect mode
-    S               toggles selection for the current item
-    Ctrl+a          select all items in the current directory
+| Key         | Name          | Description                                                                   |
+|-------------|---------------|-------------------------------------------------------------------------------|
+| ESC         | close         | closes the browser or clears the selection                                    |
+| ENTER       | play          | plays the currently selected file or folder                                   |
+| Shift+ENTER | play_append   | appends the current file or folder to the playlist                            |
+| Alt+ENTER   | play_autoload | loads playlist entries before and after the selected file (like autoload.lua) |
+| DOWN        | scroll_down   | move selector down the list                                                   |
+| UP          | scroll_up     | move selector up the list                                                     |
+| RIGHT       | down_dir      | enter the currently selected directory                                        |
+| LEFT        | up_dir        | move to the parent directory                                                  |
+| HOME        | goto_current  | move to the directory of the currently playing file                           |
+| Shift+HOME  | goto_root     | move to the root directory                                                    |
+| Ctrl+r      | reload        | reload directory and reset cache                                              |
+| s           | select_mode   | toggles multiselect mode                                                      |
+| S           | select_item   | toggles selection for the current item                                        |
+| Ctrl+a      | select_all    | select all items in the current directory                                     |
 
 When attempting to play or append a subtitle file the script will instead load the subtitle track into the existing video.
 
