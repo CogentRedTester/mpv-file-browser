@@ -87,8 +87,7 @@ The command can also be an array of arrays, in order to send multiple commands a
     "command": [
         ["print-text", "example2"],
         ["show-text", "example2"]
-    ],
-    "multiselect": false
+    ]
 }
 ```
 
@@ -112,10 +111,9 @@ Example of a command to add an audio track:
 
 ```
 {
-    "key": "Alt+ENTER",
+    "key": "Ctrl+a",
     "command": ["audio-add", "%f"],
-    "filter": "file",
-    "delay": 0.5
+    "filter": "file"
 }
 ```
 
