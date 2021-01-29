@@ -32,6 +32,8 @@
         "command": ["print-text", "quote/escape filepath: %F"],
         "multiselect": true
     },
+
+
     {
         "key": "Alt+DEL",
         "command": ["run", "rm", "%F"],
@@ -71,5 +73,35 @@
         "multiselect": true,
         "multi-type": "append",
         "append-string": "+ '\n' +"
+    },
+
+
+    {
+        "key": "WHEEL_UP",
+        "command": ["script-binding", "file_browser/dynamic/scroll_up"]
+    },
+    {
+        "key": "WHEEL_DOWN",
+        "command": ["script-binding", "file_browser/dynamic/scroll_down"]
+    },
+    {
+        "key": "MBTN_LEFT",
+        "command": ["script-binding", "file_browser/dynamic/down_dir"]
+    },
+    {
+        "key": "MBTN_RIGHT",
+        "command": ["script-binding", "file_browser/dynamic/up_dir"]
+    },
+    {
+        "key": "MBTN_MID",
+        "command": ["script-binding", "file_browser/dynamic/play"]
+    },
+    {
+        "key": "UP",
+        "command": ["osd-auto", "add", "volume", "2"]
+    },
+    {
+        "key": "DOWN",
+        "command": ["osd-auto", "add", "volume", "-2"]
     }
 ]

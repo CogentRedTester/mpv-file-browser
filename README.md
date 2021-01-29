@@ -13,7 +13,7 @@ The following keybind is set by default
 |-------------|---------------|-------------------------------------------------------------------------------|
 | MENU        | browse-files  | toggles the browser                                                           |
 
-The following keybinds are only set while the browser is open:
+The following dynamic keybinds are only set while the browser is open:
 
 | Key         | Name          | Description                                                                   |
 |-------------|---------------|-------------------------------------------------------------------------------|
@@ -117,7 +117,7 @@ Example of a command to add an audio track:
 }
 ```
 
-### Multiselect commands
+### Multiselect Commands
 When multiple items are selected the command can be run for all items in the order they appear on the screen.
 This can be controlled by the `multiselect` flag, which takes a boolean value.
 When not set the flag defaults to `false`.
@@ -133,7 +133,37 @@ Run a single command, but replace item specific codes with the corresponding str
 For example `["print-text", "%n" ]` would print the name of each item selected separated by ` `.
 The string appended between each character is determined by the `append-string` option, but ` ` is the default.
 
-Examples can be found [here](/file-browser-keybinds.json).
+### Modifying Default Keybinds
+Since the custom keybinds are applied after the default dynamic keybinds they can be used to overwrite the default bindings.
+Any key with the same key code will have preference over existing bindings.
+Additionally, setting new keys for the existing binds can be done with the `script-binding [binding-name]` command, where `binding-name` is the full name of the keybinding.
+For this script the names of the dynamic keybinds are in the format `file_browser/dynamic/[name]` where `name` is a unique identifier documented in the [keybinds](#keybinds) table.
+
+For example to change the scroll buttons from the arrows to the scroll wheel:
+
+```
+[
+    {
+        "key": "WHEEL_UP",
+        "command": ["script-binding", "file_browser/dynamic/scroll_up"]
+    },
+    {
+        "key": "WHEEL_DOWN",
+        "command": ["script-binding", "file_browser/dynamic/scroll_down"]
+    },
+        "key": "UP",
+        "command": ["osd-auto", "add", "volume", 2]
+    },
+    {
+        "key": "DOWN",
+        "command": ["osd-auto", "add", "volume", -2]
+    }
+]
+```
+
+
+### Examples
+See [here](/file-browser-keybinds.json).
 
 ## Add-ons
 Add-ons are extra scripts that add parsing support for non-native filesystems.
