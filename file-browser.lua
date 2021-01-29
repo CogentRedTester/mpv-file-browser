@@ -877,7 +877,7 @@ end
 --closes the list and sets the hidden flag
 local function close()
     for _,v in ipairs(state.keybinds) do
-        mp.remove_key_binding('__file-browser/'..v[2])
+        mp.remove_key_binding('dynamic/'..v[2])
     end
 
     state.hidden = true
