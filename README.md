@@ -152,11 +152,11 @@ For example to change the scroll buttons from the arrows to the scroll wheel:
         "command": ["script-binding", "file_browser/dynamic/scroll_down"]
     },
         "key": "UP",
-        "command": ["osd-auto", "add", "volume", 2]
+        "command": ["osd-auto", "add", "volume", "2"]
     },
     {
         "key": "DOWN",
-        "command": ["osd-auto", "add", "volume", -2]
+        "command": ["osd-auto", "add", "volume", "-2"]
     }
 ]
 ```
