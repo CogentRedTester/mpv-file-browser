@@ -269,12 +269,16 @@ local function filter(t)
 end
 
 --sorts a table into an array of selected items in the correct order
-local function sort_keys(t)
+--if a predicate function is passed, then the item will only be added to
+--the table if the function returns true
+local function sort_keys(t, include_item)
     local keys = {}
     for k in pairs(t) do
         local item = state.list[k]
-        item.index = k
-        keys[#keys+1] = item
+        if not include_item or include_item(item) then
+            item.index = k
+            keys[#keys+1] = item
+        end
     end
 
     table.sort(keys, function(a,b) return a.index < b.index end)
@@ -945,7 +949,7 @@ end
 
 --format the item string for either single or multiple items
 local function create_item_string(cmd, items, funct)
-    if not items[1] then return funct(items) end
+    if not items[1] then return end
 
     local str = funct(items[1])
     for i = 2, #items do
@@ -976,10 +980,11 @@ end
 
 --runs all of the commands in the command table
 --recurses to handle nested tables of commands
-local function run_custom_command(t, cmd, item)
+--items must be an array of multiple items (when multi-type ~= append the array will be 1 long)
+local function run_custom_command(t, cmd, items)
     if type(t[1]) == "table" then
         for i = 1, #t do
-            run_custom_command(t[i], cmd, item)
+            run_custom_command(t[i], cmd, items)
         end
     else
         local custom_cmd = format_command_table(t, cmd, item)
@@ -989,6 +994,7 @@ local function run_custom_command(t, cmd, item)
 end
 
 --runs commands for multiple selected items
+--this is if the repeat muti-type is used
 local function recursive_multi_command(cmd, i, length)
     if i > length then return end
 
@@ -996,7 +1002,7 @@ local function recursive_multi_command(cmd, i, length)
     if cmd.filter and cmd.selection[i].type ~= cmd.filter then
         msg.verbose("skipping command for selection ")
     else
-        run_custom_command(cmd.command, cmd, cmd.selection[i])
+        run_custom_command(cmd.command, cmd, { cmd.selection[i] })
     end
 
     --delay running the next command if the delay option is set
@@ -1006,12 +1012,14 @@ end
 
 --runs one of the custom commands
 local function custom_command(cmd)
-        cmd.directory = state.directory
-        cmd.directory_label = state.directory_label
+    --saving these values in-case the directory is changes while commands are being passed
+    cmd.directory = state.directory
+    cmd.directory_label = state.directory_label
 
     --runs the command on all multi-selected items
     if cmd.multiselect and next(state.selection) then
-        cmd.selection = sort_keys(state.selection)
+        cmd.selection = sort_keys(state.selection, function(item) return not cmd.filter or item.type == cmd.filter end)
+        if not next(cmd.selection) then return end
 
         if not cmd["multi-type"] or cmd["multi-type"] == "repeat" then
             recursive_multi_command(cmd, 1, #cmd.selection)
@@ -1020,9 +1028,8 @@ local function custom_command(cmd)
         end
     else
         --filtering commands
-        if cmd.filter and state.list[state.selected] and state.list[state.selected].type ~= cmd.filter then
-            return msg.verbose("cancelling custom command") end
-        run_custom_command(cmd.command, cmd, state.list[state.selected])
+        if cmd.filter and state.list[state.selected] and state.list[state.selected].type ~= cmd.filter then return end
+        run_custom_command(cmd.command, cmd, { state.list[state.selected] })
     end
 end
 
