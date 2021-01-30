@@ -987,7 +987,7 @@ local function run_custom_command(t, cmd, items)
             run_custom_command(t[i], cmd, items)
         end
     else
-        local custom_cmd = format_command_table(t, cmd, item)
+        local custom_cmd = cmd.contains_codes and format_command_table(t, cmd, items) or cmd.command
         msg.debug("running command: " .. utils.to_string(custom_cmd))
         mp.command_native(custom_cmd)
     end
@@ -1062,7 +1062,18 @@ if o.custom_keybinds then
         json = utils.parse_json(json)
         if not json then error("invalid json syntax for "..path) end
 
+        local function contains_codes(command_table)
+            local test_funct = nil
+            if type(command_table[1]) == "table" then test_funct = contains_codes
+            else test_funct = function(str) return str:find("^%%[fFnNpPdD]") or str:find("[^%%]%%[fFnNpPdD]") end end
+
+            for i = 1, #command_table do
+                if test_funct(command_table[i]) then return true end
+            end
+        end
+
         for i = 1, #json do
+            json[i].contains_codes = contains_codes(json[i].command)
             table.insert(state.keybinds, { json[i].key, "custom"..tostring(i), function() custom_command(json[i]) end, {} })
         end
     end
