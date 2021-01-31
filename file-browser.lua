@@ -1159,7 +1159,7 @@ end)
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-local ui = dofile(mp.command_native({"expand-path", "~~/scripts/user-input-module.lua"}))
+local ui = dofile(mp.command_native({"expand-path", "~~/script-modules/user-input-module.lua"}))
 
 mp.add_key_binding("Alt+o", "browse-directory/get-user-input", function()
     ui.get_user_input(browse_directory, {text = "[file-browser] open directory:"})
