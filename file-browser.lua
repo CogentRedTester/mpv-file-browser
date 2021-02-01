@@ -190,27 +190,6 @@ local function ass_escape(str)
     return str
 end
 
---appends the entered text to the overlay
-local function append(text)
-        if text == nil then return end
-        ass.data = ass.data .. text
-    end
-
---appends a newline character to the osd
-local function newline()
-    ass.data = ass.data .. '\\N'
-end
-
---detects whether or not to highlight the given entry as being played
-local function highlight_entry(v)
-    if current_file.name == nil then return false end
-    if v.type == "dir" then
-        return current_file.directory:find(get_full_path(v), 1, true)
-    else
-        return current_file.directory == state.directory and current_file.name == v.name
-    end
-end
-
 --standardises filepaths across systems
 local function fix_path(str, is_directory)
     str = str:gsub([[\]],[[/]])
@@ -293,19 +272,70 @@ local function copy_table(t)
     return copy
 end
 
-
-
---------------------------------------------------------------------------------------------------------
-------------------------------------Parser Object Implementation----------------------------------------
---------------------------------------------------------------------------------------------------------
---------------------------------------------------------------------------------------------------------
-
 --chooses which parser to use for the specific path
 local function choose_parser(path)
     for _, parser in ipairs(parsers) do
         if parser:can_parse(path) then return parser end
     end
 end
+
+
+
+--------------------------------------------------------------------------------------------------------
+-----------------------------------------Setup Functions------------------------------------------------
+--------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------
+
+--sets up the compatible extensions list
+local function setup_extensions_list()
+    if not o.filter_files then return end
+
+    --adding file extensions to the set
+    for i=1, #compatible_file_extensions do
+        extensions[compatible_file_extensions[i]] = true
+    end
+    for i = 1, #subtitle_extensions do
+        extensions[subtitle_extensions[i]] = true
+    end
+
+    --adding extra extensions on the whitelist
+    for str in string.gmatch(o.extension_whitelist, "([^"..o.root_seperators.."]+)") do
+        extensions[str] = true
+    end
+
+    --removing extensions that are in the blacklist
+    for str in string.gmatch(o.extension_blacklist, "([^"..o.root_seperators.."]+)") do
+        extensions[str] = nil
+    end
+
+    --setting up subtitle extensions list
+    for i = 1, #subtitle_extensions do
+        sub_extensions[subtitle_extensions[i]] = true
+    end
+end
+
+--splits the string into a table on the semicolons
+local function setup_root()
+    root = {}
+    for str in string.gmatch(o.root, "([^"..o.root_seperators.."]+)") do
+        local path = mp.command_native({'expand-path', str})
+        path = fix_path(path, true)
+
+        local temp = {name = path, type = 'dir', label = str, ass = ass_escape(str), parser = choose_parser(path)}
+
+        root[#root+1] = temp
+    end
+end
+
+setup_extensions_list()
+setup_root()
+
+
+
+--------------------------------------------------------------------------------------------------------
+------------------------------------Parser Object Implementation----------------------------------------
+--------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------
 
 --setting up functions to provide to addons
 local parser_mt = {}
@@ -391,81 +421,29 @@ end
 
 
 --------------------------------------------------------------------------------------------------------
------------------------------------------Setup Functions------------------------------------------------
---------------------------------------------------------------------------------------------------------
---------------------------------------------------------------------------------------------------------
-
---sets up the compatible extensions list
-local function setup_extensions_list()
-    if not o.filter_files then return end
-
-    --adding file extensions to the set
-    for i=1, #compatible_file_extensions do
-        extensions[compatible_file_extensions[i]] = true
-    end
-    for i = 1, #subtitle_extensions do
-        extensions[subtitle_extensions[i]] = true
-    end
-
-    --adding extra extensions on the whitelist
-    for str in string.gmatch(o.extension_whitelist, "([^"..o.root_seperators.."]+)") do
-        extensions[str] = true
-    end
-
-    --removing extensions that are in the blacklist
-    for str in string.gmatch(o.extension_blacklist, "([^"..o.root_seperators.."]+)") do
-        extensions[str] = nil
-    end
-
-    --setting up subtitle extensions list
-    for i = 1, #subtitle_extensions do
-        sub_extensions[subtitle_extensions[i]] = true
-    end
-end
-
---splits the string into a table on the semicolons
-local function setup_root()
-    root = {}
-    for str in string.gmatch(o.root, "([^"..o.root_seperators.."]+)") do
-        local path = mp.command_native({'expand-path', str})
-        path = fix_path(path, true)
-
-        local temp = {name = path, type = 'dir', label = str, ass = ass_escape(str), parser = choose_parser(path)}
-
-        root[#root+1] = temp
-    end
-end
-
-
-
---------------------------------------------------------------------------------------------------------
 -----------------------------------------List Formatting------------------------------------------------
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
 
---scans the list for which item to select by default
---chooses the folder that the script just moved out of
---or, otherwise, the item highlighted as currently playing
-local function select_prev_directory()
-    if state.prev_directory:find(state.directory, 1, true) == 1 then
-        local i = 1
-        while (state.list[i] and state.list[i].type == "dir") do
-            if state.prev_directory:find(get_full_path(state.list[i]), 1, true) then
-                state.selected = i
-                return
-            end
-            i = i+1
-        end
-    end
+--appends the entered text to the overlay
+local function append(text)
+    if text == nil then return end
+    ass.data = ass.data .. text
+end
 
-    if current_file.directory:find(state.directory, 1, true) == 1 then
-        for i,item in ipairs(state.list) do
-            if highlight_entry(item) then
-                state.selected = i
-                return
-            end
-        end
-    end
+--appends a newline character to the osd
+local function newline()
+ass.data = ass.data .. '\\N'
+end
+
+--detects whether or not to highlight the given entry as being played
+local function highlight_entry(v)
+if current_file.name == nil then return false end
+if v.type == "dir" then
+    return current_file.directory:find(get_full_path(v), 1, true)
+else
+    return current_file.directory == state.directory and current_file.name == v.name
+end
 end
 
 --saves the directory and name of the currently playing file
@@ -658,6 +636,31 @@ end
 -----------------------------------------Directory Movement---------------------------------------------
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
+
+--scans the list for which item to select by default
+--chooses the folder that the script just moved out of
+--or, otherwise, the item highlighted as currently playing
+local function select_prev_directory()
+    if state.prev_directory:find(state.directory, 1, true) == 1 then
+        local i = 1
+        while (state.list[i] and state.list[i].type == "dir") do
+            if state.prev_directory:find(get_full_path(state.list[i]), 1, true) then
+                state.selected = i
+                return
+            end
+            i = i+1
+        end
+    end
+
+    if current_file.directory:find(state.directory, 1, true) == 1 then
+        for i,item in ipairs(state.list) do
+            if highlight_entry(item) then
+                state.selected = i
+                return
+            end
+        end
+    end
+end
 
 --loads the root list
 local function goto_root()
@@ -1058,9 +1061,6 @@ end
 --------------------------------mpv API Callbacks-----------------------------------------
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
-
-setup_extensions_list()
-setup_root()
 
 --keeps track of the osd_font
 mp.observe_property("osd-font", "string", function(_,font) osd_font = font end)
