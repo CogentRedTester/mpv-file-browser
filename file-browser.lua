@@ -64,9 +64,8 @@ local o = {
     indent_icon = [[\h\h\h]],
 
     --enable addons
-    dvd_browser = false,
-    http_browser = false,
-    ftp_browser = false,
+    addons = false,
+    addon_directory = "~~/script-modules/file-browser-addons",
 
     --ass tags
     ass_header = "{\\q2\\fs35\\c&00ccff&}",
@@ -99,7 +98,8 @@ local state = {
     selection = {}
 }
 
-local extensions = nil
+local parsers = {}
+local extensions = {}
 local sub_extensions = {}
 
 local dvd_device = nil
@@ -127,9 +127,8 @@ local compatible_file_extensions = {
 local subtitle_extensions = {
     "etf","etf8","utf-8","idx","sub","srt","rt","ssa","ass","mks","vtt","sup","scc","smi","lrc",'pgs'
 }
-for i = 1, #subtitle_extensions do
-    sub_extensions[subtitle_extensions[i]] = true
-end
+
+
 
 --------------------------------------------------------------------------------------------------------
 --------------------------------------Cache Implementation----------------------------------------------
@@ -171,14 +170,6 @@ local cache = setmetatable({}, { __index = __cache })
 -----------------------------------------Utility Functions----------------------------------------------
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
-
---chooses which parser to use for the specific path
-local function choose_parser(path)
-    if o.dvd_browser and path == dvd_device then return "dvd"
-    elseif o.http_browser and path:find("https?://") == 1 then return "http"
-    elseif o.ftp_browser and path:sub(1, 6) == "ftp://" then return "ftp"
-    else return "file" end
-end
 
 --get the full path for the current file
 local function get_full_path(item, dir)
@@ -249,6 +240,17 @@ local function get_extension(filename)
     return filename:match("%.([^%.]+)$")
 end
 
+local function valid_dir(dir)
+    if o.filter_dot_dirs and dir:sub(1,1) == "." then return false end
+    return true
+end
+
+local function valid_file(file)
+    if o.filter_dot_files and (file:sub(1,1) == ".") then return false end
+    if o.filter_files and not extensions[ get_extension(file) ] then return false end
+    return true
+end
+
 --removes items and folders from the list
 --this is for addons which can't filter things during their normal processing
 local function filter(t)
@@ -258,9 +260,8 @@ local function filter(t)
         local temp = t[i]
         t[i] = nil
 
-        if  ( temp.type == "dir"    and not ( o.filter_dot_dirs and temp.name:sub(1,1) == ".") ) or
-            ( temp.type == "file"   and not ( o.filter_dot_files and (temp.name:sub(1,1) == ".") )
-                                    and not ( o.filter_files and not extensions[ get_extension(temp.name) ] ) )
+        if  ( temp.type == "dir" and valid_dir(temp.name) ) or
+            ( temp.type == "file" and valid_file(temp.name) )
         then
             t[top] = temp
             top = top+1
@@ -288,13 +289,101 @@ end
 
 
 --------------------------------------------------------------------------------------------------------
+------------------------------------Parser Object Implementation----------------------------------------
+--------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------
+
+--chooses which parser to use for the specific path
+local function choose_parser(path)
+    for _, parser in ipairs(parsers) do
+        if parser:can_parse(path) then return parser end
+    end
+end
+
+--setting up variables and functions to provide to addons
+local parser_mt = {}
+parser_mt.__index = parser_mt
+parser_mt.script_opts = o
+parser_mt.extensions = extensions
+parser_mt.sub_extensions = sub_extensions
+parser_mt.valid_file = valid_file
+parser_mt.valid_dir = valid_dir
+parser_mt.filter = filter
+parser_mt.sort = sort
+parser_mt.ass_escape = ass_escape
+parser_mt.state = state
+
+local file_parser = setmetatable({type = "file", priority = 100}, parser_mt)
+parsers[1] = file_parser
+
+--loading external addons
+if o.addons then
+    local addon_dir = mp.command_native({"expand-path", o.addon_directory..'/'})
+    local files = utils.readdir(addon_dir)
+    if not addon_dir then error("could not read addon directory") end
+
+    for _, file in ipairs(files) do
+        if file:sub(-4) == ".lua" then
+            local addon = setmetatable(dofile(addon_dir..file), parser_mt)
+            if type(addon.priority) ~= "number" then error("addon "..file.." needs a numeric priority") end
+            table.insert(parsers, addon)
+        end
+    end
+    table.sort(parsers, function(a, b) return a.priority < b.priority end)
+end
+
+--as the default parser we'll always attempt to use it if all others fail
+function file_parser:can_parse()
+    return true
+end
+
+--scans the current directory and updates the directory table
+function file_parser:parse(directory)
+    msg.verbose("scanning files in " .. directory)
+    local new_list = {}
+    local list1 = utils.readdir(directory, 'dirs')
+
+    --if we can't access the filesystem for the specified directory then we go to root page
+    --this is cuased by either:
+    --  a network file being streamed
+    --  the user navigating above / on linux or the current drive root on windows
+    if list1 == nil then return nil end
+
+    --sorts folders and formats them into the list of directories
+    for i=1, #list1 do
+        local item = list1[i]
+
+        --filters hidden dot directories for linux
+        if self.valid_dir(item) then
+            msg.debug(item..'/')
+            table.insert(new_list, {name = item..'/', type = 'dir'})
+        end
+    end
+
+    --appends files to the list of directory items
+    local list2 = utils.readdir(directory, 'files')
+    for i=1, #list2 do
+        local item = list2[i]
+
+        --only adds whitelisted files to the browser
+        if  self.valid_file(item) then
+            msg.debug(item)
+            table.insert(new_list, {name = item, type = 'file'})
+        end
+    end
+    self.sort(new_list)
+    return new_list, true, true
+end
+
+
+
+--------------------------------------------------------------------------------------------------------
 -----------------------------------------Setup Functions------------------------------------------------
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
 
 --sets up the compatible extensions list
 local function setup_extensions_list()
-    extensions = {}
     if not o.filter_files then return end
 
     --adding file extensions to the set
@@ -313,6 +402,11 @@ local function setup_extensions_list()
     --removing extensions that are in the blacklist
     for str in string.gmatch(o.extension_blacklist, "([^"..o.root_seperators.."]+)") do
         extensions[str] = nil
+    end
+
+    --setting up subtitle extensions list
+    for i = 1, #subtitle_extensions do
+        sub_extensions[subtitle_extensions[i]] = true
     end
 end
 
@@ -548,13 +642,12 @@ end
 
 
 --------------------------------------------------------------------------------------------------------
------------------------------------------Directory Parsing----------------------------------------------
+-----------------------------------------Directory Movement---------------------------------------------
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
 
 --loads the root list
 local function goto_root()
-    if root == nil then setup_root() end
     msg.verbose('loading root')
     state.selected = 1
     state.list = root
@@ -572,44 +665,12 @@ local function goto_root()
     update_ass()
 end
 
---scans the current directory and updates the directory table
 local function scan_directory(directory)
-    msg.verbose("scanning files in " .. directory)
-    local new_list = {}
-    local list1 = utils.readdir(directory, 'dirs')
-
-    --if we can't access the filesystem for the specified directory then we go to root page
-    --this is cuased by either:
-    --  a network file being streamed
-    --  the user navigating above / on linux or the current drive root on windows
-    if list1 == nil then return nil end
-
-    --sorts folders and formats them into the list of directories
-    for i=1, #list1 do
-        local item = list1[i]
-
-        --filters hidden dot directories for linux
-        if not (o.filter_dot_dirs and item:sub(1,1) == ".") then
-            msg.debug(item..'/')
-            table.insert(new_list, {name = item..'/', ass = ass_escape(item..'/'), type = 'dir'})
-        end
-    end
-
-    --appends files to the list of directory items
-    local list2 = utils.readdir(directory, 'files')
-    for i=1, #list2 do
-        local item = list2[i]
-
-        --only adds whitelisted files to the browser
-        if  not ( o.filter_files and not extensions[ get_extension(item) ] ) and
-            not (o.filter_dot_files and item:sub(1,1) == ".")
-        then
-            msg.debug(item)
-            table.insert(new_list, {name = item, ass = ass_escape(item), type = 'file'})
-        end
-    end
-    sort(new_list)
-    return new_list
+    local list, sorted, filtered = choose_parser(directory):parse(directory)
+    if not list then return list end
+    if filtered ~= true then filter(list) end
+    if sorted ~= true then sort(list) end
+    return list
 end
 
 --sends update requests to the different parsers
@@ -618,7 +679,6 @@ local function update_list()
 
     state.selected = 1
     state.selection = {}
-    if extensions == nil then setup_extensions_list() end
     if state.directory == "" then return goto_root() end
 
     --loads the current directry from the cache to save loading time
@@ -632,19 +692,17 @@ local function update_list()
         return
     end
 
-    state.parser = choose_parser(state.directory)
+    local list = scan_directory(state.directory)
+    if not list then return goto_root() end
 
-    if state.parser ~= "file" then
-        mp.commandv("script-message", state.parser.."/browse-dir", state.directory, "callback/browse-dir")
-    else
-        state.list = scan_directory(state.directory)
-        if not state.list then return goto_root() end
-        select_prev_directory()
-
-        --saves previous directory information
-        state.prev_directory = state.directory
-        update_ass()
+    for i = 1, #list do
+        list[i].ass = list[i].ass or ass_escape(list[i].label or list[i].name)
     end
+
+    state.list = list
+    select_prev_directory()
+    state.prev_directory = state.directory
+    update_ass()
 end
 
 --rescans the folder and updates the list
@@ -1085,6 +1143,9 @@ end
 --------------------------------mpv API Callbacks-----------------------------------------
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
+
+setup_extensions_list()
+setup_root()
 
 --keeps track of the osd_font
 mp.observe_property("osd-font", "string", function(_,font) osd_font = font end)
