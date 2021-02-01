@@ -771,40 +771,40 @@ end
 ---------------------------------File/Playlist Opening------------------------------------
 ------------------------------------Browser Controls--------------------------------------
 ------------------------------------------------------------------------------------------
-local flag = ""
 
 --recursive function to load directories using the script custom parsers
-local function custom_loadlist_recursive(directory)
+local function custom_loadlist_recursive(directory, flag)
     local list = scan_directory(directory)
     for _, item in ipairs(list) do
         if not sub_extensions[ get_extension(item.name) ] then
             local path = get_full_path(item, directory)
             if item.type == "dir" then
-                custom_loadlist_recursive(path)
+                if custom_loadlist_recursive(path, flag) then flag = "append" end
             else
                 mp.commandv("loadfile", path, flag)
                 flag = "append"
             end
         end
     end
+    return flag == "append"
 end
 
 --a wrapper for the custom_loadlist_recursive function to handle the flags
-local function custom_loadlist(directory, flags)
-    flag = flags
-    custom_loadlist_recursive(directory)
-    if flag ~= "append" then msg.warn(directory, "contained no valid files") end
+local function custom_loadlist(directory, flag)
+    flag = custom_loadlist_recursive(directory, flag)
+    if not flag then msg.warn(directory, "contained no valid files") end
+    return flag
 end
 
 --loads lists or defers the command to add-ons
-local function loadlist(path, flags)
+local function loadlist(path, flag)
     local parser = choose_parser(path)
-    if parser == file_parser then
-        mp.commandv('loadlist', path, flags == "append-play" and "append" or flags)
-        if flags == "append-play" and mp.get_property_bool("core-idle") then mp.commandv("playlist-play-index", 0) end
-        flag = "append"
+    if not o.custom_dir_loading and parser == file_parser then
+        mp.commandv('loadlist', path, flag == "append-play" and "append" or flag)
+        if flag == "append-play" and mp.get_property_bool("core-idle") then mp.commandv("playlist-play-index", 0) end
+        return true
     else
-        custom_loadlist(path, flags)
+        return custom_loadlist(path, flag)
     end
 end
 
@@ -813,7 +813,7 @@ local function autoload_dir(path)
     local pos = 1
     local file_count = 0
     for _,item in ipairs(state.list) do
-        if item.type == "file" then
+        if item.type == "file" and not sub_extensions[ get_extension(item.name) ] then
             local p = get_full_path(item)
             if p == path then pos = file_count
             else mp.commandv("loadfile", p, "append") end
@@ -824,19 +824,16 @@ local function autoload_dir(path)
 end
 
 --runs the loadfile or loadlist command
-local function loadfile(item, flags, autoload)
+local function loadfile(item, flag, autoload)
     local path = get_full_path(item)
-    if item.type == "dir" then 
-        if o.custom_dir_loading then return custom_loadlist(path, flags)
-        else return loadlist(item, flags) end
-    end
+    if item.type == "dir" then return loadlist(path, flag) end
 
     if sub_extensions[ get_extension(item.name) ] then
-        mp.commandv("sub-add", path, flags == "replace" and "select" or "auto")
+        mp.commandv("sub-add", path, flag == "replace" and "select" or "auto")
     else
-        mp.commandv('loadfile', path, flags)
-        flag = "append"
+        mp.commandv('loadfile', path, flag)
         if autoload then autoload_dir(path) end
+        return true
     end
 end
 
@@ -890,9 +887,9 @@ local function escape()
 end
 
 --opens the selelected file(s)
-local function open_file(flags, autoload)
+local function open_file(flag, autoload)
     if not state.list[state.selected] then return end
-    if flags == 'replace' then close() end
+    if flag == 'replace' then close() end
 
     --handles multi-selection behaviour
     if next(state.selection) then
@@ -900,9 +897,8 @@ local function open_file(flags, autoload)
 
         --the currently selected file will be loaded according to the flag
         --the flag variable will be switched to append once a file is loaded
-        flag = flags
         for i=1, #selection do
-            loadfile(selection[i], flag)
+            if loadfile(selection[i], flag) then flag = "append" end
         end
 
         --reset the selection after
@@ -910,12 +906,12 @@ local function open_file(flags, autoload)
         disable_select_mode()
         update_ass()
 
-    elseif flags == 'replace' then
-        loadfile(state.list[state.selected], flags, autoload ~= o.autoload)
+    elseif flag == 'replace' then
+        loadfile(state.list[state.selected], flag, autoload ~= o.autoload)
         down_dir()
         close()
     else
-        loadfile(state.list[state.selected], flags)
+        loadfile(state.list[state.selected], flag)
     end
 end
 
