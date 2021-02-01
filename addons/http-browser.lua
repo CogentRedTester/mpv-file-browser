@@ -74,7 +74,7 @@ function http:parse(directory)
         end
     end
 
-    self.state.directory_label = decodeURI(directory)
+    self.set_directory_label( decodeURI(directory) )
     return self.sort(list), true, true
 end
 

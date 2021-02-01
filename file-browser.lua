@@ -284,6 +284,15 @@ local function sort_keys(t, include_item)
     return keys
 end
 
+--copies a table without leaving any references to the original
+local function copy_table(t)
+    local copy = {}
+    for key, value in pairs(t) do
+        copy[key] = type(t) == "table" and copy_table(value) or value
+    end
+    return copy
+end
+
 
 
 --------------------------------------------------------------------------------------------------------
@@ -298,21 +307,24 @@ local function choose_parser(path)
     end
 end
 
---setting up variables and functions to provide to addons
+--setting up functions to provide to addons
 local parser_mt = {}
 parser_mt.__index = parser_mt
-parser_mt.script_opts = o
-parser_mt.extensions = extensions
-parser_mt.sub_extensions = sub_extensions
 parser_mt.valid_file = valid_file
 parser_mt.valid_dir = valid_dir
 parser_mt.filter = filter
 parser_mt.sort = sort
 parser_mt.ass_escape = ass_escape
-parser_mt.state = state
 
-local file_parser = setmetatable({type = "file", priority = 100}, parser_mt)
-parsers[1] = file_parser
+--providing getter and setter functions so that addons can't modify things directly
+function parser_mt.get_script_opts() return copy_table(o) end
+function parser_mt.get_extensions() return copy_table(extensions) end
+function parser_mt.get_sub_extensions() return copy_table(sub_extensions) end
+function parser_mt.get_state() return copy_table(state) end
+function parser_mt.get_dvd_device() return dvd_device end
+
+function parser_mt.set_directory_label(label) state.directory_label = label end
+function parser_mt.set_empty_text(text) state.empty_text = text end
 
 --loading external addons
 if o.addons then
@@ -329,6 +341,9 @@ if o.addons then
     end
     table.sort(parsers, function(a, b) return a.priority < b.priority end)
 end
+
+local file_parser = setmetatable({}, parser_mt)
+table.insert(parsers, file_parser)
 
 --as the default parser we'll always attempt to use it if all others fail
 function file_parser:can_parse()
