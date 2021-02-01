@@ -1113,6 +1113,7 @@ local function browse_directory(directory)
     if directory ~= "" then directory = fix_path(directory, true) end
     msg.verbose('recieved directory from script message: '..directory)
 
+    if directory == "dvd://" then directory = dvd_device end
     state.directory = directory
     cache:clear()
     open()
