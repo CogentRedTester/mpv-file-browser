@@ -753,136 +753,41 @@ end
 
 
 ------------------------------------------------------------------------------------------
----------------------------Custom Directory Loading---------------------------------------
-------------------------------------------------------------------------------------------
-------------------------------------------------------------------------------------------
-
---an object for custom directory loading and parsing
---this is written specifically for handling asynchronous playback from add-ons
---I've bundled this into an object to make it clearer how everything works together
-local directory_parser = {
-    stack = {},
-    parser = "file",
-    flags = "",
-    queue = {},
-
-    --continue with the next directory in the queue/stack
-    continue = function(self)
-        if self.stack[1] then return self:open_directory()
-        elseif self.queue[1] then
-            local front = self.queue[1]
-            self:setup_parse(front.directory, front.parser, front.flags)
-            table.remove(self.queue, 1)
-            return self:open_directory()
-        end
-    end,
-
-    --queue an item to be opened
-    queue_directory = function(self, item, flags)
-        local dir = state.directory..item.name
-
-        table.insert(self.queue, {
-            directory = dir,
-            parser = item.parser or state.parser,
-            flags = flags
-        })
-        msg.trace("queuing " .. dir .. " for opening")
-    end,
-
-    --setup the variables to start opening from a specific directory
-    setup_parse = function(self, directory, parser, flags)
-        self.stack[1] = {
-            pos = 0,
-            directory = directory,
-            files = nil
-        }
-        self.flags = flags
-        self.parser = parser
-    end,
-
-    --parse the response from an add-on
-    callback = function(self, response)
-        local top = self.stack[#self.stack]
-        response = utils.parse_json(response)
-        local files = response.list
-
-        if not files then
-            msg.warn("could not open "..top.directory)
-            self.stack[#self.stack] = nil
-            return self:continue()
-        end
-
-        if response.filter ~= false and (o.filter_files or o.filter_dot_dirs or o.filter_dot_files) then
-            filter(files)
-        end
-        if response.sort ~= false then sort(files) end
-        top.files = files
-        return self:open_directory()
-    end,
-
-    --scan for files in the specific directory
-    scan_files = function(self)
-        local top = self.stack[#self.stack]
-        local parser = self.parser
-        local directory = top.directory
-        msg.debug("parsing files in '"..directory.."'")
-
-        if parser ~= "file" then
-            mp.commandv("script-message", parser.."/browse-dir", directory, "callback/custom-loadlist")
-        else
-            top.files = scan_directory(directory)
-            return self:open_directory()
-        end
-    end,
-
-    --open the files in a directory
-    open_directory = function(self)
-        local top = self.stack[#self.stack]
-        local files = top.files
-        local directory = top.directory
-        msg.verbose("opening " .. directory)
-
-        if not files then return self:scan_files()
-        else msg.debug("loading '"..directory.."' into playlist") end
-
-        --the position to iterate from is saved in case an asynchronous request needs to
-        --be made to open a folder part way through
-        for i = top.pos+1, #files do
-            if not sub_extensions[ get_extension(files[i].name) ] then
-                if files[i].type == "file" then
-                    mp.commandv("loadfile", get_full_path(files[i], directory), self.flags)
-                    self.flags = "append"
-                else
-                    top.pos = i
-                    table.insert(self.stack, { pos = 0, directory = get_full_path(files[i], directory), files = nil})
-                    return self:scan_files()
-                end
-            end
-        end
-
-        self.stack[#self.stack] = nil
-        return self:continue()
-    end
-}
-
---filters and sorts the response from the addons
-mp.register_script_message("callback/custom-loadlist", function(...) directory_parser:callback(...) end)
-
-
-
-------------------------------------------------------------------------------------------
 ---------------------------------File/Playlist Opening------------------------------------
 ------------------------------------Browser Controls--------------------------------------
 ------------------------------------------------------------------------------------------
 
+--recursive function to load directories using the script custom parsers
+local flag = ""
+local function custom_loadlist_recursive(directory)
+    local list = scan_directory(directory)
+    for _, item in ipairs(list) do
+        if not sub_extensions[ get_extension(item.name) ] then
+            local path = get_full_path(item, directory)
+            if item.type == "dir" then
+                custom_loadlist_recursive(path)
+            else
+                mp.commandv("loadfile", path, flag)
+                flag = "append"
+            end
+        end
+    end
+end
+
+--a wrapper for the custom_loadlist_recursive function to handle the flags
+local function custom_loadlist(directory, flags)
+    flag = flags
+    custom_loadlist_recursive(directory)
+end
+
 --loads lists or defers the command to add-ons
-local function loadlist(item, flags)
-    local parser = item.parser or state.parser
-    if parser == "file" then
-        mp.commandv('loadlist', get_full_path(item), flags == "append-play" and "append" or flags)
+local function loadlist(path, flags)
+    local parser = choose_parser(path)
+    if parser.type == "file" then
+        mp.commandv('loadlist', path, flags == "append-play" and "append" or flags)
         if flags == "append-play" and mp.get_property_bool("core-idle") then mp.commandv("playlist-play-index", 0) end
-    elseif parser ~= "" then
-        mp.commandv("script-message", parser.."/open-dir", get_full_path(item), flags)
+    else
+        custom_loadlist(path, flags)
     end
 end
 
@@ -905,7 +810,7 @@ end
 local function loadfile(item, flags, autoload)
     local path = get_full_path(item)
     if item.type == "dir" then 
-        if o.custom_dir_loading then return directory_parser:queue_directory(item, flags)
+        if o.custom_dir_loading then return custom_loadlist(path, flags)
         else return loadlist(item, flags) end
     end
 
@@ -994,8 +899,6 @@ local function open_file(flags, autoload)
     else
         loadfile(state.list[state.selected], flags)
     end
-
-    if o.custom_dir_loading then directory_parser:continue() end
 end
 
 
@@ -1182,36 +1085,6 @@ end
 
 --allows keybinds/other scripts to auto-open specific directories
 mp.register_script_message('browse-directory', browse_directory)
-
---a callback function for addon scripts to return the results of their filesystem processing
-mp.register_script_message('callback/browse-dir', function(response)
-    msg.trace("callback response = "..response)
-    response = utils.parse_json(response)
-    local items = response.list
-    if not items then goto_root(); return end
-
-    if response.filter ~= false and (o.filter_files or o.filter_dot_dirs or o.filter_dot_files) then
-        filter(items)
-    end
-
-    if response.sort ~= false then sort(items) end
-    if response.ass_escape ~= false then
-        for i = 1, #items do
-            items[i].ass = items[i].ass or ass_escape(items[i].label or items[i].name)
-        end
-    end
-
-    state.list = items
-    state.directory_label = response.directory_label
-
-    --changes the text displayed when the directory is empty
-    if response.empty_text then state.empty_text = response.empty_text end
-
-    --setting up the previous directory stuff
-    select_prev_directory()
-    state.prev_directory = state.directory
-    update_ass()
-end)
 
 
 
