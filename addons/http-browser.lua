@@ -65,8 +65,8 @@ function http:parse(directory)
         if valid and link:find("[:?<>|]") then valid = false end
 
         local is_dir = (alt == "DIR")
-        if valid and is_dir and not self.valid_dir(link) then valid = false
-        elseif valid and self.valid_file(link) then valid = false end
+        if valid and is_dir and not self.valid_dir(link) then valid = false end
+        if valid and not is_dir and not self.valid_file(link) then valid = false end
 
         if valid then
             msg.trace(alt..": "..link)
@@ -74,7 +74,8 @@ function http:parse(directory)
         end
     end
 
-    return self.sort(list)
+    self.state.directory_label = decodeURI(directory)
+    return self.sort(list), true, true
 end
 
 return http
