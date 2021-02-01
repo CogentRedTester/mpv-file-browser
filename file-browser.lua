@@ -91,7 +91,6 @@ local state = {
     directory = nil,
     directory_label = nil,
     prev_directory = "",
-    parser = "file",
 
     multiselect_start = nil,
     initial_selection = {},
@@ -142,7 +141,6 @@ local __cache = {
             directory = state.directory,
             directory_label = state.directory_label,
             list = state.list,
-            parser = state.parser,
             selected = state.selected
         })
     end,
@@ -657,7 +655,6 @@ local function goto_root()
     state.directory = ""
     select_prev_directory()
 
-    state.parser = ""
     state.prev_directory = ""
     cache:clear()
     state.selection = {}
@@ -783,7 +780,7 @@ end
 --loads lists or defers the command to add-ons
 local function loadlist(path, flags)
     local parser = choose_parser(path)
-    if parser.type == "file" then
+    if parser == file_parser then
         mp.commandv('loadlist', path, flags == "append-play" and "append" or flags)
         if flags == "append-play" and mp.get_property_bool("core-idle") then mp.commandv("playlist-play-index", 0) end
     else
