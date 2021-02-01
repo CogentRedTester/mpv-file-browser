@@ -4,7 +4,6 @@
 
 local mp = require 'mp'
 local msg = require 'mp.msg'
-local utils = require 'mp.utils'
 
 --decodes a URL address
 --this piece of code was taken from: https://stackoverflow.com/questions/20405985/lua-decodeuri-luvit/20406960#20406960
@@ -19,7 +18,15 @@ do
     end
 end
 
-local function parse_http(directory)
+local http = {
+    priority = 70
+}
+
+function http:can_parse(name)
+    return name:find("^https?://")
+end
+
+function http:parse(directory)
     msg.verbose(directory)
     msg.trace("curl -k -l -m 5 "..string.format("%q", directory))
 
@@ -47,51 +54,27 @@ local function parse_http(directory)
     html = html.stdout
     local list = {}
     for str in string.gmatch(html, "[^\r\n]+") do
-        if str:sub(1,4) ~= "<tr>" then goto continue end
+        local valid = true
+        if str:sub(1,4) ~= "<tr>" then valid = false end
 
         local link = str:match('href="(.-)"')
         local alt = str:match('alt="%[(.-)%]"')
 
-        if not alt or not link then goto continue end
-        if alt == "PARENTDIR" or alt == "ICO" then goto continue end
-        if link:find("[:?<>|]") then goto continue end
+        if valid and not alt or not link then valid = false end
+        if valid and alt == "PARENTDIR" or alt == "ICO" then valid = false end
+        if valid and link:find("[:?<>|]") then valid = false end
 
-        msg.trace(alt..": "..link)
-        table.insert(list, { name = link, type = (alt == "DIR" and "dir" or "file"), label = decodeURI(link) })
+        local is_dir = (alt == "DIR")
+        if valid and is_dir and not self.valid_dir(link) then valid = false
+        elseif valid and self.valid_file(link) then valid = false end
 
-        ::continue::
-    end
-
-    return list
-end
-
-local flag = ""
-
---recursively opens the given directory
-local function open_directory(path)
-    local list = parse_http(path)
-    if not list then return end
-    for i = 1, #list do
-        local item_path = path..list[i].name
-
-        if list[i].type == "dir" then open_directory(item_path)
-        else
-            mp.commandv("loadfile", item_path, flag)
-            flag = "append"
+        if valid then
+            msg.trace(alt..": "..link)
+            table.insert(list, { name = link, type = (is_dir and "dir" or "file"), label = decodeURI(link) })
         end
     end
+
+    return self.sort(list)
 end
 
---custom parsing of directories
-mp.register_script_message("http/browse-dir", function(dir, callback, ...)
-    local response = {}
-    response.list, response.empty_text = parse_http(dir)
-    response.directory_label = decodeURI(dir)
-    mp.commandv("script-message", callback, utils.format_json(response), ...)
-end)
-
---custom handling for opening directories
-mp.register_script_message("http/open-dir", function(path, flags)
-    flag = flags
-    open_directory(path)
-end)
+return http
