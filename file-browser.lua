@@ -369,7 +369,7 @@ local function update_current_directory(_, filepath)
         current_file.name = nil
         return
     elseif filepath:find("dvd://") == 1 then
-        filepath = dvd_device..filepath:match("dvd://(.+)")
+        filepath = dvd_device..filepath:match("dvd://(.*)")
     end
 
     local workingDirectory = mp.get_property('working-directory', '')
