@@ -360,7 +360,7 @@ function parser_mt.set_empty_text(text) state.empty_text = text end
 if o.addons then
     local addon_dir = mp.command_native({"expand-path", o.addon_directory..'/'})
     local files = utils.readdir(addon_dir)
-    if not addon_dir then error("could not read addon directory") end
+    if not files then error("could not read addon directory") end
 
     for _, file in ipairs(files) do
         if file:sub(-4) == ".lua" then
