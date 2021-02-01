@@ -771,9 +771,9 @@ end
 ---------------------------------File/Playlist Opening------------------------------------
 ------------------------------------Browser Controls--------------------------------------
 ------------------------------------------------------------------------------------------
+local flag = ""
 
 --recursive function to load directories using the script custom parsers
-local flag = ""
 local function custom_loadlist_recursive(directory)
     local list = scan_directory(directory)
     for _, item in ipairs(list) do
@@ -793,6 +793,7 @@ end
 local function custom_loadlist(directory, flags)
     flag = flags
     custom_loadlist_recursive(directory)
+    if flag ~= "append" then msg.warn(directory, "contained no valid files") end
 end
 
 --loads lists or defers the command to add-ons
@@ -801,6 +802,7 @@ local function loadlist(path, flags)
     if parser == file_parser then
         mp.commandv('loadlist', path, flags == "append-play" and "append" or flags)
         if flags == "append-play" and mp.get_property_bool("core-idle") then mp.commandv("playlist-play-index", 0) end
+        flag = "append"
     else
         custom_loadlist(path, flags)
     end
@@ -829,9 +831,11 @@ local function loadfile(item, flags, autoload)
         else return loadlist(item, flags) end
     end
 
-    if sub_extensions[ get_extension(item.name) ] then mp.commandv("sub-add", path, flags == "replace" and "select" or "auto")
+    if sub_extensions[ get_extension(item.name) ] then
+        mp.commandv("sub-add", path, flags == "replace" and "select" or "auto")
     else
         mp.commandv('loadfile', path, flags)
+        flag = "append"
         if autoload then autoload_dir(path) end
     end
 end
@@ -895,11 +899,10 @@ local function open_file(flags, autoload)
         local selection = sort_keys(state.selection)
 
         --the currently selected file will be loaded according to the flag
-        --the remaining files will be appended
-        loadfile(selection[1], flags)
-
-        for i=2, #selection do
-            loadfile(selection[i], "append")
+        --the flag variable will be switched to append once a file is loaded
+        flag = flags
+        for i=1, #selection do
+            loadfile(selection[i], flag)
         end
 
         --reset the selection after
