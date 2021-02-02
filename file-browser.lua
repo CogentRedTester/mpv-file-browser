@@ -87,6 +87,7 @@ local state = {
     hidden = true,
     flag_update = false,
     cursor_style = o.ass_cursor,
+    keybinds = nil,
 
     directory = nil,
     directory_label = nil,
@@ -768,8 +769,64 @@ end
 
 
 ------------------------------------------------------------------------------------------
----------------------------------File/Playlist Opening------------------------------------
 ------------------------------------Browser Controls--------------------------------------
+------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+
+--opens the browser
+local function open()
+    for _,v in ipairs(state.keybinds) do
+        mp.add_forced_key_binding(v[1], 'dynamic/'..v[2], v[3], v[4])
+    end
+
+    state.hidden = false
+    if state.directory == nil then
+        local path = mp.get_property('path')
+        update_current_directory(nil, path)
+        if path or o.default_to_working_directory then goto_current_dir() else goto_root() end
+        return
+    end
+
+    if state.flag_update then update_current_directory(nil, mp.get_property('path')) end
+    state.hidden = false
+    if not state.flag_update then ass:update()
+    else state.flag_update = false ; update_ass() end
+end
+
+--closes the list and sets the hidden flag
+local function close()
+    for _,v in ipairs(state.keybinds) do
+        mp.remove_key_binding('dynamic/'..v[2])
+    end
+
+    state.hidden = true
+    ass:remove()
+end
+
+--toggles the list
+local function toggle()
+    if state.hidden then open()
+    else close() end
+end
+
+--run when the escape key is used
+local function escape()
+    --if multiple items are selection cancel the
+    --selection instead of closing the browser
+    if next(state.selection) or state.multiselect_start then
+        state.selection = {}
+        disable_select_mode()
+        update_ass()
+        return
+    end
+    close()
+end
+
+
+
+------------------------------------------------------------------------------------------
+---------------------------------File/Playlist Opening------------------------------------
+------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
 --recursive function to load directories using the script custom parsers
@@ -835,55 +892,6 @@ local function loadfile(item, flag, autoload)
         if autoload then autoload_dir(path) end
         return true
     end
-end
-
---opens the browser
-local function open()
-    for _,v in ipairs(state.keybinds) do
-        mp.add_forced_key_binding(v[1], 'dynamic/'..v[2], v[3], v[4])
-    end
-
-    state.hidden = false
-    if state.directory == nil then
-        local path = mp.get_property('path')
-        update_current_directory(nil, path)
-        if path or o.default_to_working_directory then goto_current_dir() else goto_root() end
-        return
-    end
-
-    if state.flag_update then update_current_directory(nil, mp.get_property('path')) end
-    state.hidden = false
-    if not state.flag_update then ass:update()
-    else state.flag_update = false ; update_ass() end
-end
-
---closes the list and sets the hidden flag
-local function close()
-    for _,v in ipairs(state.keybinds) do
-        mp.remove_key_binding('dynamic/'..v[2])
-    end
-
-    state.hidden = true
-    ass:remove()
-end
-
---toggles the list
-local function toggle()
-    if state.hidden then open()
-    else close() end
-end
-
---run when the escape key is used
-local function escape()
-    --if multiple items are selection cancel the
-    --selection instead of closing the browser
-    if next(state.selection) or state.multiselect_start then
-        state.selection = {}
-        disable_select_mode()
-        update_ass()
-        return
-    end
-    close()
 end
 
 --opens the selelected file(s)
