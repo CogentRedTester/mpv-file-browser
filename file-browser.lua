@@ -245,6 +245,7 @@ local function filter(t)
             top = top+1
         end
     end
+    return t
 end
 
 --sorts a table into an array of selected items in the correct order
@@ -349,6 +350,8 @@ parser_mt.valid_dir = valid_dir
 parser_mt.filter = filter
 parser_mt.sort = sort
 parser_mt.ass_escape = ass_escape
+parser_mt.fix_path = fix_path
+parser_mt.get_extension = get_extension
 
 --providing getter and setter functions so that addons can't modify things directly
 function parser_mt.get_script_opts() return copy_table(o) end
