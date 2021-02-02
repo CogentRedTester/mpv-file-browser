@@ -66,6 +66,7 @@ Keybinds are declared in the `~~/script-opts/file-browser-keybinds.json` file, t
     key             the key to bind the command to - same syntax as input.conf
     command         a json array of commands and arguments
     filter          optional - run the command on just a file or folder
+    parser          optional - only run in directories parsed by the given parser
     multiselect     optional - command is run on all commands selected (default false)
     multi-type      optional - type of multi-command to send (default repeat)
     delay           optional - time to wait between sending repeated multi-selected commands
@@ -93,6 +94,11 @@ The command can also be an array of arrays, in order to send multiple commands a
 
 Filter should not be included unless one wants to limit what types of list entries the command should be run on.
 To only run the command for directories use `dir`, to only run the command for files use `file`.
+
+The parser filter is for filtering keybinds to only work on paged loaded by specific parsers.
+This is currently just for filtering between different addons.
+The default parser is called `file`; parsers loaded by addons use the filename with `-browser.lua` or just `.lua` stripped unless otherwise stated.
+For example `ftp-browser.lua` would have a parser called `ftp`.
 
 ### Codes
 The script will scan every string in the command for the special substitution strings, they are:

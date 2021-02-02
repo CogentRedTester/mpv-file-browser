@@ -89,6 +89,7 @@ local state = {
     cursor_style = o.ass_cursor,
     keybinds = nil,
 
+    parser = nil,
     directory = nil,
     directory_label = nil,
     prev_directory = "",
@@ -142,7 +143,9 @@ local __cache = {
             directory = state.directory,
             directory_label = state.directory_label,
             list = state.list,
-            selected = state.selected
+            selected = state.selected,
+            parser = state.parser,
+            empty_text = state.empty_text
         })
     end,
 
@@ -378,7 +381,9 @@ if o.addons then
     for _, file in ipairs(files) do
         if file:sub(-4) == ".lua" then
             local parser = setmetatable( dofile(addon_dir..file), copy_table(parser_mt) )
-            parser.name = parser.name or file:sub(1,-5)
+
+            parser.name = parser.name or file:gsub("%-browser%.lua$", ""):gsub("%.lua$", "")
+            msg.verbose("imported parser", parser.name, "from", file)
             if type(parser.priority) ~= "number" then error("addon "..file.." needs a numeric priority") end
 
             table.insert(parsers, parser)
@@ -387,7 +392,7 @@ if o.addons then
     table.sort(parsers, function(a, b) return a.priority < b.priority end)
 end
 
-local file_parser = setmetatable({name = "file-browser"}, parser_mt)
+local file_parser = setmetatable({name = "file"}, parser_mt)
 table.insert(parsers, file_parser)
 
 for index, parser in ipairs(parsers) do
@@ -690,6 +695,7 @@ local function goto_root()
 
     --if moving to root from one of the connected locations,
     --then select that location
+    state.parser = file_parser
     state.directory = ""
     select_prev_directory()
 
@@ -701,11 +707,12 @@ local function goto_root()
 end
 
 local function scan_directory(directory)
-    local list, filtered, sorted = choose_parser(directory):parse(directory)
-    if not list then return list end
+    local parser = choose_parser(directory)
+    local list, filtered, sorted = parser:parse(directory)
+    if not list then return list, file_parser end
     if filtered ~= true then filter(list) end
     if sorted ~= true then sort(list) end
-    return list
+    return list, parser
 end
 
 --sends update requests to the different parsers
@@ -727,8 +734,9 @@ local function update_list()
         return
     end
 
-    local list = scan_directory(state.directory)
+    local list, parser = scan_directory(state.directory)
     if not list then return goto_root() end
+    state.parser = parser
 
     for i = 1, #list do
         list[i].ass = list[i].ass or ass_escape(list[i].label or list[i].name)
@@ -1015,6 +1023,8 @@ end
 
 --runs one of the custom commands
 local function custom_command(cmd)
+    if cmd.parser and cmd.parser ~= state.parser.name then return end
+
     --saving these values in-case the directory is changes while commands are being passed
     cmd.directory = state.directory
     cmd.directory_label = state.directory_label
