@@ -89,6 +89,7 @@ local state = {
     cursor_style = o.ass_cursor,
     keybinds = nil,
 
+    parser = {},
     directory = nil,
     directory_label = nil,
     prev_directory = "",
@@ -142,7 +143,8 @@ local __cache = {
             directory = state.directory,
             directory_label = state.directory_label,
             list = state.list,
-            selected = state.selected
+            selected = state.selected,
+            parser = state.parser
         })
     end,
 
@@ -691,6 +693,7 @@ local function goto_root()
     --if moving to root from one of the connected locations,
     --then select that location
     state.directory = ""
+    state.parser = file_parser
     select_prev_directory()
 
     state.prev_directory = ""
@@ -700,12 +703,37 @@ local function goto_root()
     update_ass()
 end
 
+--activate keybinds for the given section name
+local function activate_key_section(section)
+    if not section or not state.keybinds[section] then return end
+    for _,v in ipairs(state.keybinds[section]) do
+        mp.add_forced_key_binding(v[1], section..'/'..v[2], v[3], v[4])
+    end
+end
+
+--remove keybinds for the given section names
+local function remove_key_section(section)
+    if not section or not state.keybinds[section] then return end
+    for _,v in ipairs(state.keybinds[section]) do
+        mp.remove_key_binding(section..'/'..v[2])
+    end
+end
+
+--switch between different parser keybind sections
+local function change_parser_keybinds(prev_parser, parser)
+    remove_key_section(prev_parser.name)
+    activate_key_section(parser.name)
+end
+
+--finds a parser for the given directory and requests a directory list
+--runs standard sorting and filtering operations unless told not to
 local function scan_directory(directory)
-    local list, filtered, sorted = choose_parser(directory):parse(directory)
-    if not list then return list end
+    local parser = choose_parser(directory)
+    local list, filtered, sorted = parser:parse(directory)
+    if not list then return list, file_parser end
     if filtered ~= true then filter(list) end
     if sorted ~= true then sort(list) end
-    return list
+    return list, parser
 end
 
 --sends update requests to the different parsers
@@ -714,7 +742,6 @@ local function update_list()
 
     state.selected = 1
     state.selection = {}
-    if state.directory == "" then return goto_root() end
 
     --loads the current directry from the cache to save loading time
     --there will be a way to forcibly reload the current directory at some point
@@ -727,7 +754,9 @@ local function update_list()
         return
     end
 
-    local list = scan_directory(state.directory)
+    local list, parser = scan_directory(state.directory)
+    state.parser = parser
+
     if not list then return goto_root() end
 
     for i = 1, #list do
@@ -748,7 +777,11 @@ local function update()
     disable_select_mode()
     update_ass()
     state.empty_text = "empty directory"
+
+    --if the parser has changed then we want to switch keybinds
+    local prev_parser = state.parser
     update_list()
+    if state.parser ~= prev_parser then change_parser_keybinds(prev_parser, state.parser) end
 end
 
 --switches to the directory of the currently playing file
@@ -797,6 +830,7 @@ local function open()
     for _,v in ipairs(state.keybinds) do
         mp.add_forced_key_binding(v[1], 'dynamic/'..v[2], v[3], v[4])
     end
+    activate_key_section(state.parser.name)
 
     state.hidden = false
     if state.directory == nil then
@@ -817,6 +851,7 @@ local function close()
     for _,v in ipairs(state.keybinds) do
         mp.remove_key_binding('dynamic/'..v[2])
     end
+    remove_key_section(state.parser.name)
 
     state.hidden = true
     ass:remove()
@@ -990,7 +1025,6 @@ local function run_custom_command(t, cmd, items)
         end
     else
         local custom_cmd = cmd.contains_codes and format_command_table(t, cmd, items) or cmd.command
-        msg.debug("running command: " .. utils.to_string(custom_cmd))
         mp.command_native(custom_cmd)
     end
 end
@@ -1074,9 +1108,21 @@ if o.custom_keybinds then
             end
         end
 
-        for i = 1, #json do
-            json[i].contains_codes = contains_codes(json[i].command)
-            table.insert(state.keybinds, { json[i].key, "custom"..tostring(i), function() custom_command(json[i]) end, {} })
+        for i, keybind in ipairs(json.all or json) do
+            keybind.contains_codes = contains_codes(keybind.command)
+            table.insert(state.keybinds, { keybind.key, "custom"..tostring(i), function() custom_command(keybind) end, {} })
+        end
+
+        --if json.all is enabled then we're using keybind sections for different addons
+        if json.all then
+            json.all = nil
+            for addon, keybinds in pairs(json) do
+                state.keybinds[addon] = {}
+                for i, keybind in ipairs(keybinds) do
+                    keybind.contains_codes = contains_codes(keybind.command)
+                    table.insert(state.keybinds[addon], { keybind.key, "custom"..tostring(i), function() custom_command(keybind) end, {} })
+                end
+            end
         end
     end
 end
