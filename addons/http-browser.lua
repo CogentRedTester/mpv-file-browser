@@ -80,7 +80,7 @@ function http:parse(directory)
         end
     end
 
-    self.set_directory_label( decodeURI(directory) )
+    if self.get_directory() == directory then self.set_directory_label( decodeURI(directory) ) end
     return self.sort(list), true, true
 end
 
