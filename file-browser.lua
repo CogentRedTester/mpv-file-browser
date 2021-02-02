@@ -268,7 +268,10 @@ end
 local function copy_table(t)
     local copy = {}
     for key, value in pairs(t) do
-        copy[key] = type(value) == "table" and copy_table(value) or value
+        if type(value) == "table" then
+            if value == t then copy[key] = copy
+            else copy[key] = copy_table(value) end
+        else copy[key] = value end
     end
     return copy
 end
@@ -371,11 +374,11 @@ if o.addons then
 
     for _, file in ipairs(files) do
         if file:sub(-4) == ".lua" then
-            local addon = setmetatable(dofile(addon_dir..file), parser_mt)
-            addon.name = addon.name or file:sub(1,-5)
-            if type(addon.priority) ~= "number" then error("addon "..file.." needs a numeric priority") end
+            local parser = setmetatable( dofile(addon_dir..file), copy_table(parser_mt) )
+            parser.name = parser.name or file:sub(1,-5)
+            if type(parser.priority) ~= "number" then error("addon "..file.." needs a numeric priority") end
 
-            table.insert(parsers, addon)
+            table.insert(parsers, parser)
         end
     end
     table.sort(parsers, function(a, b) return a.priority < b.priority end)
