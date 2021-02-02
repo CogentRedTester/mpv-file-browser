@@ -20,7 +20,8 @@ When a directory is loaded file-browser will iterate through the list of parsers
 The first parser for which `can_parse` returns true will be selected as the parser for that directory.
 
 The `parse` method will then be called on the selected parser, which is expected to return either a table of list items, or nil.
-If nil is returned, then the browser will move to the root, otherwise if an empty table is returned the browser will treat the directory as empty.
+If nil is returned, then the browser will attempt to load the directory from the next parser for which `can_parse` return true, otherwise if an empty table is returned the browser will treat the directory as empty.
+To be specific file-browser doesn't call parse directly, it calls the `parse_or_defer` method, as described in the [below](#utility-functions) table.
 
 Additionally, parse can return two values after the list; these values will be evaluated into booleans, and will be used to determine if the output of the parser requires additional filtering and sorting, respectively.
 This can be useful if you choose to filter or sort the script yourself, or if the directory does not conform to standard filesystem rules (such as dvd-browser).
@@ -54,7 +55,7 @@ These functions are only made available once file-browser has fully imported the
 | key           | type     | arguments        | returns                 | description                                                                                                                                            |
 |---------------|----------|------------------|-------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
 | setup         | method   | -                | -                       | a function that is automatically run once the parsers have been imported - this function is not set by default, and must instead be created by addons. |
-| defer         | method   | string           | table, boolean, boolean | runs parse(string) on the next valid parser - this allows addons to give up on a directory and let another parser try                                  |
+| parse_or_defer| method   | string           | table, boolean, boolean | returns parse(string) or, if nil is returned, run again on the next valid parser - this is what file-browser uses to scan directories                  |
 | fix_path      | function | string, boolean  | string                  | takes a path and an is_directory boolean and returns a corrected path                                                                                  |
 | ass_escape    | function | string           | string                  | returns the string with escaped ass styling codes                                                                                                      |
 | get_extension | function | string           | string                  | returns the file extension of the given file                                                                                                           |
@@ -78,4 +79,5 @@ All tables returned by these functions are copies to ensure addons can't break t
 | get_dvd_device      | function | -         | string  | the current dvd-device - formatted to work with file-browser                                                          |
 | get_directory       | function | -         | string  | the current directory open in the browser - formatted to work with file-browser                                       |
 | get_current_file    | function | -         | table   | a table containing the path of the current open file - in the form {directory = "", name = ""}                        |
+| get_current_parser  | function | -         | string  | the string name of the current parser - as used by custom keybinds                                                    |
 | get_state           | function | -         | table   | the current state values of the browser - this is probably useless                                                    |

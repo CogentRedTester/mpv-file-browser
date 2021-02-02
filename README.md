@@ -96,8 +96,7 @@ Filter should not be included unless one wants to limit what types of list entri
 To only run the command for directories use `dir`, to only run the command for files use `file`.
 
 The parser filter is for filtering keybinds to only work on paged loaded by specific parsers.
-This is currently just for filtering between different addons.
-The default parser is called `file`; parsers loaded by addons use the filename with `-browser.lua` or just `.lua` stripped unless otherwise stated.
+The default parser for native filesystems is called `file`, while the root parser is called `root`; parsers loaded by addons use the filename with `-browser.lua` or just `.lua` stripped unless otherwise stated.
 For example `ftp-browser.lua` would have a parser called `ftp`.
 
 ### Codes

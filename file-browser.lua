@@ -363,13 +363,19 @@ function parser_mt.get_dvd_device() return dvd_device end
 function parser_mt.get_parsers() return copy_table(parsers) end
 function parser_mt.get_directory() return state.directory end
 function parser_mt.get_current_file() return copy_table(current_file) end
+function parser_mt.get_current_parser() return state.parser.name end
 
 function parser_mt.set_directory_label(label) state.directory_label = label end
 function parser_mt.set_empty_text(text) state.empty_text = text end
 
---return the result of the next valid parser
-function parser_mt:defer(directory)
-    return choose_parser(directory, self.index+1):parse(directory)
+--parses the given directory or defers to the next parser if nil is returned
+function parser_mt:parse_or_defer(directory)
+    local list, filtered, sorted = self:parse(directory)
+    if list then return list, filtered, sorted
+    else
+        local next = choose_parser(directory, self.index+1)
+        return next and next:parse_or_defer(directory) or nil
+    end
 end
 
 --loading external addons
@@ -380,7 +386,7 @@ if o.addons then
 
     for _, file in ipairs(files) do
         if file:sub(-4) == ".lua" then
-            local parser = setmetatable( dofile(addon_dir..file), copy_table(parser_mt) )
+            local parser = setmetatable( dofile(addon_dir..file), copy_table(parser_mt, true) )
 
             parser.name = parser.name or file:gsub("%-browser%.lua$", ""):gsub("%.lua$", "")
             msg.verbose("imported parser", parser.name, "from", file)
@@ -392,55 +398,71 @@ if o.addons then
     table.sort(parsers, function(a, b) return a.priority < b.priority end)
 end
 
-local file_parser = setmetatable({name = "file"}, parser_mt)
-table.insert(parsers, file_parser)
+--parser object for the root
+--this object is not added to the parsers table so that scripts cannot get access to
+--the root table, which is returned directly by parse()
+local root_parser = {
+    name = "root",
 
+    --if this is being called then all other parsers have failed and we've fallen back to root
+    can_parse = function() return true end,
+
+    --we return the root directory exactly as setup
+    parse = function()
+        state.directory = ""
+        cache:clear()
+        return root, true, true
+    end
+}
+
+--parser ofject for native filesystems
+local file_parser = {
+    name = "file",
+
+    --as the default parser we'll always attempt to use it if all others fail
+    can_parse = function() return true end,
+
+    --scans the given directory using the mp.utils.readdir function
+    parse = function(self, directory)
+        if directory == "" then return nil end
+
+        msg.verbose("scanning files in " .. directory)
+        local new_list = {}
+        local list1 = utils.readdir(directory, 'dirs')
+        if list1 == nil then return nil end
+
+        --sorts folders and formats them into the list of directories
+        for i=1, #list1 do
+            local item = list1[i]
+
+            --filters hidden dot directories for linux
+            if self.valid_dir(item) then
+                msg.debug(item..'/')
+                table.insert(new_list, {name = item..'/', type = 'dir'})
+            end
+        end
+
+        --appends files to the list of directory items
+        local list2 = utils.readdir(directory, 'files')
+        for i=1, #list2 do
+            local item = list2[i]
+
+            --only adds whitelisted files to the browser
+            if self.valid_file(item) then
+                msg.debug(item)
+                table.insert(new_list, {name = item, type = 'file'})
+            end
+        end
+        return new_list, true
+    end
+}
+
+table.insert(parsers, setmetatable(file_parser, parser_mt))
+
+--we want to store the index of each parser and run the setup functions
 for index, parser in ipairs(parsers) do
     parser.index = index
     if parser.setup then parser:setup() end
-end
-
---as the default parser we'll always attempt to use it if all others fail
-function file_parser:can_parse()
-    return true
-end
-
---scans the given directory using the mp.utils.readdir function
-function file_parser:parse(directory)
-    msg.verbose("scanning files in " .. directory)
-    local new_list = {}
-    local list1 = utils.readdir(directory, 'dirs')
-
-    --if we can't access the filesystem for the specified directory then we go to root page
-    --this is cuased by either:
-    --  a network file being streamed
-    --  the user navigating above / on linux or the current drive root on windows
-    if list1 == nil then return nil end
-
-    --sorts folders and formats them into the list of directories
-    for i=1, #list1 do
-        local item = list1[i]
-
-        --filters hidden dot directories for linux
-        if self.valid_dir(item) then
-            msg.debug(item..'/')
-            table.insert(new_list, {name = item..'/', type = 'dir'})
-        end
-    end
-
-    --appends files to the list of directory items
-    local list2 = utils.readdir(directory, 'files')
-    for i=1, #list2 do
-        local item = list2[i]
-
-        --only adds whitelisted files to the browser
-        if self.valid_file(item) then
-            msg.debug(item)
-            table.insert(new_list, {name = item, type = 'file'})
-        end
-    end
-    self.sort(new_list)
-    return new_list, true, true
 end
 
 
@@ -687,29 +709,12 @@ local function select_prev_directory()
     end
 end
 
---loads the root list
-local function goto_root()
-    msg.verbose('loading root')
-    state.selected = 1
-    state.list = root
-
-    --if moving to root from one of the connected locations,
-    --then select that location
-    state.parser = file_parser
-    state.directory = ""
-    select_prev_directory()
-
-    state.prev_directory = ""
-    cache:clear()
-    state.selection = {}
-    disable_select_mode()
-    update_ass()
-end
-
+--moves through valid parsers until a one returns a list
 local function scan_directory(directory)
     local parser = choose_parser(directory)
-    local list, filtered, sorted = parser:parse(directory)
-    if not list then return list, file_parser end
+    local list, filtered, sorted = parser:parse_or_defer(directory)
+
+    if list == nil then return root_parser:parse(), root_parser end
     if filtered ~= true then filter(list) end
     if sorted ~= true then sort(list) end
     return list, parser
@@ -721,12 +726,11 @@ local function update_list()
 
     state.selected = 1
     state.selection = {}
-    if state.directory == "" then return goto_root() end
 
     --loads the current directry from the cache to save loading time
     --there will be a way to forcibly reload the current directory at some point
     --the cache is in the form of a stack, items are taken off the stack when the dir moves up
-    if #cache > 0 and cache[#cache].directory == state.directory then
+    if cache[1] and cache[#cache].directory == state.directory then
         msg.verbose('found directory in cache')
         cache:apply()
         state.prev_directory = state.directory
@@ -735,11 +739,12 @@ local function update_list()
     end
 
     local list, parser = scan_directory(state.directory)
-    if not list then return goto_root() end
     state.parser = parser
 
-    for i = 1, #list do
-        list[i].ass = list[i].ass or ass_escape(list[i].label or list[i].name)
+    if parser ~= root_parser then
+        for i = 1, #list do
+            list[i].ass = list[i].ass or ass_escape(list[i].label or list[i].name)
+        end
     end
 
     state.list = list
@@ -757,6 +762,13 @@ local function update()
     update_ass()
     state.empty_text = "empty directory"
     update_list()
+end
+
+--loads the root list
+local function goto_root()
+    msg.verbose('loading root')
+    state.directory = ""
+    update()
 end
 
 --switches to the directory of the currently playing file
@@ -781,7 +793,8 @@ local function up_dir()
     else state.directory = dir:sub(index):reverse() end
 
     update()
-    cache:pop()
+    if cache[#cache] ~= state.directory then cache:clear()
+    else cache:pop() end
 end
 
 --moves down a directory
@@ -859,6 +872,7 @@ end
 --recursive function to load directories using the script custom parsers
 local function custom_loadlist_recursive(directory, flag)
     local list = scan_directory(directory)
+    if list == root then return end
     for _, item in ipairs(list) do
         if not sub_extensions[ get_extension(item.name) ] then
             local path = get_full_path(item, directory)
