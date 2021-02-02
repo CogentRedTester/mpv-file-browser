@@ -992,6 +992,7 @@ local function run_custom_command(t, cmd, items)
         local custom_cmd = cmd.contains_codes and format_command_table(t, cmd, items) or cmd.command
         msg.debug("running command: " .. utils.to_string(custom_cmd))
         mp.command_native(custom_cmd)
+        return true
     end
 end
 
@@ -1031,7 +1032,7 @@ local function custom_command(cmd)
     else
         --filtering commands
         if cmd.filter and state.list[state.selected] and state.list[state.selected].type ~= cmd.filter then return end
-        run_custom_command(cmd.command, cmd, { state.list[state.selected] })
+        return run_custom_command(cmd.command, cmd, { state.list[state.selected] })
     end
 end
 
@@ -1074,9 +1075,20 @@ if o.custom_keybinds then
             end
         end
 
-        for i = 1, #json do
-            json[i].contains_codes = contains_codes(json[i].command)
-            table.insert(state.keybinds, { json[i].key, "custom"..tostring(i), function() custom_command(json[i]) end, {} })
+        local latest_key = {}
+        for _, keybind in ipairs(state.keybinds) do latest_key[keybind[1]] = keybind[3] end
+
+        for i, keybind in ipairs(json) do
+            keybind.contains_codes = contains_codes(keybind.command)
+
+            --this creates a linked list of functions that call the previous if the various filters weren't met
+            --multiselect commands with the same key are all run, it's up to the user to choose filters that don't overlap
+            local prev_key = latest_key[keybind.key]
+            local fn = function()
+                if not custom_command(keybind) and prev_key then prev_key() end
+            end
+            table.insert(state.keybinds, { keybind.key, "custom"..tostring(i), fn, {} })
+            latest_key[keybind.key] = fn
         end
     end
 end

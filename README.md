@@ -133,10 +133,16 @@ Run a single command, but replace item specific codes with the corresponding str
 For example `["print-text", "%n" ]` would print the name of each item selected separated by ` `.
 The string appended between each character is determined by the `append-string` option, but ` ` is the default.
 
+### Layering Keybinds
+When loading keybinds from the json file file-browser will move down the list and overwrite any existing bindings with the same key.
+This means the lower an item on the list, the higher preference it has.
+However, if the keybind is blocked from running by user filters, then the next highest preference command will be sent, continuing until a command is sent or there are no more keybinds.
+
+The behaviour of multi-select commands is slightly different; they always run the next highest preference command, regardless of how many items the command successfully runs on.
+
 ### Modifying Default Keybinds
 Since the custom keybinds are applied after the default dynamic keybinds they can be used to overwrite the default bindings.
-Any key with the same key code will have preference over existing bindings.
-Additionally, setting new keys for the existing binds can be done with the `script-binding [binding-name]` command, where `binding-name` is the full name of the keybinding.
+Setting new keys for the existing binds can be done with the `script-binding [binding-name]` command, where `binding-name` is the full name of the keybinding.
 For this script the names of the dynamic keybinds are in the format `file_browser/dynamic/[name]` where `name` is a unique identifier documented in the [keybinds](#keybinds) table.
 
 For example to change the scroll buttons from the arrows to the scroll wheel:
