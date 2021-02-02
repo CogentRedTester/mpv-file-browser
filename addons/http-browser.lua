@@ -26,6 +26,12 @@ function http:can_parse(name)
     return name:find("^https?://")
 end
 
+--send curl errors through the browser empty_text
+function http:send_error(str)
+    self.set_empty_text("curl error: "..str)
+    return {}
+end
+
 function http:parse(directory)
     msg.verbose(directory)
     msg.trace("curl -k -l -m 5 "..string.format("%q", directory))
@@ -39,7 +45,7 @@ function http:parse(directory)
     })
     local response = test.stdout:match("(%d%d%d [^\n\r]+)")
     if test.stdout:match("Content%-Type: ([^\r\n/]+)") ~= "text" then return nil end
-    if response ~= "200 OK" then return {}, "curl error: "..response end
+    if response ~= "200 OK" then return self:send_error(response) end
 
     local html = mp.command_native({
         name = "subprocess",
@@ -48,7 +54,7 @@ function http:parse(directory)
         capture_stderr = true,
         args = {"curl", "-k", "-l", directory}
     })
-    if html.status ~= 0 then return {}, "curl error: "..tostring(html.status)
+    if html.status ~= 0 then return self:send_error(tostring(html.status))
     elseif not html.stdout:find("%[PARENTDIR%]") then return nil end
 
     html = html.stdout
