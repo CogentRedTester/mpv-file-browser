@@ -358,6 +358,8 @@ function parser_mt.get_sub_extensions() return copy_table(sub_extensions) end
 function parser_mt.get_state() return copy_table(state) end
 function parser_mt.get_dvd_device() return dvd_device end
 function parser_mt.get_parsers() return copy_table(parsers) end
+function parser_mt.get_directory() return state.directory end
+function parser_mt.get_current_file() return copy_table(current_file) end
 
 function parser_mt.set_directory_label(label) state.directory_label = label end
 function parser_mt.set_empty_text(text) state.empty_text = text end

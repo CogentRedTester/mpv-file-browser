@@ -76,4 +76,6 @@ All tables returned by these functions are copies to ensure addons can't break t
 | get_sub_extensions  | function | -         | table   | like above but with subtitle extensions - note that subtitles show up in the above list as well                       |
 | get_parsers         | function | -         | table   | an array of the loaded parsers                                                                                        |
 | get_dvd_device      | function | -         | string  | the current dvd-device - formatted to work with file-browser                                                          |
+| get_directory       | function | -         | string  | the current directory open in the browser - formatted to work with file-browser                                       |
+| get_current_file    | function | -         | table   | a table containing the path of the current open file - in the form {directory = "", name = ""}                        |
 | get_state           | function | -         | table   | the current state values of the browser - this is probably useless                                                    |
