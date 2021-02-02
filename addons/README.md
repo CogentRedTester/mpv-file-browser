@@ -68,10 +68,13 @@ These functions are only made available once file-browser has fully imported the
 These functions allow addons to safely get information from file-browser, as well as set some useful values.
 All tables returned by these functions are copies to ensure addons can't break things.
 
+Note that the parse function is also run when appending directories to the playlist, so only set values when the requested directory is the one being loaded (use `get_directory()`).
+
 | key                 | type     | arguments | returns | description                                                                                                           |
 |---------------------|----------|-----------|---------|-----------------------------------------------------------------------------------------------------------------------|
 | set_directory_label | function | string    | -       | set an alternative directory string to print to the header - useful to replace encoded paths                          |
 | set_empty_text      | function | string    | -       | set alternative text to display when directory is empty - can also be used for error messages                         |
+| set_selected_index  | function | number    | -       | set the current position of the cursor                                                                                |
 | get_script_opts     | function | -         | table   | the table of script opts set by the user - this never gets changed during runtime                                     |
 | get_extensions      | function | -         | table   | a set of valid extensions after applying the user's whitelist/blacklist - in the form {ext1 = true, ext2 = true, ...} |
 | get_sub_extensions  | function | -         | table   | like above but with subtitle extensions - note that subtitles show up in the above list as well                       |
@@ -80,4 +83,5 @@ All tables returned by these functions are copies to ensure addons can't break t
 | get_directory       | function | -         | string  | the current directory open in the browser - formatted to work with file-browser                                       |
 | get_current_file    | function | -         | table   | a table containing the path of the current open file - in the form {directory = "", name = ""}                        |
 | get_current_parser  | function | -         | string  | the string name of the current parser - as used by custom keybinds                                                    |
+| get_selected_index  | function | -         | number  | the current index of the cursor                                                                                       |
 | get_state           | function | -         | table   | the current state values of the browser - this is probably useless                                                    |

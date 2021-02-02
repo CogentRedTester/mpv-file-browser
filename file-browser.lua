@@ -364,9 +364,11 @@ function parser_mt.get_parsers() return copy_table(parsers) end
 function parser_mt.get_directory() return state.directory end
 function parser_mt.get_current_file() return copy_table(current_file) end
 function parser_mt.get_current_parser() return state.parser.name end
+function parser_mt.get_selected_index() return state.selected end
 
 function parser_mt.set_directory_label(label) state.directory_label = label end
 function parser_mt.set_empty_text(text) state.empty_text = text end
+function parser_mt.set_selected_index(number) state.selected = number end
 
 --parses the given directory or defers to the next parser if nil is returned
 function parser_mt:parse_or_defer(directory)
