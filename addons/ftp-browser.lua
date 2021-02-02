@@ -4,29 +4,44 @@
 
 local mp = require 'mp'
 local msg = require 'mp.msg'
-local utils = require 'mp.utils'
 
-local function parse_ftp(directory)
+local ftp = {
+    priority = 50
+}
+
+function ftp:can_parse(directory)
+    return directory:sub(1, 6) == "ftp://"
+end
+
+--in my experience curl has been somewhat unreliable when it comes to ftp requests
+--this fuction retries the request a few times just in case
+local function get_response(args)
+    local req = {status = 28}
+    local attempts = 0
+    while req.status == 28 and attempts < 4 do
+        req = mp.command_native({
+            name = "subprocess",
+            playback_only = false,
+            capture_stdout = true,
+            capture_stderr = true,
+            args = args
+        })
+        attempts = attempts + 1
+    end
+    return req
+end
+
+function ftp:parse(directory)
     msg.verbose(directory)
     msg.debug("curl -k -g "..string.format("%q", directory))
 
-    local ftp = mp.command_native({
-        name = "subprocess",
-        playback_only = false,
-        capture_stdout = true,
-        capture_stderr = true,
-        args = {"curl", "-k", "-g", directory}
-    })
+    local ftp = get_response({"curl", "-k", "-g", directory})
 
-    local entries = mp.command_native({
-        name = "subprocess",
-        playback_only = false,
-        capture_stdout = true,
-        capture_stderr = true,
-        args = {"curl", "-k", "-g", "-l", directory}
-    })
+    local entries = get_response({"curl", "-k", "-g", "-l", directory})
 
-    if entries.status ~= 0 then
+    if entries.status == 28 then
+        msg.error(entries.stderr)
+    elseif entries.status ~= 0 or ftp.status ~= 0 then
         msg.error(entries.stderr)
         return
     end
@@ -39,48 +54,20 @@ local function parse_ftp(directory)
     local list = {}
     local i = 1
     for str in string.gmatch(entries.stdout, "[^\r\n]+") do
-        if (not str or not response[i]) then goto continue end
-        msg.trace(str .. ' | ' .. response[i])
+        if str and response[i] then
+            msg.trace(str .. ' | ' .. response[i])
 
-        if response[i]:sub(1,1) == "d" then
-            table.insert(list, { name = str..'/', type = "dir" })
-        else
-            table.insert(list, { name = str, type = "file" })
+            if response[i]:sub(1,1) == "d" then
+                table.insert(list, { name = str..'/', type = "dir" })
+            else
+                table.insert(list, { name = str, type = "file" })
+            end
+
+            i = i+1
         end
-
-        i = i+1
-        ::continue::
     end
 
     return list
 end
 
-local flag = ""
-
---recursively opens the given directory
-local function open_directory(path)
-    local list = parse_ftp(path)
-    if not list then return end
-    for i = 1, #list do
-        local item_path = path..list[i].name
-
-        if list[i].type == "dir" then open_directory(item_path)
-        else
-            mp.commandv("loadfile", item_path, flag)
-            flag = "append"
-        end
-    end
-end
-
---custom parsing of directories
-mp.register_script_message("ftp/browse-dir", function(dir, callback, ...)
-    local response = {}
-    response.list = parse_ftp(dir)
-    mp.commandv("script-message", callback, utils.format_json(response), ...)
-end)
-
---custom handling for opening directories
-mp.register_script_message("ftp/open-dir", function(path, flags)
-    flag = flags
-    open_directory(path)
-end)
+return ftp

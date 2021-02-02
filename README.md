@@ -167,10 +167,13 @@ See [here](/file-browser-keybinds.json).
 
 ## Add-ons
 Add-ons are extra scripts that add parsing support for non-native filesystems.
-They can be enabled by loading the add-on script normally and enabling the corresponding `script-opt`.
+They can be enabled by setting `addon` script-opt to yes, and placing the addon file into the `~~/script-modules/file-browser-addons/` directory.
 
 Browsing filesystems provided by add-ons should feel identical to the normal handling of the script,
 but they may require extra commandline tools be installed.
+
+Since addons are loaded programatically from the addon directory it is possible for anyone to write their own addon to parse custom directory structures.
+Instructions on how to do this are available [here](addons/README.md).
 
 ### [http-browser](addons/http-browser.lua)
 This add-on implements support for http/https file servers, specifically the directory indexes that apache servers dynamically generate.
@@ -188,8 +191,7 @@ When playing a dvd, or when moving into the `--dvd-device` directory, the add-on
 This add-on is a little different from the others; dvd-browser is actually standalone, and has a number of other dvd related features that don't
 require the browser at all to make DVD playback more enjoyable, such as automatic playlist management.
 
-It also has it's own, more limitted, browser, but overwriting the default keybind to open file-browser instead effectively disables it.
-Both scripts use `MENU` as the default toggle command, so it will be necessary to explicitly specify which to use by putting `MENU script-binding browse-files` in input.conf.
+It also has it's own, more limitted, browser, but it is automatically disabled when the script detects it is being loaded as an addon for file-browser.
 
 Note that `lsdvd` is only available on linux, but the script has special support for WSL on windows 10.
 
