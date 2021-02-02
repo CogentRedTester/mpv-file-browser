@@ -292,8 +292,11 @@ local function setup_extensions_list()
     for i=1, #compatible_file_extensions do
         extensions[compatible_file_extensions[i]] = true
     end
+
+    --setting up subtitle extensions
     for i = 1, #subtitle_extensions do
         extensions[subtitle_extensions[i]] = true
+        sub_extensions[subtitle_extensions[i]] = true
     end
 
     --adding extra extensions on the whitelist
@@ -304,11 +307,6 @@ local function setup_extensions_list()
     --removing extensions that are in the blacklist
     for str in string.gmatch(o.extension_blacklist, "([^"..o.root_seperators.."]+)") do
         extensions[str] = nil
-    end
-
-    --setting up subtitle extensions list
-    for i = 1, #subtitle_extensions do
-        sub_extensions[subtitle_extensions[i]] = true
     end
 end
 
