@@ -804,7 +804,7 @@ local function down_dir()
     if not state.list[state.selected] or state.list[state.selected].type ~= 'dir' then return end
 
     cache:push()
-    state.directory = state.list[state.selected].path or state.directory..state.list[state.selected].name
+    state.directory = state.directory..state.list[state.selected].name
     update()
 end
 
