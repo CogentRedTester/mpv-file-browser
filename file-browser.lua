@@ -238,8 +238,8 @@ local function filter(t)
         local temp = t[i]
         t[i] = nil
 
-        if  ( temp.type == "dir" and valid_dir(temp.name) ) or
-            ( temp.type == "file" and valid_file(temp.name) )
+        if  ( temp.type == "dir" and valid_dir(temp.label or temp.name) ) or
+            ( temp.type == "file" and valid_file(temp.label or temp.name) )
         then
             t[top] = temp
             top = top+1
@@ -698,7 +698,7 @@ local function goto_root()
 end
 
 local function scan_directory(directory)
-    local list, sorted, filtered = choose_parser(directory):parse(directory)
+    local list, filtered, sorted = choose_parser(directory):parse(directory)
     if not list then return list end
     if filtered ~= true then filter(list) end
     if sorted ~= true then sort(list) end
