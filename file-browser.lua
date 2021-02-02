@@ -268,16 +268,9 @@ end
 local function copy_table(t)
     local copy = {}
     for key, value in pairs(t) do
-        copy[key] = type(t) == "table" and copy_table(value) or value
+        copy[key] = type(value) == "table" and copy_table(value) or value
     end
     return copy
-end
-
---chooses which parser to use for the specific path
-local function choose_parser(path)
-    for _, parser in ipairs(parsers) do
-        if parser:can_parse(path) then return parser end
-    end
 end
 
 
@@ -322,7 +315,7 @@ local function setup_root()
         local path = mp.command_native({'expand-path', str})
         path = fix_path(path, true)
 
-        local temp = {name = path, type = 'dir', label = str, ass = ass_escape(str), parser = choose_parser(path)}
+        local temp = {name = path, type = 'dir', label = str, ass = ass_escape(str)}
 
         root[#root+1] = temp
     end
@@ -337,6 +330,13 @@ setup_root()
 ------------------------------------Parser Object Implementation----------------------------------------
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
+
+--chooses which parser to use for the specific path starting from index
+local function choose_parser(path, index)
+    for i = index or 1, #parsers, 1 do
+        if parsers[i]:can_parse(path) then return parsers[i] end
+    end
+end
 
 --setting up functions to provide to addons
 local parser_mt = {}
@@ -353,9 +353,15 @@ function parser_mt.get_extensions() return copy_table(extensions) end
 function parser_mt.get_sub_extensions() return copy_table(sub_extensions) end
 function parser_mt.get_state() return copy_table(state) end
 function parser_mt.get_dvd_device() return dvd_device end
+function parser_mt.get_parsers() return copy_table(parsers) end
 
 function parser_mt.set_directory_label(label) state.directory_label = label end
 function parser_mt.set_empty_text(text) state.empty_text = text end
+
+--return the result of the next valid parser
+function parser_mt:defer(directory)
+    return choose_parser(directory, self.index+1):parse(directory)
+end
 
 --loading external addons
 if o.addons then
@@ -366,22 +372,29 @@ if o.addons then
     for _, file in ipairs(files) do
         if file:sub(-4) == ".lua" then
             local addon = setmetatable(dofile(addon_dir..file), parser_mt)
+            addon.name = addon.name or file:sub(1,-5)
             if type(addon.priority) ~= "number" then error("addon "..file.." needs a numeric priority") end
+
             table.insert(parsers, addon)
         end
     end
     table.sort(parsers, function(a, b) return a.priority < b.priority end)
 end
 
-local file_parser = setmetatable({}, parser_mt)
+local file_parser = setmetatable({name = "file-browser"}, parser_mt)
 table.insert(parsers, file_parser)
+
+for index, parser in ipairs(parsers) do
+    parser.index = index
+    if parser.setup then parser:setup() end
+end
 
 --as the default parser we'll always attempt to use it if all others fail
 function file_parser:can_parse()
     return true
 end
 
---scans the current directory and updates the directory table
+--scans the given directory using the mp.utils.readdir function
 function file_parser:parse(directory)
     msg.verbose("scanning files in " .. directory)
     local new_list = {}
@@ -410,7 +423,7 @@ function file_parser:parse(directory)
         local item = list2[i]
 
         --only adds whitelisted files to the browser
-        if  self.valid_file(item) then
+        if self.valid_file(item) then
             msg.debug(item)
             table.insert(new_list, {name = item, type = 'file'})
         end
