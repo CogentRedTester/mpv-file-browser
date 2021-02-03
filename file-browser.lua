@@ -270,6 +270,7 @@ end
 
 --copies a table without leaving any references to the original
 local function copy_table(t)
+    if not t then return nil end
     local copy = {}
     for key, value in pairs(t) do
         if type(value) == "table" then
@@ -374,10 +375,13 @@ function parser_mt.set_selected_index(number) state.selected = number end
 function parser_mt:parse_or_defer(directory)
     local list, filtered, sorted = self:parse(directory)
     if list then return list, filtered, sorted
-    else
-        local next = choose_parser(directory, self.index+1)
-        return next and next:parse_or_defer(directory) or nil
-    end
+    else return self:defer(directory) end
+end
+
+--runs parse_or_defer on the next valid parser
+function parser_mt:defer(directory)
+    local next = choose_parser(directory, self.index+1)
+    return next and next:parse_or_defer(directory) or nil
 end
 
 --loading external addons
@@ -874,7 +878,7 @@ end
 --recursive function to load directories using the script custom parsers
 local function custom_loadlist_recursive(directory, flag)
     local list = scan_directory(directory)
-    if list == root then return end
+    if not list or list == root then return end
     for _, item in ipairs(list) do
         if not sub_extensions[ get_extension(item.name) ] then
             local path = get_full_path(item, directory)
