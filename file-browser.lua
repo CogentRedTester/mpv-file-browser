@@ -67,6 +67,9 @@ local o = {
     addons = false,
     addon_directory = "~~/script-modules/file-browser-addons",
 
+    --directory to load external modules - currently just user-input-module
+    module_directory = "~~/script-modules",
+
     --ass tags
     ass_header = "{\\q2\\fs35\\c&00ccff&}",
     ass_body = "{\\q2\\fs25\\c&Hffffff&}",
@@ -78,6 +81,7 @@ local o = {
     ass_cursor = "{\\c&00ccff&}"
 }
 
+package.path = mp.command_native({"expand-path", o.module_directory.."/?.lua;"})..package.path
 opt.read_options(o, 'file_browser')
 local ass = mp.create_osd_overlay("ass-events")
 
@@ -1177,7 +1181,7 @@ mp.register_script_message('browse-directory', browse_directory)
 
 local ui = nil
 
-if pcall(function() ui = dofile(mp.command_native({"expand-path", "~~/script-modules/user-input-module.lua"})) end) then
+if pcall(function() ui = require "user-input-module" end) then
     mp.add_key_binding("Alt+o", "browse-directory/get-user-input", function()
         ui.get_user_input(browse_directory, {text = "[file-browser] open directory:"})
     end)
