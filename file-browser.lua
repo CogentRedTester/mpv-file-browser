@@ -1175,8 +1175,10 @@ mp.register_script_message('browse-directory', browse_directory)
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-local ui = dofile(mp.command_native({"expand-path", "~~/script-modules/user-input-module.lua"}))
+local ui = nil
 
-mp.add_key_binding("Alt+o", "browse-directory/get-user-input", function()
-    ui.get_user_input(browse_directory, {text = "[file-browser] open directory:"})
-end)
+if pcall(function() ui = dofile(mp.command_native({"expand-path", "~~/script-modules/user-input-module.lua"})) end) then
+    mp.add_key_binding("Alt+o", "browse-directory/get-user-input", function()
+        ui.get_user_input(browse_directory, {text = "[file-browser] open directory:"})
+    end)
+end
