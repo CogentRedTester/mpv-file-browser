@@ -41,12 +41,17 @@ local favs = {
     cursor = 1
 }
 
+local use_virtual_directory = true
+local full_paths = {}
+
 local function create_favourite_object(str)
-    return {
+    local item = {
         type = str:sub(-1) == "/" and "dir" or "file",
         path = str,
         name = str:match("([^/]+/?)$")
     }
+    full_paths[item.name] = str
+    return item
 end
 
 function favs:setup()
@@ -62,13 +67,32 @@ function favs:setup()
 end
 
 function favs:can_parse(directory)
-    return directory == "Favourites/"
+    return directory:find("Favourites/") == 1
 end
 
-function favs:parse()
-    if self.cursor ~= 1 then self.set_selected_index(self.cursor) ; self.cursor = 1 end
-    self.set_directory_label("Favourites")
-    return favourites, true, true
+function favs:parse(directory)
+    if directory == "Favourites/" then
+        if self.cursor ~= 1 then self.set_selected_index(self.cursor) ; self.cursor = 1 end
+        self.set_directory_label("Favourites")
+        return favourites, true, true
+    end
+
+    if use_virtual_directory then
+        -- converts the relative favourite path into a full path
+        local _, finish = directory:find("Favourites/([^/]+/)")
+        local full_path = (full_paths[directory:sub(12, finish)] or "")..directory:sub(finish+1)
+        local list, filtered, sorted = self:defer(full_path or "")
+
+        for _, item in ipairs(list) do
+            item.path = item.path or full_path..item.name
+        end
+
+        return list, filtered, sorted
+    end
+
+    local path = full_paths[ directory:match("([^/]+/?)$") or "" ]
+    self.set_directory(path)
+    return self:defer(path)
 end
 
 local function get_favourite(path)
