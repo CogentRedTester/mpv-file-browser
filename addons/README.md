@@ -73,6 +73,7 @@ Note that the parse function is also run when appending directories to the playl
 
 | key                 | type     | arguments | returns | description                                                                                                           |
 |---------------------|----------|-----------|---------|-----------------------------------------------------------------------------------------------------------------------|
+| set_directory       | function | string    | -       | change the current directory - useful to redirect the browser along with defer()                                      |
 | set_directory_label | function | string    | -       | set an alternative directory string to print to the header - useful to replace encoded paths                          |
 | set_empty_text      | function | string    | -       | set alternative text to display when directory is empty - can also be used for error messages                         |
 | set_selected_index  | function | number    | -       | set the current position of the cursor                                                                                |
