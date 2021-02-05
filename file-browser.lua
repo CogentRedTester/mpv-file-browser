@@ -375,20 +375,23 @@ function parser_mt.get_selected_index() return state.selected end
 function parser_mt:get_index() return parser_index[self] end
 
 --parses the given directory or defers to the next parser if nil is returned
-function parser_mt:parse_or_defer(directory)
-    local list, opts = self:parse(directory)
-    if list then
-        if type(opts) ~= "table" then opts = {} end
-        opts.index = opts.index or parser_index[self]
-        return list, opts
-    else return self:defer(directory) end
+local function choose_and_parse(directory, index)
+    local parser, list, opts
+    while list == nil and index <= #parsers do
+        parser = parsers[index]
+        if parser:can_parse(directory) then
+            list, opts = parser:parse(directory)
+        end
+        index = index + 1
+    end
+    opts = opts or {}
+    opts.index = opts.index or parser_index[parser]
+    return list, opts
 end
 
---runs parse_or_defer on the next valid parser
+--runs choose_and_parse starting from the next parser
 function parser_mt:defer(directory)
-    local next = choose_parser(directory, parser_index[self]+1)
-    if next then return next:parse_or_defer(directory)
-    else return nil end
+    return choose_and_parse(directory, self:get_index() + 1)
 end
 
 --loading external addons
@@ -724,11 +727,10 @@ end
 
 --moves through valid parsers until a one returns a list
 local function scan_directory(directory)
-    local parser = choose_parser(directory)
-    local list, opts = parser:parse_or_defer(directory)
+    local list, opts = choose_and_parse(directory, 1)
 
     if list == nil then return root_parser:parse(), {parser = root_parser} end
-    opts.parser = parsers[opts.index] or parser
+    opts.parser = parsers[opts.index]
     if not opts.filtered then filter(list) end
     if not opts.sorted then sort(list) end
     return list, opts
