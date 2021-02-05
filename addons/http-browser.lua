@@ -28,8 +28,7 @@ end
 
 --send curl errors through the browser empty_text
 function http:send_error(str)
-    self.set_empty_text("curl error: "..str)
-    return {}
+    return {}, {empty_text = "curl error: "..str}
 end
 
 function http:parse(directory)
@@ -80,8 +79,7 @@ function http:parse(directory)
         end
     end
 
-    if self.get_directory() == directory then self.set_directory_label( decodeURI(directory) ) end
-    return self.sort(list), true, true
+    return list, {filtered = true, directory_label = decodeURI(directory)}
 end
 
 return http

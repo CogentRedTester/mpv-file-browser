@@ -72,27 +72,34 @@ end
 
 function favs:parse(directory)
     if directory == "Favourites/" then
-        if self.cursor ~= 1 then self.set_selected_index(self.cursor) ; self.cursor = 1 end
-        self.set_directory_label("Favourites")
-        return favourites, true, true
+        local opts = {
+            filtered = true,
+            sorted = true,
+            directory_label = "Favourites"
+        }
+        if self.cursor ~= 1 then opts.selected_index = self.cursor ; self.cursor = 1 end
+        return favourites, opts
     end
 
     if use_virtual_directory then
         -- converts the relative favourite path into a full path
         local _, finish = directory:find("Favourites/([^/]+/)")
         local full_path = (full_paths[directory:sub(12, finish)] or "")..directory:sub(finish+1)
-        local list, filtered, sorted = self:defer(full_path or "")
+        local list, opts = self:defer(full_path or "")
+        opts.index = self:get_index()
 
         for _, item in ipairs(list) do
             item.path = item.path or full_path..item.name
         end
 
-        return list, filtered, sorted
+        return list, opts
     end
 
     local path = full_paths[ directory:match("([^/]+/?)$") or "" ]
-    self.set_directory(path)
-    return self:defer(path)
+
+    local list, opts = self:defer(path)
+    opts.directory = opts.directory or path
+    return list, opts
 end
 
 local function get_favourite(path)
