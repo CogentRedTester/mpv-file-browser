@@ -349,6 +349,7 @@ local function choose_parser(path, index)
 end
 
 --setting up functions to provide to addons
+local parser_index = {}
 local parser_mt = {}
 parser_mt.__index = parser_mt
 parser_mt.valid_file = valid_file
@@ -371,22 +372,23 @@ function parser_mt.get_current_file() return copy_table(current_file) end
 function parser_mt.get_current_parser() return state.parser.name end
 function parser_mt.get_selected_index() return state.selected end
 
-function parser_mt.set_directory(directory) state.directory = directory or "" end
-function parser_mt.set_directory_label(label) state.directory_label = label end
-function parser_mt.set_empty_text(text) state.empty_text = text end
-function parser_mt.set_selected_index(number) state.selected = number end
+function parser_mt:get_index() return parser_index[self] end
 
 --parses the given directory or defers to the next parser if nil is returned
 function parser_mt:parse_or_defer(directory)
-    local list, filtered, sorted = self:parse(directory)
-    if list then return list, filtered, sorted
+    local list, opts = self:parse(directory)
+    if list then
+        if type(opts) ~= "table" then opts = {} end
+        opts.index = opts.index or parser_index[self]
+        return list, opts
     else return self:defer(directory) end
 end
 
 --runs parse_or_defer on the next valid parser
 function parser_mt:defer(directory)
-    local next = choose_parser(directory, self.index+1)
-    return next and next:parse_or_defer(directory) or nil
+    local next = choose_parser(directory, parser_index[self]+1)
+    if next then return next:parse_or_defer(directory)
+    else return nil end
 end
 
 --loading external addons
@@ -422,7 +424,7 @@ local root_parser = {
     parse = function()
         state.directory = ""
         cache:clear()
-        return root, true, true
+        return root, {sorted = true, filtered = true}
     end
 }
 
@@ -464,7 +466,7 @@ local file_parser = {
                 table.insert(new_list, {name = item, type = 'file'})
             end
         end
-        return new_list, true
+        return new_list, {filtered = true}
     end
 }
 
@@ -472,7 +474,7 @@ table.insert(parsers, setmetatable(file_parser, parser_mt))
 
 --we want to store the index of each parser and run the setup functions
 for index, parser in ipairs(parsers) do
-    parser.index = index
+    parser_index[parser] = index
     if parser.setup then parser:setup() end
 end
 
@@ -723,12 +725,13 @@ end
 --moves through valid parsers until a one returns a list
 local function scan_directory(directory)
     local parser = choose_parser(directory)
-    local list, filtered, sorted = parser:parse_or_defer(directory)
+    local list, opts = parser:parse_or_defer(directory)
 
-    if list == nil then return root_parser:parse(), root_parser end
-    if filtered ~= true then filter(list) end
-    if sorted ~= true then sort(list) end
-    return list, parser
+    if list == nil then return root_parser:parse(), {parser = root_parser} end
+    opts.parser = parsers[opts.index] or parser
+    if not opts.filtered then filter(list) end
+    if not opts.sorted then sort(list) end
+    return list, opts
 end
 
 --sends update requests to the different parsers
@@ -749,13 +752,19 @@ local function update_list()
         return
     end
 
-    local list, parser = scan_directory(state.directory)
-    state.parser = parser
+    local list, opts = scan_directory(state.directory)
+    state.parser = opts.parser
 
-    if parser ~= root_parser then
+    if state.parser ~= root_parser then
         for i = 1, #list do
             list[i].ass = list[i].ass or ass_escape(list[i].label or list[i].name)
         end
+
+        --setting custom options from parsers
+        state.directory_label = opts.directory_label or state.directory_label
+        state.empty_text = opts.empty_text or state.empty_text
+        state.directory = opts.directory or state.directory
+        state.selected = opts.selected_index or state.selected
     end
 
     state.list = list
@@ -882,8 +891,10 @@ end
 
 --recursive function to load directories using the script custom parsers
 local function custom_loadlist_recursive(directory, flag)
-    local list = scan_directory(directory)
+    local list, opts = scan_directory(directory)
     if not list or list == root then return end
+    directory = opts.directory or directory
+
     for _, item in ipairs(list) do
         if not sub_extensions[ get_extension(item.name) ] then
             local path = get_full_path(item, directory)
