@@ -1,6 +1,6 @@
 # How to Write an Addon
 
-Addons provide ways for file-browser to parse non-native directory structures. This document describes how one can create their own custom addon. For examples see [ftp-browser](ftp-browser.lua) and [http-browser](http-browser.lua).
+Addons provide ways for file-browser to parse non-native directory structures. This document describes how one can create their own custom addon.
 
 ## Terminology
 
@@ -94,3 +94,12 @@ All tables returned by these functions are copies to ensure addons can't break t
 | get_current_parser  | function | -         | string  | the string name of the parser used for the currently open directory - as used by custom keybinds                      |
 | get_selected_index  | function | -         | number  | the current index of the cursor                                                                                       |
 | get_state           | function | -         | table   | the current state values of the browser - this is probably useless                                                    |
+
+## Examples
+
+For standard addons that add support for non-native filesystems, but otherwise don't do anything fancy, see [ftp-browser](ftp-browser.lua) and [http-browser](http-browser.lua).
+
+For more simple addons that make a few small modifications to how other parsers are displayed, see [home-label](home-label.lua).
+
+For more complex addons that maintain their own virtual directory structure, see
+[favourites](favourites.lua).
