@@ -106,6 +106,7 @@ The script will scan every string in the command for the special substitution st
     %n      name of the selected item (what appears on the list)
     %p      currently open directory
     %d      name of the current directory (characters between the last two '/')
+    %r      name of the parser for the current open directory
     %%      escape the previous codes
 
 Additionally, using the uppercase forms of those codes will send the substituted string through the `string.format("%q", str)` function.

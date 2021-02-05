@@ -1020,7 +1020,9 @@ local function format_command_table(t, cmd, items)
             ["%p"] = cmd.directory or "",
             ["%P"] = string.format("%q", cmd.directory or ""),
             ["%d"] = (cmd.directory_label or cmd.directory):match("([^/]+)/$") or "",
-            ["%D"] = string.format("%q", (cmd.directory_label or cmd.directory):match("([^/]+)/$") or "")
+            ["%D"] = string.format("%q", (cmd.directory_label or cmd.directory):match("([^/]+)/$") or ""),
+            ["%r"] = state.parser.name or "",
+            ["%R"] = string.format("%q", state.parser.name or "")
         })
     end
     return copy
@@ -1116,7 +1118,7 @@ if o.custom_keybinds then
         local function contains_codes(command_table)
             local test_funct = nil
             if type(command_table[1]) == "table" then test_funct = contains_codes
-            else test_funct = function(str) return str:find("^%%[fFnNpPdD]") or str:find("[^%%]%%[fFnNpPdD]") end end
+            else test_funct = function(str) return str:find("%%[fFnNpPdDrR]") end end
 
             for i = 1, #command_table do
                 if test_funct(command_table[i]) then return true end
