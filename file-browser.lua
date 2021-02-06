@@ -501,12 +501,12 @@ end
 
 --detects whether or not to highlight the given entry as being played
 local function highlight_entry(v)
-if current_file.name == nil then return false end
-if v.type == "dir" then
-    return current_file.directory:find(get_full_path(v), 1, true)
-else
-    return current_file.directory == state.directory and current_file.name == v.name
-end
+    if current_file.name == nil then return false end
+    if v.type == "dir" then
+        return current_file.directory:find(get_full_path(v), 1, true)
+    else
+        return current_file.directory..current_file.name == get_full_path(v)
+    end
 end
 
 --saves the directory and name of the currently playing file
@@ -715,12 +715,10 @@ local function select_prev_directory()
         end
     end
 
-    if current_file.directory:find(state.directory, 1, true) == 1 then
-        for i,item in ipairs(state.list) do
-            if highlight_entry(item) then
-                state.selected = i
-                return
-            end
+    for i,item in ipairs(state.list) do
+        if highlight_entry(item) then
+            state.selected = i
+            return
         end
     end
 end
