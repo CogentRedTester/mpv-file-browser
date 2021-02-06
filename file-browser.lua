@@ -824,8 +824,7 @@ local function up_dir()
     else state.directory = dir:sub(index):reverse() end
 
     update()
-    if cache[#cache] ~= state.directory then cache:clear()
-    else cache:pop() end
+    cache:pop()
 end
 
 --moves down a directory
