@@ -206,6 +206,11 @@ local function fix_path(str, is_directory)
     return str
 end
 
+--wrapper for utils.join_path to handle protocols
+local function join_path(working, relative)
+    return relative:find("^[^/\\]+://") and relative or utils.join_path(working, relative)
+end
+
 --sorts the table lexicographically ignoring case and accounting for leading/non-leading zeroes
 --the number format functionality was proposed by github user twophyro, and was presumably taken
 --from here: http://notebook.kulchenko.com/algorithms/alphanumeric-natural-sorting-for-humans-in-lua
@@ -359,6 +364,7 @@ parser_mt.sort = sort
 parser_mt.ass_escape = ass_escape
 parser_mt.fix_path = fix_path
 parser_mt.get_extension = get_extension
+parser_mt.join_path = join_path
 
 --providing getter and setter functions so that addons can't modify things directly
 function parser_mt.get_script_opts() return copy_table(o) end
@@ -473,7 +479,7 @@ local file_parser = {
                 table.insert(new_list, {name = item, type = 'file'})
             end
         end
-        return new_list, {filtered = true}
+        return sort(new_list), {filtered = true, sorted = true}
     end
 }
 
@@ -525,7 +531,7 @@ local function update_current_directory(_, filepath)
     end
 
     local workingDirectory = mp.get_property('working-directory', '')
-    local exact_path = filepath:find("^[^/\\]+://") and filepath or utils.join_path(workingDirectory, filepath)
+    local exact_path = join_path(workingDirectory, filepath)
     exact_path = fix_path(exact_path, false)
     current_file.directory, current_file.name = utils.split_path(exact_path)
 end
