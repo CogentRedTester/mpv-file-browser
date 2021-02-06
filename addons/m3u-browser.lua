@@ -2,6 +2,8 @@
     An addon for mpv-file-browser which adds support for m3u playlists
 ]]--
 
+local utils = require "mp.utils"
+
 local m3u = {
     priority = 10
 }
@@ -25,9 +27,13 @@ function m3u:parse(directory)
         if not list then return nil end
         for _, item in ipairs(list) do
             if exts[ self.get_extension(item.name) ] then
-                item.type = "dir"
                 local path = (opts.directory or directory)..item.name
-                full_paths[ path ] = item.path or path
+
+                --only declare the playlist file if it is local
+                if utils.file_info(item.path or path) then
+                    item.type = "dir"
+                    full_paths[ path ] = item.path or path
+                end
             end
         end
         return list, opts
