@@ -376,16 +376,21 @@ function parser_mt:get_index() return parser_index[self] end
 
 --parses the given directory or defers to the next parser if nil is returned
 local function choose_and_parse(directory, index)
+    msg.debug("finding parser for", directory)
     local parser, list, opts
     while list == nil and index <= #parsers do
         parser = parsers[index]
         if parser:can_parse(directory) then
+            msg.trace("attempting parser:", parser.name)
             list, opts = parser:parse(directory)
         end
         index = index + 1
     end
+    if not list then msg.debug("no successful parsers - using root"); return nil, {} end
+
+    msg.debug("list returned from:", parser.name)
     opts = opts or {}
-    opts.index = opts.index or parser_index[parser]
+    if list then opts.index = opts.index or parser_index[parser] end
     return list, opts
 end
 
@@ -424,10 +429,10 @@ local root_parser = {
     can_parse = function() return true end,
 
     --we return the root directory exactly as setup
-    parse = function()
+    parse = function(self)
         state.directory = ""
         cache:clear()
-        return root, {sorted = true, filtered = true}
+        return root, {sorted = true, filtered = true, parser = self}
     end
 }
 
@@ -442,7 +447,6 @@ local file_parser = {
     parse = function(self, directory)
         if directory == "" then return nil end
 
-        msg.verbose("scanning files in " .. directory)
         local new_list = {}
         local list1 = utils.readdir(directory, 'dirs')
         if list1 == nil then return nil end
@@ -453,7 +457,7 @@ local file_parser = {
 
             --filters hidden dot directories for linux
             if self.valid_dir(item) then
-                msg.debug(item..'/')
+                msg.trace(item..'/')
                 table.insert(new_list, {name = item..'/', type = 'dir'})
             end
         end
@@ -465,7 +469,7 @@ local file_parser = {
 
             --only adds whitelisted files to the browser
             if self.valid_file(item) then
-                msg.debug(item)
+                msg.trace(item)
                 table.insert(new_list, {name = item, type = 'file'})
             end
         end
@@ -725,9 +729,10 @@ end
 
 --moves through valid parsers until a one returns a list
 local function scan_directory(directory)
+    msg.verbose("scanning files in", directory)
     local list, opts = choose_and_parse(directory, 1)
 
-    if list == nil then return root_parser:parse(), {parser = root_parser} end
+    if list == nil then return root_parser:parse() end
     opts.parser = parsers[opts.index]
     if not opts.filtered then filter(list) end
     if not opts.sorted then sort(list) end
