@@ -447,12 +447,10 @@ local file_parser = {
     name = "file",
 
     --as the default parser we'll always attempt to use it if all others fail
-    can_parse = function() return true end,
+    can_parse = function(directory) return directory ~= "" end,
 
     --scans the given directory using the mp.utils.readdir function
     parse = function(self, directory)
-        if directory == "" then return nil end
-
         local new_list = {}
         local list1 = utils.readdir(directory, 'dirs')
         if list1 == nil then return nil end
