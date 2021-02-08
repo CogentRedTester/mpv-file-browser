@@ -87,7 +87,10 @@ function favs:parse(directory)
         local _, finish = directory:find("Favourites/([^/]+/?)")
         local full_path = (full_paths[name] or "")..directory:sub(finish+1)
         local list, opts = self:defer(full_path or "")
+
+        if not list then return nil end
         opts.index = self:get_index()
+        opts.directory_label = nil
 
         for _, item in ipairs(list) do
             item.path = item.path or full_path..item.name
@@ -99,6 +102,7 @@ function favs:parse(directory)
     local path = full_paths[ directory:match("([^/]+/?)$") or "" ]
 
     local list, opts = self:defer(path)
+    if not list then return nil end
     opts.directory = opts.directory or path
     return list, opts
 end
