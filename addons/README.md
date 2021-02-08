@@ -16,7 +16,7 @@ Each parser object must contain the following three members:
 
 | key       | type   | arguments | returns                    | description                                                                                                                 |
 |-----------|--------|-----------|----------------------------|-----------------------------------------------------------------------------------------------------------------------------|
-| priority  | number | -         | -                          | a number to determine what order parsers are tested - 50 is a recommended neutral value                                     |
+| priority  | number | -         | -                          | a number to determine what order parsers are tested - see [here](#priority-suggestions) for suggested values                |
 | can_parse | method | string    | boolean                    | returns whether or not the given path is compatible with the parser                                                         |
 | parse     | method | string    | list_table, opts_table     | returns an array of item_tables, and a table of options to control how file_browser handles the list                        |
 
@@ -64,6 +64,20 @@ None of these values are required, and the opts table can even left as nil when 
 | empty_text      | string  | display this text when the list is empty - can be used for error messages                                           |
 | selected_index  | number  | the index of the item on the list to select by default - a.k.a. the cursor position                                 |
 | index           | number  | index of the parser that successfully returns a list - set automatically, but can be set manually to take ownership |
+
+## Priority Suggestions
+
+Below is a table of suggested priority ranges:
+
+| Range  | Suggested Use                                                                                                              | Example parsers                                |
+|--------|----------------------------------------------------------------------------------------------------------------------------|------------------------------------------------|
+| 0-20   | parsers that purely modify the results of other parsers                                                                    | [m3u-fixer](m3u-browser.lua)                   |
+| 20-40  | virtual filesystems which need to link to the results of other parsers                                                     | [favourites](favourites.lua)                   |
+| 40-50  | to support specific sites or systems which can be inferred from the path                                                   |                                                |
+| 50-90  | limitted support for specific protocols which requires complex parsing to verify compatability                             | [http](http-browser.lua)                       |
+| 90-100 | parsers that only need to modify the results of full parsers                                                               | [home-label](home-label.lua)                   |
+| 100    | priority of the native file-parser - use for parsers which fully support a non-native protocol with absolutely no overlap  | [ftp](ftp-browser.lua), [m3u](m3u-browser.lua) |
+| 100+   | fallbacks for main parsers - potentially alternatives to the default root                                                  |                                                |
 
 ## API Functions
 
