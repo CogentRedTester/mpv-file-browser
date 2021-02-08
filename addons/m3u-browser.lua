@@ -61,7 +61,8 @@ function pl_fixer:parse(directory)
     for _, item in ipairs(list) do
         if exts[ self.get_extension(item.name) ] then
             item.type = "dir"
-            -- item.label = item.name
+            item.path = directory..item.name
+            item.label = item.name
             item.name = item.name.."/"
         end
     end
