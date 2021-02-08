@@ -37,7 +37,7 @@ local save_path = mp.command_native({"expand-path", "~~/script-opts/file_browser
 
 local favourites = nil
 local favs = {
-    priority = 50,
+    priority = 30,
     cursor = 1
 }
 
@@ -50,7 +50,7 @@ local function create_favourite_object(str)
         path = str,
         name = str:match("([^/]+/?)$")
     }
-    full_paths[item.name] = str
+    full_paths[str:match("([^/]+)/?$")] = str
     return item
 end
 
@@ -74,8 +74,7 @@ function favs:parse(directory)
     if directory == "Favourites/" then
         local opts = {
             filtered = true,
-            sorted = true,
-            directory_label = "Favourites"
+            sorted = true
         }
         if self.cursor ~= 1 then opts.selected_index = self.cursor ; self.cursor = 1 end
         return favourites, opts
@@ -83,8 +82,10 @@ function favs:parse(directory)
 
     if use_virtual_directory then
         -- converts the relative favourite path into a full path
-        local _, finish = directory:find("Favourites/([^/]+/)")
-        local full_path = (full_paths[directory:sub(12, finish)] or "")..directory:sub(finish+1)
+        local name = directory:match("Favourites/([^/]+)/?")
+
+        local _, finish = directory:find("Favourites/([^/]+/?)")
+        local full_path = (full_paths[name] or "")..directory:sub(finish+1)
         local list, opts = self:defer(full_path or "")
         opts.index = self:get_index()
 
