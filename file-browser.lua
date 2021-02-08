@@ -1025,7 +1025,7 @@ local function format_command_table(t, cmd, items)
             ["%N"] = create_item_string(cmd, items, function(item) return string.format("%q", item and (item.label or item.name) or "") end),
             ["%p"] = cmd.directory or "",
             ["%P"] = string.format("%q", cmd.directory or ""),
-            ["%d"] = (cmd.directory_label or cmd.directory):match("([^/]+)/$") or "",
+            ["%d"] = (cmd.directory_label or cmd.directory):match("([^/]+)/?$") or "",
             ["%D"] = string.format("%q", (cmd.directory_label or cmd.directory):match("([^/]+)/$") or ""),
             ["%r"] = state.parser.name or "",
             ["%R"] = string.format("%q", state.parser.name or "")
