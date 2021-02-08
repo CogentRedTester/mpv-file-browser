@@ -5,7 +5,8 @@
 local utils = require "mp.utils"
 
 local m3u = {
-    priority = 10
+    priority = 50,
+    name = "m3u"
 }
 
 local exts = {
@@ -15,30 +16,11 @@ local exts = {
 
 local full_paths = {}
 
-function m3u:can_parse()
-    return true
+function m3u:can_parse(directory)
+    return directory:find("m3u8?/?$") and true
 end
 
 function m3u:parse(directory)
-    --convert .m3u files into directories
-    local ext = self.get_extension(directory:gsub("/$", ""))
-    if not exts[ext] then
-        local list, opts = self:defer(directory)
-        if not list then return nil end
-        for _, item in ipairs(list) do
-            if exts[ self.get_extension(item.name) ] then
-                local path = (opts.directory or directory)..item.name
-
-                --only declare the playlist file if it is local
-                if utils.file_info(item.path or path) then
-                    item.type = "dir"
-                    full_paths[ path ] = item.path or path
-                end
-            end
-        end
-        return list, opts
-    end
-
     directory = directory:gsub("/$", "")
     local list = {}
 
@@ -61,4 +43,29 @@ function m3u:parse(directory)
     return list, {filtered = true, sorted = true}
 end
 
-return m3u
+--set m3u files as directories so that file-browser will allow the user to open them
+local pl_fixer = {
+    priority = 10,
+    name = "m3u-fixer"
+}
+
+function pl_fixer:can_parse(directory)
+    if directory == "" then return false end
+    local protocol = directory:find("^(%w+)://")
+    return not protocol and not exts[ self.get_extension(directory:gsub("/$", "")) ]
+end
+
+function pl_fixer:parse(directory)
+    local list, opts = self:defer(directory)
+    if not list then return nil end
+    for _, item in ipairs(list) do
+        if exts[ self.get_extension(item.name) ] then
+            item.type = "dir"
+            -- item.label = item.name
+            item.name = item.name.."/"
+        end
+    end
+    return list, opts
+end
+
+return {m3u, pl_fixer}
