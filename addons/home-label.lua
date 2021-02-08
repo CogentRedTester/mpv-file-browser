@@ -5,7 +5,7 @@
 local mp = require "mp"
 local home = mp.command_native({"expand-path", "~/"})
 local home_label = {
-    priority = 100
+    priority = 99
 }
 
 function home_label:setup()

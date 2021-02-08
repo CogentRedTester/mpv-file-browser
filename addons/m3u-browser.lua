@@ -5,7 +5,7 @@
 local utils = require "mp.utils"
 
 local m3u = {
-    priority = 50,
+    priority = 100,
     name = "m3u"
 }
 

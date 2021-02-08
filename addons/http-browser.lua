@@ -19,7 +19,7 @@ do
 end
 
 local http = {
-    priority = 70
+    priority = 80
 }
 
 function http:can_parse(name)

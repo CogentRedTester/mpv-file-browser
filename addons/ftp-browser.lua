@@ -6,7 +6,7 @@ local mp = require 'mp'
 local msg = require 'mp.msg'
 
 local ftp = {
-    priority = 50
+    priority = 100
 }
 
 function ftp:can_parse(directory)
