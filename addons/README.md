@@ -4,12 +4,15 @@ Addons provide ways for file-browser to parse non-native directory structures. T
 
 ## Terminology
 
-For the purpose of this document addons refer to the scripts being loaded while parsers are the objects the scripts return. However, these terms are practically synonymous.
+For the purpose of this document addons refer to the scripts being loaded while parsers are the objects the scripts return.
+An addon can return multiple parsers, but when they only returns one the terms are almost synonymous.
 Additionally, `method` refer to functions called using the `object:funct()` syntax, and hence have access to the self object, whereas `function` is the standard `object.funct()` syntax.
 
 ## Overview
 
-File-browser automatically loads any lua files from the `~~/script-modules/file-browser-addons` directory as modules. Each addon must return an object with the following three members:
+File-browser automatically loads any lua files from the `~~/script-modules/file-browser-addons` directory as modules.
+Each addon must return either a single parser table, or an array of parser tables.
+Each parser object must contain the following three members:
 
 | key       | type   | arguments | returns                    | description                                                                                                                 |
 |-----------|--------|-----------|----------------------------|-----------------------------------------------------------------------------------------------------------------------------|
@@ -17,12 +20,18 @@ File-browser automatically loads any lua files from the `~~/script-modules/file-
 | can_parse | method | string    | boolean                    | returns whether or not the given path is compatible with the parser                                                         |
 | parse     | method | string    | list_table, opts_table     | returns an array of item_tables, and a table of options to control how file_browser handles the list                        |
 
+Additionally, each parser can optionally contain:
+
+| key   | type   | arguments | returns | description                                                                                                                            |
+|-------|--------|-----------|---------|----------------------------------------------------------------------------------------------------------------------------------------|
+| name  | string | -         | -       | the name of the parser used for custom keybinds filters and codes - by default uses the filename with `.lua` or `-browser.lua` removed |
+| setup | method | -         | -       | If it exists this method is automatically run after all parsers are imported and API functions are made available                      |
+
 When a directory is loaded file-browser will iterate through the list of parsers from lowest to highest priority.
 The first parser for which `can_parse` returns true will be selected as the parser for that directory.
 
 The `parse` method will then be called on the selected parser, which is expected to return either a table of list items, or nil.
 If nil is returned, then the browser will attempt to load the directory from the next parser for which `can_parse` return true, otherwise if an empty table is returned the browser will treat the directory as empty.
-To be specific file-browser doesn't call parse directly, it calls the `parse_or_defer` method, as described in the [below](#utility-functions) table.
 
 ## The List Array
 
@@ -39,7 +48,7 @@ Each item has the following members:
 
 File-browser expects that `type` and `name` will be set for each item, so leaving these out will probably crash the script.
 File-browser also assumes that all directories end in a `/` when appending name, and that there will be no backslashes.
-The API function `fix_path` (see next section) can be used to ensure that paths conform to file-browser rules.
+The API function [`fix_path`](#Utility-Functions) can be used to ensure that paths conform to file-browser rules.
 
 ## The Opts Table
 
@@ -66,7 +75,6 @@ These functions are only made available once file-browser has fully imported the
 
 | key           | type     | arguments        | returns                 | description                                                                                                                                            |
 |---------------|----------|------------------|-------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| setup         | method   | -                | -                       | a function that is automatically run once the parsers have been imported - this function is not set by default, and must instead be created by addons. |
 | defer         | method   | string           | list_table, opts_table  | forwards the given directory to the next valid parser - can be used to redirect the browser or to modify the results of lower priority parsers         |
 | fix_path      | function | string, boolean  | string                  | takes a path and an is_directory boolean and returns a corrected path                                                                                  |
 | join_path     | function | string, string   | string                  | a wrapper for mp.utils.join_path which adds support for network protocols                                                                              |

@@ -413,13 +413,22 @@ if o.addons then
 
     for _, file in ipairs(files) do
         if file:sub(-4) == ".lua" then
-            local parser = setmetatable( dofile(addon_dir..file), copy_table(parser_mt, true) )
+            local addon = dofile(addon_dir..file)
+            local addon_parsers = {}
 
-            parser.name = parser.name or file:gsub("%-browser%.lua$", ""):gsub("%.lua$", "")
-            msg.verbose("imported parser", parser.name, "from", file)
-            if type(parser.priority) ~= "number" then error("addon "..file.." needs a numeric priority") end
+            --if the table contains a priority key then we assume it isn't an array of parsers
+            if addon.priority then addon_parsers[1] = addon
+            else addon_parsers = addon end
 
-            table.insert(parsers, parser)
+            for _, parser in ipairs(addon_parsers) do
+                parser = setmetatable(parser, copy_table(parser_mt))
+                parser.name = parser.name or file:gsub("%-browser%.lua$", ""):gsub("%.lua$", "")
+
+                msg.verbose("imported parser", parser.name, "from", file)
+                if type(parser.priority) ~= "number" then error("addon "..file.." needs a numeric priority") end
+
+                table.insert(parsers, parser)
+            end
         end
     end
     table.sort(parsers, function(a, b) return a.priority < b.priority end)
