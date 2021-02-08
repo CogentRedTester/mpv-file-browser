@@ -772,6 +772,7 @@ local function update_list()
     end
 
     local list, opts = scan_directory(state.directory)
+    state.list = list
     state.parser = opts.parser
 
     if state.parser ~= root_parser then
@@ -783,10 +784,14 @@ local function update_list()
         state.directory_label = opts.directory_label or state.directory_label
         state.empty_text = opts.empty_text or state.empty_text
         state.directory = opts.directory or state.directory
-        state.selected = opts.selected_index or state.selected
+
+        if opts.selected_index then
+            state.selected = opts.selected_index or state.selected
+            if state.selected > #state.list then state.selected = #state.list
+            elseif state.selected < 1 then state.selected = 1 end
+        end
     end
 
-    state.list = list
     select_prev_directory()
     state.prev_directory = state.directory
     update_ass()
