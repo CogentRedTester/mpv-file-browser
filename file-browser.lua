@@ -405,35 +405,6 @@ function parser_mt:defer(directory)
     return choose_and_parse(directory, self:get_index() + 1)
 end
 
---loading external addons
-if o.addons then
-    local addon_dir = mp.command_native({"expand-path", o.addon_directory..'/'})
-    local files = utils.readdir(addon_dir)
-    if not files then error("could not read addon directory") end
-
-    for _, file in ipairs(files) do
-        if file:sub(-4) == ".lua" then
-            local addon = dofile(addon_dir..file)
-            local addon_parsers = {}
-
-            --if the table contains a priority key then we assume it isn't an array of parsers
-            if addon.priority then addon_parsers[1] = addon
-            else addon_parsers = addon end
-
-            for _, parser in ipairs(addon_parsers) do
-                parser = setmetatable(parser, copy_table(parser_mt))
-                parser.name = parser.name or file:gsub("%-browser%.lua$", ""):gsub("%.lua$", "")
-
-                msg.verbose("imported parser", parser.name, "from", file)
-                if type(parser.priority) ~= "number" then error("addon "..file.." needs a numeric priority") end
-
-                table.insert(parsers, parser)
-            end
-        end
-    end
-    table.sort(parsers, function(a, b) return a.priority < b.priority end)
-end
-
 --parser object for the root
 --this object is not added to the parsers table so that scripts cannot get access to
 --the root table, which is returned directly by parse()
@@ -454,6 +425,7 @@ local root_parser = {
 --parser ofject for native filesystems
 local file_parser = {
     name = "file",
+    priority = 100,
 
     --as the default parser we'll always attempt to use it if all others fail
     can_parse = function(directory) return directory ~= "" end,
@@ -490,7 +462,36 @@ local file_parser = {
     end
 }
 
-table.insert(parsers, setmetatable(file_parser, parser_mt))
+parsers[1] = setmetatable(file_parser, parser_mt)
+
+--loading external addons
+if o.addons then
+    local addon_dir = mp.command_native({"expand-path", o.addon_directory..'/'})
+    local files = utils.readdir(addon_dir)
+    if not files then error("could not read addon directory") end
+
+    for _, file in ipairs(files) do
+        if file:sub(-4) == ".lua" then
+            local addon = dofile(addon_dir..file)
+            local addon_parsers = {}
+
+            --if the table contains a priority key then we assume it isn't an array of parsers
+            if addon.priority then addon_parsers[1] = addon
+            else addon_parsers = addon end
+
+            for _, parser in ipairs(addon_parsers) do
+                parser = setmetatable(parser, copy_table(parser_mt))
+                parser.name = parser.name or file:gsub("%-browser%.lua$", ""):gsub("%.lua$", "")
+
+                msg.verbose("imported parser", parser.name, "from", file)
+                if type(parser.priority) ~= "number" then error("addon "..file.." needs a numeric priority") end
+
+                table.insert(parsers, parser)
+            end
+        end
+    end
+    table.sort(parsers, function(a, b) return a.priority < b.priority end)
+end
 
 --we want to store the index of each parser and run the setup functions
 for index, parser in ipairs(parsers) do
