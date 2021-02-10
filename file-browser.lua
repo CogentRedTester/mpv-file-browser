@@ -425,7 +425,7 @@ local root_parser = {
 --parser ofject for native filesystems
 local file_parser = {
     name = "file",
-    priority = 100,
+    priority = 110,
 
     --as the default parser we'll always attempt to use it if all others fail
     can_parse = function(directory) return directory ~= "" end,

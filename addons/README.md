@@ -72,12 +72,14 @@ Below is a table of suggested priority ranges:
 | Range  | Suggested Use                                                                                                              | Example parsers                                |
 |--------|----------------------------------------------------------------------------------------------------------------------------|------------------------------------------------|
 | 0-20   | parsers that purely modify the results of other parsers                                                                    | [m3u-fixer](m3u-browser.lua)                   |
-| 20-40  | virtual filesystems which need to link to the results of other parsers                                                     | [favourites](favourites.lua)                   |
-| 40-50  | to support specific sites or systems which can be inferred from the path                                                   |                                                |
-| 50-90  | limitted support for specific protocols which requires complex parsing to verify compatability                             | [http](http-browser.lua)                       |
-| 90-100 | parsers that only need to modify the results of full parsers                                                               | [home-label](home-label.lua)                   |
-| 100    | priority of the native file-parser - use for parsers which fully support a non-native protocol with absolutely no overlap  | [ftp](ftp-browser.lua), [m3u](m3u-browser.lua) |
-| 100+   | fallbacks for main parsers - potentially alternatives to the default root                                                  |                                                |
+| 21-40  | virtual filesystems which need to link to the results of other parsers                                                     | [favourites](favourites.lua)                   |
+| 41-50  | to support specific sites or systems which can be inferred from the path                                                   |                                                |
+| 51-80  | limitted support for specific protocols which requires complex parsing to verify compatability                             | [http](http-browser.lua)                       |
+| 81-90  | parsers that only need to modify the results of full parsers                                                               | [home-label](home-label.lua)                   |
+| 91-100 | use for parsers which fully support a non-native protocol with absolutely no overlap                                       | [ftp](ftp-browser.lua), [m3u](m3u-browser.lua) |
+| 101-109| replacements for the native file parser or fallbacks for the full parsers                                                  |                                                |
+| 110    | priority of the native file parser                                                                                         |                                                |
+| 111+   | fallbacks for native parser - potentially alternatives to the default root                                                 |                                                |
 
 ## API Functions
 
