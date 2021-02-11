@@ -77,8 +77,8 @@ Below is a table of suggested priority ranges:
 | 51-80  | limitted support for specific protocols which requires complex parsing to verify compatability                             | [http](http-browser.lua)                       |
 | 81-90  | parsers that only need to modify the results of full parsers                                                               | [home-label](home-label.lua)                   |
 | 91-100 | use for parsers which fully support a non-native protocol with absolutely no overlap                                       | [ftp](ftp-browser.lua), [m3u](m3u-browser.lua) |
-| 101-109| replacements for the native file parser or fallbacks for the full parsers                                                  |                                                |
-| 110    | priority of the native file parser                                                                                         |                                                |
+| 101-109| replacements for the native file parser or fallbacks for the full parsers                                                  | [powershell](powershell.lua)                   |
+| 110    | priority of the native file parser - don't use                                                                             |                                                |
 | 111+   | fallbacks for native parser - potentially alternatives to the default root                                                 |                                                |
 
 ## API Functions
