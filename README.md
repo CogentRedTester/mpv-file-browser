@@ -53,7 +53,7 @@ By default file-browser only opens/appends the single item that the cursor has s
 However, using the `s` keybinds specified above, it is possible to select multiple items to open all at once. Selected items are shown in a different colour to the cursor.
 When in multiselect mode the cursor changes colour and scrolling up and down the list will drag the current selection. If the original item was unselected, then dragging will select items, if the original item was selected, then dragging will unselect items.
 
-When multiple items are selected using the open or append commands will add all selected files to the playlist in the order they appear on the screen.
+When multiple items are selected using the open or append commands all selected files will be added to the playlist in the order they appear on the screen.
 The currently selected (with the cursor) file will be ignored, instead the first multi-selected item in the folder will follow replace/append behaviour as normal, and following selected items will be appended to the playlist afterwards in the order that they appear on the screen.
 
 ## Custom Keybinds
@@ -67,10 +67,10 @@ Keybinds are declared in the `~~/script-opts/file-browser-keybinds.json` file, t
     command         a json array of commands and arguments
     filter          optional - run the command on just a file or folder
     parser          optional - only run in directories parsed by the given parser
-    multiselect     optional - command is run on all commands selected (default false)
+    multiselect     optional - command is run on all selected items (default false)
     multi-type      optional - type of multi-command to send (default repeat)
     delay           optional - time to wait between sending repeated multi-selected commands
-    append-string   optional - string to insert between items in commands (default " ")
+    append-string   optional - string to insert between items in appended multi-select commands (default " ")
 
 Example:
 ```
@@ -95,8 +95,9 @@ The command can also be an array of arrays, in order to send multiple commands a
 Filter should not be included unless one wants to limit what types of list entries the command should be run on.
 To only run the command for directories use `dir`, to only run the command for files use `file`.
 
-The parser filter is for filtering keybinds to only work on paged loaded by specific parsers.
-The default parser for native filesystems is called `file`, while the root parser is called `root`; parsers loaded by addons use the filename with `-browser.lua` or just `.lua` stripped unless otherwise stated.
+The parser filter is for filtering keybinds to only work inside directories loaded by specific parsers.
+There are two parsers in the base script, the default parser for native filesystems is called `file`, while the root parser is called `root`.
+Other parsers can be supplied by addons, and use the addon's filename with `-browser.lua` or just `.lua` stripped unless otherwise stated.
 For example `ftp-browser.lua` would have a parser called `ftp`.
 
 ### Codes
@@ -111,7 +112,7 @@ The script will scan every string in the command for the special substitution st
 
 Additionally, using the uppercase forms of those codes will send the substituted string through the `string.format("%q", str)` function.
 This adds double quotes around the string and automatically escapes any quotation marks within the string.
-This is not necessary for most mpv commands, but can be very useful when sending commands to the console with the `run` command.
+This is not necessary for most mpv commands, but can be very useful when sending commands to the OS with the `run` command.
 
 Example of a command to add an audio track:
 
@@ -144,7 +145,7 @@ When loading keybinds from the json file file-browser will move down the list an
 This means the lower an item on the list, the higher preference it has.
 However, if the keybind is blocked from running by user filters, then the next highest preference command will be sent, continuing until a command is sent or there are no more keybinds.
 
-The behaviour of multi-select commands is slightly different; they always run the next highest preference command, regardless of how many items the command successfully runs on.
+The behaviour of multi-select commands is somewhat unreliable; generally they always run the next highest preference command, regardless of how many items the command successfully runs on, but this behaviour may change in the future.
 
 ### Modifying Default Keybinds
 Since the custom keybinds are applied after the default dynamic keybinds they can be used to overwrite the default bindings.
@@ -178,13 +179,13 @@ For example to change the scroll buttons from the arrows to the scroll wheel:
 See [here](/file-browser-keybinds.json).
 
 ## Add-ons
-Add-ons are extra scripts that add parsing support for non-native filesystems.
+Add-ons are ways to add extra features to file-browser, for example adding support for network file servers like ftp, or implementing virtual directories in the root like recently opened files.
 They can be enabled by setting `addon` script-opt to yes, and placing the addon file into the `~~/script-modules/file-browser-addons/` directory.
 
 Browsing filesystems provided by add-ons should feel identical to the normal handling of the script,
 but they may require extra commandline tools be installed.
 
-Since addons are loaded programatically from the addon directory it is possible for anyone to write their own addon to parse custom directory structures.
+Since addons are loaded programatically from the addon directory it is possible for anyone to write their own addon.
 Instructions on how to do this are available [here](addons/README.md).
 
 ### [http-browser](addons/http-browser.lua)
