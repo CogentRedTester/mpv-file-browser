@@ -75,6 +75,7 @@ function favs:can_parse(directory)
 end
 
 function favs:parse(directory)
+    if not favourites then update_favourites() end
     if directory == "Favourites/" then
         local opts = {
             filtered = true,
@@ -94,7 +95,10 @@ function favs:parse(directory)
 
         if not list then return nil end
         opts.index = self:get_index()
-        opts.directory_label = nil
+        if opts.directory_label then
+            opts.directory_label = opts.directory_label:gsub(full_paths[name], "Favourites/"..name..'/')
+            if opts.directory_label:find("Favourites/") ~= 1 then opts.directory_label = nil end
+        end
 
         for _, item in ipairs(list) do
             item.path = item.path or full_path..item.name
