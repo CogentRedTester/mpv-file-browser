@@ -932,6 +932,7 @@ local function custom_loadlist_recursive(directory, flag)
     local list, opts = scan_directory(directory)
     if not list or list == root then return end
     directory = opts.directory or directory
+    if directory == "" then return end
 
     for _, item in ipairs(list) do
         if not sub_extensions[ get_extension(item.name) ] then
