@@ -6,7 +6,7 @@ Addons provide ways for file-browser to parse non-native directory structures. T
 
 For the purpose of this document addons refer to the scripts being loaded while parsers are the objects the scripts return.
 An addon can return multiple parsers, but when they only returns one the terms are almost synonymous.
-Additionally, `method` refer to functions called using the `object:funct()` syntax, and hence have access to the self object, whereas `function` is the standard `object.funct()` syntax.
+Additionally, `method` refers to functions called using the `object:funct()` syntax, and hence have access to the self object, whereas `function` is the standard `object.funct()` syntax.
 
 ## Overview
 
@@ -27,13 +27,16 @@ Additionally, each parser can optionally contain:
 | name  | string | -         | -       | the name of the parser used for custom keybinds filters and codes - by default uses the filename with `.lua` or `-browser.lua` removed |
 | setup | method | -         | -       | If it exists this method is automatically run after all parsers are imported and API functions are made available                      |
 
+## Parsing
+
 When a directory is loaded file-browser will iterate through the list of parsers from lowest to highest priority.
 The first parser for which `can_parse` returns true will be selected as the parser for that directory.
 
 The `parse` method will then be called on the selected parser, which is expected to return either a table of list items, or nil.
-If nil is returned, then the browser will attempt to load the directory from the next parser for which `can_parse` return true, otherwise if an empty table is returned the browser will treat the directory as empty.
+If an empty table is returned then file-browser will treat the directory as empty, otherwise if the list_table is nil then file-browser will attempt to run `parse` on the next parser for which `can_parse` returns true.
+This continues until a parser returns a list_table, or until there are no more parsers, after which the root is loaded instead.
 
-## The List Array
+### The List Array
 
 The list array must be made up of item_tables, which contain details about each item in the directory.
 Each item has the following members:
@@ -50,7 +53,7 @@ File-browser expects that `type` and `name` will be set for each item, so leavin
 File-browser also assumes that all directories end in a `/` when appending name, and that there will be no backslashes.
 The API function [`fix_path`](#Utility-Functions) can be used to ensure that paths conform to file-browser rules.
 
-## The Opts Table
+### The Opts Table
 
 The options table allows scripts to better control how they are handled by file-browser.
 None of these values are required, and the opts table can even left as nil when returning.
