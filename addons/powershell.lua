@@ -34,7 +34,7 @@ local function command(args)
 end
 
 function wn:can_parse(directory)
-    return drives[ directory:sub(1,1) ]
+    return not self.get_protocol(directory) and drives[ directory:sub(1,1) ]
 end
 
 function wn:parse(directory)

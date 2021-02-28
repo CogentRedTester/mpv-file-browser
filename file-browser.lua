@@ -183,6 +183,16 @@ local function get_full_path(item, dir)
     return (dir or state.directory)..item.name
 end
 
+--returns the file extension of the given file
+local function get_extension(filename)
+    return filename:match("%.([^%.]+)$")
+end
+
+--returns the protocol scheme of the given url, or nil if there is none
+local function get_protocol(filename)
+    return filename:match("^(%a%w*)://")
+end
+
 --formats strings for ass handling
 --this function is taken from https://github.com/mpv-player/mpv/blob/master/player/lua/console.lua#L110
 local function ass_escape(str)
@@ -208,7 +218,7 @@ end
 
 --wrapper for utils.join_path to handle protocols
 local function join_path(working, relative)
-    return relative:find("^[^/\\]+://") and relative or utils.join_path(working, relative)
+    return get_protocol(relative) and relative or utils.join_path(working, relative)
 end
 
 --sorts the table lexicographically ignoring case and accounting for leading/non-leading zeroes
@@ -223,11 +233,6 @@ local function sort(t)
     --appends the letter d or f to the start of the comparison to sort directories and folders as well
     table.sort(t, function(a,b) return a.type:sub(1,1)..(a.label or a.name):lower():gsub("%d+",padnum) < b.type:sub(1,1)..(b.label or b.name):lower():gsub("%d+",padnum) end)
     return t
-end
-
---returns the file extension of the given file
-local function get_extension(filename)
-    return filename:match("%.([^%.]+)$")
 end
 
 local function valid_dir(dir)
@@ -364,6 +369,7 @@ parser_mt.sort = sort
 parser_mt.ass_escape = ass_escape
 parser_mt.fix_path = fix_path
 parser_mt.get_extension = get_extension
+parser_mt.get_protocol = get_protocol
 parser_mt.join_path = join_path
 
 --providing getter and setter functions so that addons can't modify things directly

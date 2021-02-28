@@ -51,8 +51,7 @@ local pl_fixer = {
 
 function pl_fixer:can_parse(directory)
     if directory == "" then return false end
-    local protocol = directory:find("^(%w+)://")
-    return not protocol and not exts[ self.get_extension(directory:gsub("/$", "")) ]
+    return not self.get_protocol(directory) and not exts[ self.get_extension(directory:gsub("/$", "")) ]
 end
 
 function pl_fixer:parse(directory)
