@@ -55,6 +55,10 @@ local function create_favourite_object(str)
 end
 
 function favs:setup()
+    self:insert_root_item({name = "Favourites/", label = "Favourites"}, 1)
+end
+
+local function update_favourites()
     favourites = {}
 
     local file = io.open(save_path, "r")
@@ -127,13 +131,13 @@ end
 
 local function add_favourite(path)
     if get_favourite(path) then return end
-    favs:setup()
+    update_favourites()
     table.insert(favourites, create_favourite_object(path))
     write_to_file()
 end
 
 local function remove_favourite(path)
-    favs.setup()
+    update_favourites()
     local index = get_favourite(path)
     if not index then return end
     table.remove(favourites, index)
@@ -141,7 +145,7 @@ local function remove_favourite(path)
 end
 
 local function move_favourite(path, direction)
-    favs:setup()
+    update_favourites()
     local index, item = get_favourite(path)
     if not index or not favourites[index + direction] then return end
 

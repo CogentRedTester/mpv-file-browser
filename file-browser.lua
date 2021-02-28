@@ -379,12 +379,21 @@ function parser_mt.get_sub_extensions() return copy_table(sub_extensions) end
 function parser_mt.get_state() return copy_table(state) end
 function parser_mt.get_dvd_device() return dvd_device end
 function parser_mt.get_parsers() return copy_table(parsers) end
+function parser_mt.get_root() return copy_table(root) end
 function parser_mt.get_directory() return state.directory end
 function parser_mt.get_current_file() return copy_table(current_file) end
 function parser_mt.get_current_parser() return state.parser.name end
 function parser_mt.get_selected_index() return state.selected end
 
 function parser_mt:get_index() return parser_index[self] end
+
+--add item to root at position pos
+function parser_mt:insert_root_item(item, pos)
+    msg.verbose(self.name..":", "adding item to root")
+    item.ass = item.ass or ass_escape(item.label or item.name)
+    item.type = "dir"
+    table.insert(root, pos or (#root + 1), item)
+end
 
 --parses the given directory or defers to the next parser if nil is returned
 local function choose_and_parse(directory, index)

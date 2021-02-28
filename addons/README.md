@@ -102,6 +102,14 @@ These functions are only made available once file-browser has fully imported the
 | filter        | function | list_table       | list_table              | iterates through the given list and removes items that don't pass the filters - acts directly on the given list, it does not create a copy             |
 | sort          | function | list_table       | list_table              | iterates through the given list and sorts the items using file-browsers sorting algorithm - acts directly on the given list, it does not create a copy |
 
+### Adders
+
+These functions allow addons to add defaults to file-browser.
+
+| key              | type   | arguments                    | returns | description                                                                                                              |
+|------------------|--------|------------------------------|---------|--------------------------------------------------------------------------------------------------------------------------|
+| insert_root_item | method | item_table, number(optional) | -       | add an item_table (must be a directory) to the root list at the specified position - if number is nil then append to end |
+
 ### Getters
 
 These functions allow addons to safely get information from file-browser.
@@ -111,6 +119,7 @@ All tables returned by these functions are copies to ensure addons can't break t
 |---------------------|----------|-----------|---------|-----------------------------------------------------------------------------------------------------------------------|
 | get_index           | method   | -         | number  | the index of the parser in order of preference                                                                        |
 | get_script_opts     | function | -         | table   | the table of script opts set by the user - this never gets changed during runtime                                     |
+| get_root            | function | -         | table   | the root table - an array of item_tables                                                                              |
 | get_extensions      | function | -         | table   | a set of valid extensions after applying the user's whitelist/blacklist - in the form {ext1 = true, ext2 = true, ...} |
 | get_sub_extensions  | function | -         | table   | like above but with subtitle extensions - note that subtitles show up in the above list as well                       |
 | get_parsers         | function | -         | table   | an array of the loaded parsers                                                                                        |
