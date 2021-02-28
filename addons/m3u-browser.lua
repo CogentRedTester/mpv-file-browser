@@ -1,5 +1,8 @@
 --[[
     An addon for mpv-file-browser which adds support for m3u playlists
+
+    If the first entry of a playlist isn't working it is because some playlists are created with random invisible unicode in the first line
+    Vim makes it easy to detect these
 ]]--
 
 local utils = require "mp.utils"
@@ -34,11 +37,12 @@ function m3u:parse(directory)
 
     local lines = playlist:read("*a")
 
-    --for some reason there seems to be an invisible unicode character at the start of the playlist sometimes, so for now I'm removing it
-    if lines:byte() > 127 then lines = lines:gsub("^[%z\1-\127\194-\244][\128-\191]*", "") end
     for item in lines:gmatch("[^%c]+") do
         item = self.fix_path(item)
-        table.insert(list, {name = item, path = self.join_path(parent, item), type = "file"})
+        local fullpath = self.join_path(parent, item)
+
+        local name = ( self.get_protocol(item) and item or fullpath:match("([^/]+)/?$") )
+        table.insert(list, {name = name, path = fullpath, type = "file"})
     end
     return list, {filtered = true, sorted = true}
 end
