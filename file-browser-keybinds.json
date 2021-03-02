@@ -39,13 +39,13 @@
         "command": ["run", "rm", "%F"],
         "filter": "file",
         "multiselect": true,
-        "multi-type": "append"
+        "multi-type": "concat"
     },
     {
         "key": "Ctrl+ENTER",
         "command": ["run", "mpv", "%F"],
         "multiselect": true,
-        "multi-type": "append"
+        "multi-type": "concat"
     },
     {
         "key": "Ctrl+c",
@@ -71,8 +71,8 @@
         "key": "INS",
         "command": ["run", "powershell", "-command", "Set-Content", "-LiteralPath", "( %P + '/.ordered-chapters.m3u' )", "-Value", "( %N )"],
         "multiselect": true,
-        "multi-type": "append",
-        "append-string": "+ '\n' +"
+        "multi-type": "concat",
+        "concat-string": "+ '\n' +"
     },
 
 

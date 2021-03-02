@@ -1038,7 +1038,7 @@ local function create_item_string(cmd, items, funct)
 
     local str = funct(items[1])
     for i = 2, #items do
-        str = str .. ( cmd["append-string"] or " " ) .. funct(items[i])
+        str = str .. ( cmd["concat-string"] or " " ) .. funct(items[i])
     end
     return str
 end
@@ -1067,7 +1067,7 @@ end
 
 --runs all of the commands in the command table
 --recurses to handle nested tables of commands
---items must be an array of multiple items (when multi-type ~= append the array will be 1 long)
+--items must be an array of multiple items (when multi-type ~= concat the array will be 1 long)
 local function run_custom_command(t, cmd, items)
     if type(t[1]) == "table" then
         for i = 1, #t do
@@ -1112,7 +1112,7 @@ local function custom_command(cmd)
 
         if not cmd["multi-type"] or cmd["multi-type"] == "repeat" then
             recursive_multi_command(cmd, 1, #cmd.selection)
-        elseif cmd["multi-type"] == "append" then
+        elseif cmd["multi-type"] == "concat" then
             run_custom_command(cmd.command, cmd, cmd.selection)
         end
     else
