@@ -215,9 +215,9 @@ but they may require extra commandline tools be installed.
 Since addons are loaded programatically from the addon directory it is possible for anyone to write their own addon.
 Instructions on how to do this are available [here](addons/README.md).
 
-### [http-browser](addons/http-browser.lua)
+### [apache-browser](addons/apache-browser.lua)
 
-This add-on implements support for http/https file servers, specifically the directory indexes that apache servers dynamically generate.
+This add-on implements support for http/https directory indexes that apache servers dynamically generate.
 I don't know if this will work on different types of servers.
 
 Requires `curl` in the system PATH.

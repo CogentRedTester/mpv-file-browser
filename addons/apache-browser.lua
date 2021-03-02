@@ -18,20 +18,20 @@ do
     end
 end
 
-local http = {
+local apache = {
     priority = 80
 }
 
-function http:can_parse(name)
+function apache:can_parse(name)
     return name:find("^https?://")
 end
 
 --send curl errors through the browser empty_text
-function http:send_error(str)
+function apache:send_error(str)
     return {}, {empty_text = "curl error: "..str}
 end
 
-function http:parse(directory)
+function apache:parse(directory)
     msg.verbose(directory)
     msg.trace("curl -k -l -m 5 "..string.format("%q", directory))
 
@@ -82,4 +82,4 @@ function http:parse(directory)
     return list, {filtered = true, directory_label = decodeURI(directory)}
 end
 
-return http
+return apache

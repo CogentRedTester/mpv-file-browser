@@ -77,7 +77,7 @@ Below is a table of suggested priority ranges:
 | 0-20   | parsers that purely modify the results of other parsers                                                                    | [m3u-fixer](m3u-browser.lua)                   |
 | 21-40  | virtual filesystems which need to link to the results of other parsers                                                     | [favourites](favourites.lua)                   |
 | 41-50  | to support specific sites or systems which can be inferred from the path                                                   |                                                |
-| 51-80  | limitted support for specific protocols which requires complex parsing to verify compatability                             | [http](http-browser.lua)                       |
+| 51-80  | limitted support for specific protocols which requires complex parsing to verify compatability                             | [apache](apache-browser.lua)                       |
 | 81-90  | parsers that only need to modify the results of full parsers                                                               | [home-label](home-label.lua)                   |
 | 91-100 | use for parsers which fully support a non-native protocol with absolutely no overlap                                       | [ftp](ftp-browser.lua), [m3u](m3u-browser.lua) |
 | 101-109| replacements for the native file parser or fallbacks for the full parsers                                                  | [powershell](powershell.lua)                   |
@@ -135,7 +135,7 @@ All tables returned by these functions are copies to ensure addons can't break t
 
 ## Examples
 
-For standard addons that add support for non-native filesystems, but otherwise don't do anything fancy, see [ftp-browser](ftp-browser.lua) and [http-browser](http-browser.lua).
+For standard addons that add support for non-native filesystems, but otherwise don't do anything fancy, see [ftp-browser](ftp-browser.lua) and [apache-browser](apache-browser.lua).
 
 For more simple addons that make a few small modifications to how other parsers are displayed, see [home-label](home-label.lua).
 
