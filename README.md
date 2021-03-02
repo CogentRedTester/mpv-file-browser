@@ -65,12 +65,14 @@ Keybinds are declared in the `~~/script-opts/file-browser-keybinds.json` file, t
 
     key             the key to bind the command to - same syntax as input.conf
     command         a json array of commands and arguments
+    name            optional - name of the script-binding in the form file_browser/dynamic/custom/[name]
     filter          optional - run the command on just a file or folder
     parser          optional - only run in directories parsed by the given parser
     multiselect     optional - command is run on all selected items (default false)
     multi-type      optional - type of multi-command to send (default repeat)
     delay           optional - time to wait between sending repeated multi-selected commands
     append-string   optional - string to insert between items in appended multi-select commands (default " ")
+    passthrough     optional - force or ban passthrough behaviour (see below)
 
 Example:
 ```
@@ -140,12 +142,16 @@ Run a single command, but replace item specific codes with the corresponding str
 For example `["print-text", "%n" ]` would print the name of each item selected separated by ` `.
 The string appended between each character is determined by the `append-string` option, but ` ` is the default.
 
-### Layering Keybinds
+### Passthrough Keybinds
 When loading keybinds from the json file file-browser will move down the list and overwrite any existing bindings with the same key.
 This means the lower an item on the list, the higher preference it has.
-However, if the keybind is blocked from running by user filters, then the next highest preference command will be sent, continuing until a command is sent or there are no more keybinds.
+However, file-browser implements a layered passthrough system for its keybinds; if a keybind is blocked from running by user filters, then the next highest preference command will be sent, continuing until a command is sent or there are no more keybinds.
+The default dynamic keybinds are considered the lowest priority.
 
-The behaviour of multi-select commands is somewhat unreliable; generally they always run the next highest preference command, regardless of how many items the command successfully runs on, but this behaviour may change in the future.
+The behaviour of multi-select commands is somewhat unreliable; generally they never run the next highest preference command, unless every selected item fails the filter.
+
+Passthrough can be forcibly disabled or enabled using the passthrough option.
+When enabled passthrough will always be activate regardless of the state of the filters.
 
 ### Modifying Default Keybinds
 Since the custom keybinds are applied after the default dynamic keybinds they can be used to overwrite the default bindings.
@@ -174,6 +180,8 @@ For example to change the scroll buttons from the arrows to the scroll wheel:
 ]
 ```
 
+Custom keybinds can be called using the same method, but users must set the `name` value inside the `file-browser-keybinds.json` file.
+To avoid conflicts custom keybinds use the format: `file_browser/dynamic/custom/[name]`.
 
 ### Examples
 See [here](/file-browser-keybinds.json).

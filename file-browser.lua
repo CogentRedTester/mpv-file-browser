@@ -1077,7 +1077,6 @@ local function run_custom_command(t, cmd, items)
         local custom_cmd = cmd.contains_codes and format_command_table(t, cmd, items) or cmd.command
         msg.debug("running command: " .. utils.to_string(custom_cmd))
         mp.command_native(custom_cmd)
-        return true
     end
 end
 
@@ -1100,7 +1099,7 @@ end
 
 --runs one of the custom commands
 local function custom_command(cmd)
-    if cmd.parser and cmd.parser ~= state.parser.name then return end
+    if cmd.parser and cmd.parser ~= state.parser.name then return false end
 
     --saving these values in-case the directory is changes while commands are being passed
     cmd.directory = state.directory
@@ -1109,7 +1108,7 @@ local function custom_command(cmd)
     --runs the command on all multi-selected items
     if cmd.multiselect and next(state.selection) then
         cmd.selection = sort_keys(state.selection, function(item) return not cmd.filter or item.type == cmd.filter end)
-        if not next(cmd.selection) then return end
+        if not next(cmd.selection) then return false end
 
         if not cmd["multi-type"] or cmd["multi-type"] == "repeat" then
             recursive_multi_command(cmd, 1, #cmd.selection)
@@ -1118,8 +1117,8 @@ local function custom_command(cmd)
         end
     else
         --filtering commands
-        if cmd.filter and state.list[state.selected] and state.list[state.selected].type ~= cmd.filter then return end
-        return run_custom_command(cmd.command, cmd, { state.list[state.selected] })
+        if cmd.filter and state.list[state.selected] and state.list[state.selected].type ~= cmd.filter then return false end
+        run_custom_command(cmd.command, cmd, { state.list[state.selected] })
     end
 end
 
@@ -1153,12 +1152,13 @@ if o.custom_keybinds then
         if not json then error("invalid json syntax for "..path) end
 
         local function contains_codes(command_table)
-            local test_funct = nil
-            if type(command_table[1]) == "table" then test_funct = contains_codes
-            else test_funct = function(str) return str:find("%%[fFnNpPdDrR]") end end
-
-            for i = 1, #command_table do
-                if test_funct(command_table[i]) then return true end
+            for _, value in pairs(command_table) do
+                local type = type(value)
+                if type == "table" then
+                    if contains_codes(value) then return true end
+                elseif type == "string" then
+                    if value:find("%%[fFnNpPdDrR]") then return true end
+                end
             end
         end
 
@@ -1172,9 +1172,18 @@ if o.custom_keybinds then
             --multiselect commands with the same key are all run, it's up to the user to choose filters that don't overlap
             local prev_key = latest_key[keybind.key]
             local fn = function()
-                if not custom_command(keybind) and prev_key then prev_key() end
+                if keybind.passthrough == false then
+                    custom_command(keybind)
+                elseif keybind.passthrough == true then
+                    custom_command(keybind)
+                    if prev_key then prev_key() end
+                elseif keybind.passthrough == nil then
+                    if custom_command(keybind) == false and prev_key then prev_key() end
+                else
+                    custom_command(keybind)
+                end
             end
-            table.insert(state.keybinds, { keybind.key, "custom"..tostring(i), fn, {} })
+            table.insert(state.keybinds, { keybind.key, "custom/"..(keybind.name or tostring(i)), fn, {} })
             latest_key[keybind.key] = fn
         end
     end
