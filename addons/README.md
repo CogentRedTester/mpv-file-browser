@@ -130,7 +130,9 @@ All tables returned by these functions are copies to ensure addons can't break t
 | get_directory       | function | -         | string  | the current directory open in the browser - formatted to work with file-browser                                       |
 | get_current_file    | function | -         | table   | a table containing the path of the current open file - in the form {directory = "", name = ""}                        |
 | get_current_parser  | function | -         | string  | the string name of the parser used for the currently open directory - as used by custom keybinds                      |
-| get_selected_index  | function | -         | number  | the current index of the cursor                                                                                       |
+| get_selected_index  | function | -         | number  | the current index of the cursor - if the list is empty this should return 1                                           |
+| get_selected_item   | function | -         | table   | returns the item_table of the currently selected item - returns nil if no item is selected (empty list)               |
+| get_open_status     | function | -         | boolean | returns true if the browser is currently open and false if not                                                        |
 | get_state           | function | -         | table   | the current state values of the browser - this is probably useless                                                    |
 
 ## Examples

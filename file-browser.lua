@@ -384,6 +384,8 @@ function parser_mt.get_directory() return state.directory end
 function parser_mt.get_current_file() return copy_table(current_file) end
 function parser_mt.get_current_parser() return state.parser.name end
 function parser_mt.get_selected_index() return state.selected end
+function parser_mt.get_selected_item() return copy_table(state.list[state.selected]) end
+function parser_mt.get_open_status() return not state.hidden end
 
 function parser_mt:get_index() return parser_index[self] end
 
