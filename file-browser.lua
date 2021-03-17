@@ -431,10 +431,13 @@ local root_parser = {
 
     --we return the root directory exactly as setup
     parse = function(self)
-        state.directory = ""
-        state.directory_label = nil
-        cache:clear()
-        return root, {sorted = true, filtered = true, parser = self}
+        return root, {
+            sorted = true,
+            filtered = true,
+            escaped = true,
+            parser = self,
+            directory = "",
+        }
     end
 }
 
@@ -791,21 +794,28 @@ local function update_list()
     state.list = list
     state.parser = opts.parser
 
-    if state.parser ~= root_parser then
+    --this only matters when displaying the list on the screen, so it doesn't need to be in the scan function
+    if not opts.escaped then
         for i = 1, #list do
             list[i].ass = list[i].ass or ass_escape(list[i].label or list[i].name)
         end
+    end
 
-        --setting custom options from parsers
-        state.directory_label = opts.directory_label
-        state.empty_text = opts.empty_text or state.empty_text
-        state.directory = opts.directory or state.directory
+    --setting custom options from parsers
+    state.directory_label = opts.directory_label
+    state.empty_text = opts.empty_text or state.empty_text
 
-        if opts.selected_index then
-            state.selected = opts.selected_index or state.selected
-            if state.selected > #state.list then state.selected = #state.list
-            elseif state.selected < 1 then state.selected = 1 end
-        end
+    --we assume that directory is only changed when redirecting to a different location
+    --therefore, the cache should be wiped
+    if opts.directory then
+        state.directory = opts.directory
+        cache:clear()
+    end
+
+    if opts.selected_index then
+        state.selected = opts.selected_index or state.selected
+        if state.selected > #state.list then state.selected = #state.list
+        elseif state.selected < 1 then state.selected = 1 end
     end
 
     select_prev_directory()
