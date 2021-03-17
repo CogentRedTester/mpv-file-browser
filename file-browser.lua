@@ -185,7 +185,7 @@ end
 
 --returns the file extension of the given file
 local function get_extension(filename)
-    return filename:match("%.([^%.]+)$")
+    return filename:match("%.([^%./]+)$")
 end
 
 --returns the protocol scheme of the given url, or nil if there is none
