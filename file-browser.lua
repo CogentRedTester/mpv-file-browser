@@ -432,6 +432,7 @@ local root_parser = {
     --we return the root directory exactly as setup
     parse = function(self)
         state.directory = ""
+        state.directory_label = nil
         cache:clear()
         return root, {sorted = true, filtered = true, parser = self}
     end
@@ -796,7 +797,7 @@ local function update_list()
         end
 
         --setting custom options from parsers
-        state.directory_label = opts.directory_label or state.directory_label
+        state.directory_label = opts.directory_label
         state.empty_text = opts.empty_text or state.empty_text
         state.directory = opts.directory or state.directory
 
@@ -813,10 +814,12 @@ local function update_list()
 end
 
 --rescans the folder and updates the list
-local function update()
+local function update(moving_adjacent)
+    --we can only make assumptions about the directory label when moving from adjacent directories
+    if not moving_adjacent then state.directory_label = nil end
+
     state.empty_text = "~"
     state.list = {}
-    state.directory_label = nil
     disable_select_mode()
     update_ass()
     state.empty_text = "empty directory"
@@ -851,17 +854,24 @@ local function up_dir()
     if index == nil then state.directory = ""
     else state.directory = dir:sub(index):reverse() end
 
-    update()
+    --we can make some assumptions about the next directory label when moving up or down
+    if state.directory_label then state.directory_label = state.directory_label:match("^(.+/)[^/]+/$") end
+
+    update(true)
     cache:pop()
 end
 
 --moves down a directory
 local function down_dir()
-    if not state.list[state.selected] or state.list[state.selected].type ~= 'dir' then return end
+    local current = state.list[state.selected]
+    if not current or current.type ~= 'dir' then return end
 
     cache:push()
-    state.directory = state.directory..state.list[state.selected].name
-    update()
+    state.directory = state.directory..current.name
+
+    --we can make some assumptions about the next directory label when moving up or down
+    if state.directory_label then state.directory_label = state.directory_label..(current.label or current.name) end
+    update(true)
 end
 
 
