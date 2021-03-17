@@ -13,13 +13,13 @@ function home_label:setup()
 end
 
 function home_label:can_parse(directory)
-    return directory == home
+    return directory:sub(1, home:len()) == home
 end
 
 function home_label:parse(directory)
     local list, opts = self:defer(directory)
     if (not opts.directory or opts.directory == directory) and not opts.directory_label then
-        opts.directory_label = "~/"
+        opts.directory_label = "~/"..(directory:sub(home:len()+1) or "")
     end
     return list, opts
 end
