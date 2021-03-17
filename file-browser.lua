@@ -515,9 +515,9 @@ if o.addons then
 end
 
 --we want to store the index of each parser and run the setup functions
-for index, parser in ipairs(parsers) do
-    parser_index[parser] = index
-    if parser.setup then parser:setup() end
+for i = #parsers, 1, -1 do
+    parser_index[ parsers[i] ] = i
+    if parsers[i].setup then parsers[i]:setup() end
 end
 
 
