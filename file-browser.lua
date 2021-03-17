@@ -766,10 +766,12 @@ end
 
 --moves through valid parsers until a one returns a list
 local function scan_directory(directory)
+    if directory == "" then return root_parser:parse() end
+
     msg.verbose("scanning files in", directory)
     local list, opts = choose_and_parse(directory, 1)
 
-    if list == nil then return root_parser:parse() end
+    if list == nil then msg.debug("no successful parsers - using root"); return root_parser:parse() end
     opts.parser = parsers[opts.index]
     if not opts.filtered then filter(list) end
     if not opts.sorted then sort(list) end
@@ -778,7 +780,7 @@ end
 
 --sends update requests to the different parsers
 local function update_list()
-    msg.verbose('loading contents of ' .. state.directory)
+    msg.verbose('opening directory: ' .. state.directory)
 
     state.selected = 1
     state.selection = {}
