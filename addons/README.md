@@ -58,15 +58,24 @@ The API function [`fix_path`](#Utility-Functions) can be used to ensure that pat
 The options table allows scripts to better control how they are handled by file-browser.
 None of these values are required, and the opts table can even left as nil when returning.
 
-| key             | type    | description                                                                                                         |
-|-----------------|---------|---------------------------------------------------------------------------------------------------------------------|
-| filtered        | boolean | if true file-browser will not run the standard filter() function on the list                                        |
-| sorted          | boolean | if true file-browser will not sort the list                                                                         |
-| directory       | string  | changes the browser directory to this - used for redirecting to other locations                                     |
-| directory_label | string  | display this label in the header instead of the actual directory - useful to display encoded paths                  |
-| empty_text      | string  | display this text when the list is empty - can be used for error messages                                           |
-| selected_index  | number  | the index of the item on the list to select by default - a.k.a. the cursor position                                 |
-| index           | number  | index of the parser that successfully returns a list - set automatically, but can be set manually to take ownership |
+| key             | type    | description                                                                                                                               |
+|-----------------|---------|-------------------------------------------------------------------------------------------------------------------------------------------|
+| filtered        | boolean | if true file-browser will not run the standard filter() function on the list                                                              |
+| sorted          | boolean | if true file-browser will not sort the list                                                                                               |
+| directory       | string  | changes the browser directory to this - used for redirecting to other locations                                                           |
+| directory_label | string  | display this label in the header instead of the actual directory - useful to display encoded paths                                        |
+| empty_text      | string  | display this text when the list is empty - can be used for error messages                                                                 |
+| selected_index  | number  | the index of the item on the list to select by default - a.k.a. the cursor position                                                       |
+| already_deferred| boolean | whether or not [defer](#Utility-Functions) was used to create the list, if so then give up if list is nil - set automatically, but can be manually disabled   |
+| index           | number  | index of the parser that successfully returns a list - set automatically, but can be set manually to take ownership                       |
+
+`already_deferred` is an optimisation. If a script uses defer and still returns nil, then that means that none of the remaining parsers will be able to parse the path.
+Therefore, it is more efficient to just immediately jump to the root.
+It is up to the addon author to manually disable this if their use of `defer` conflicts with this assumption.
+
+`index` is used to declare ownership of a page. The name of the parser that has ownership is used for custom-keybinds parser filtering.
+When using `defer` index will be the index of whichever parser first returned a list.
+This is the only situation when a parser may want to set index manually.
 
 ## Priority Suggestions
 

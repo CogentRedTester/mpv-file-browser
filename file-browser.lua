@@ -401,7 +401,7 @@ end
 local function choose_and_parse(directory, index)
     msg.debug("finding parser for", directory)
     local parser, list, opts
-    while list == nil and index <= #parsers do
+    while list == nil and ( not opts or not opts.already_deferred ) and index <= #parsers do
         parser = parsers[index]
         if parser:can_parse(directory) then
             msg.trace("attempting parser:", parser.name)
@@ -409,7 +409,7 @@ local function choose_and_parse(directory, index)
         end
         index = index + 1
     end
-    if not list then msg.debug("no successful parsers - using root"); return nil, {} end
+    if not list then return nil, {} end
 
     msg.debug("list returned from:", parser.name)
     opts = opts or {}
@@ -419,7 +419,9 @@ end
 
 --runs choose_and_parse starting from the next parser
 function parser_mt:defer(directory)
-    return choose_and_parse(directory, self:get_index() + 1)
+    local list, opts = choose_and_parse(directory, self:get_index() + 1)
+    opts.already_deferred = true
+    return list, opts
 end
 
 --parser object for the root
@@ -449,7 +451,7 @@ local file_parser = {
     priority = 110,
 
     --as the default parser we'll always attempt to use it if all others fail
-    can_parse = function(directory) return directory ~= "" end,
+    can_parse = function(_, directory) return true end,
 
     --scans the given directory using the mp.utils.readdir function
     parse = function(self, directory)
