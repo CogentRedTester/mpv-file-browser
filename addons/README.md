@@ -11,7 +11,7 @@ Instructions on how to do this are available [here](addons.md).
 
 ## Examples
 
-[This directory](https://github.com/CogentRedTester/mpv-file-browser/addons) contains a number of pre-written addons that can be used as examples of the addon API, though each could still prove useful for everyday use.
+[This directory](https://github.com/CogentRedTester/mpv-file-browser/tree/master/addons) contains a number of pre-written addons that can be used as examples of the addon API, though each could still prove useful for everyday use.
 Any improvements on these addons are welcome.
 
 ## Addon List
