@@ -15,19 +15,17 @@ end
 
 --in my experience curl has been somewhat unreliable when it comes to ftp requests
 --this fuction retries the request a few times just in case
-local function get_response(args)
+local function execute(args)
     local req = {status = 28}
     local attempts = 0
-    while req.status == 28 and attempts < 4 do
-        req = mp.command_native({
-            name = "subprocess",
-            playback_only = false,
-            capture_stdout = true,
-            capture_stderr = true,
-            args = args
-        })
-        attempts = attempts + 1
-    end
+    req = mp.command_native({
+        name = "subprocess",
+        playback_only = false,
+        capture_stdout = true,
+        capture_stderr = true,
+        args = args
+    })
+    attempts = attempts + 1
     return req
 end
 
@@ -35,9 +33,9 @@ function ftp:parse(directory)
     msg.verbose(directory)
     msg.debug("curl -k -g "..string.format("%q", directory))
 
-    local ftp = get_response({"curl", "-k", "-g", directory})
+    local ftp = execute({"curl", "-k", "-g", "--retry", "4", directory})
 
-    local entries = get_response({"curl", "-k", "-g", "-l", directory})
+    local entries = execute({"curl", "-k", "-g", "-l", "--retry", "4", directory})
 
     if entries.status == 28 then
         msg.error(entries.stderr)
