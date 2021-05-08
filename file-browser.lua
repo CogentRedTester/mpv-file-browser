@@ -401,7 +401,7 @@ end
 local function choose_and_parse(directory, index)
     msg.debug("finding parser for", directory)
     local parser, list, opts
-    while list == nil and ( not opts or not opts.already_deferred ) and index <= #parsers do
+    while list == nil and not ( opts and opts.already_deferred ) and index <= #parsers do
         parser = parsers[index]
         if parser:can_parse(directory) then
             msg.trace("attempting parser:", parser.name)
