@@ -70,6 +70,9 @@ local o = {
     --directory to load external modules - currently just user-input-module
     module_directory = "~~/script-modules",
 
+    --enable experimental mouse mode
+    mouse_mode = false,
+
     --ass tags
     ass_header = "{\\q2\\fs35\\c&00ccff&}",
     ass_body = "{\\q2\\fs25\\c&Hffffff&}",
@@ -734,7 +737,14 @@ local function toggle_select_mode()
     end
 end
 
-
+--update the selected item based on the mouse position
+local function update_mouse_pos(_, mouse_pos)
+    if not mouse_pos.hover then return end
+    local scale = mp.get_property_number("osd-height", 0) / 720
+    local header_offset = 65
+    state.selected = math.ceil((mouse_pos.y-header_offset) / (25* scale))
+    update_ass()
+end
 
 --------------------------------------------------------------------------------------------------------
 -----------------------------------------Directory Movement---------------------------------------------
@@ -903,6 +913,8 @@ local function open()
         mp.add_forced_key_binding(v[1], 'dynamic/'..v[2], v[3], v[4])
     end
 
+    if o.mouse_mode then mp.observe_property("mouse-pos", "native", update_mouse_pos) end
+
     state.hidden = false
     if state.directory == nil then
         local path = mp.get_property('path')
@@ -923,6 +935,7 @@ local function close()
         mp.remove_key_binding('dynamic/'..v[2])
     end
 
+    if o.mouse_mode then mp.unobserve_property(update_mouse_pos) end
     state.hidden = true
     ass:remove()
 end
