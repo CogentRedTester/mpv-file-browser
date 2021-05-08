@@ -89,6 +89,9 @@ local o = {
     --directory to load external modules - currently just user-input-module
     module_directory = "~~/script-modules",
 
+    --enable experimental mouse mode
+    mouse_mode = false,
+
     --force file-browser to use a specific text alignment (default: top-left)
     --uses ass tag alignment numbers: https://aegi.vmoe.info/docs/3.0/ASS_Tags/#index23h3
     --set to 0 to use the default mpv osd-align options
@@ -858,7 +861,14 @@ local function toggle_select_mode()
     end
 end
 
-
+--update the selected item based on the mouse position
+local function update_mouse_pos(_, mouse_pos)
+    if not mouse_pos.hover then return end
+    local scale = mp.get_property_number("osd-height", 0) / 720
+    local header_offset = 65
+    state.selected = math.ceil((mouse_pos.y-header_offset) / (25* scale))
+    update_ass()
+end
 
 --------------------------------------------------------------------------------------------------------
 -----------------------------------------Directory Movement---------------------------------------------
@@ -1118,6 +1128,8 @@ local function open()
         mp.add_forced_key_binding(v[1], 'dynamic/'..v[2], v[3], v[4])
     end
 
+    if o.mouse_mode then mp.observe_property("mouse-pos", "native", update_mouse_pos) end
+
     utils.shared_script_property_set("file_browser-open", "yes")
     state.hidden = false
     if state.directory == nil then
@@ -1141,6 +1153,7 @@ local function close()
     end
 
     utils.shared_script_property_set("file_browser-open", "no")
+    if o.mouse_mode then mp.unobserve_property(update_mouse_pos) end
     state.hidden = true
     ass:remove()
 end
