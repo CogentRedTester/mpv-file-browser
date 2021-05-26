@@ -61,6 +61,14 @@ end
 function pl_fixer:parse(directory)
     local list, opts = self:defer(directory)
     if not list then return nil end
+
+    -- this script will mess with sorting when changing m3u files to be folders
+    -- we don't want that to happen
+    if not opts.sorted then
+        self.sort(list)
+        opts.sorted = true
+    end
+
     for _, item in ipairs(list) do
         if exts[ self.get_extension(item.name) ] then
             item.type = "dir"
