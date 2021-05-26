@@ -18,6 +18,10 @@ Any improvements on these addons are welcome.
 
 The following is a list of addons I have written:
 
+**ls**  
+Implements standard directory parsing using the linux `ls` utility.
+This is an example addon, I don't know of any actual uses.
+
 **apache-browser**  
 Implements support for http/https directory indexes that apache servers dynamically generate.
 I don't know if this will work on different types of servers.
@@ -42,4 +46,3 @@ Read the contents of select drives using powershell instead of the inbuilt mpv A
 This script implements support for DVD titles using the `lsdvd` commandline utility.
 When playing a dvd, or when moving into the `--dvd-device` directory, the add-on loads up the DVD titles.
 Note that `lsdvd` is only available on linux, but the script has special support for WSL on windows 10.
-
