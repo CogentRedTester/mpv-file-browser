@@ -81,9 +81,13 @@ local o = {
     ass_cursor = "{\\c&00ccff&}"
 }
 
-package.path = mp.command_native({"expand-path", o.module_directory.."/?.lua;"})..package.path
 opt.read_options(o, 'file_browser')
+
+--the osd_overlay API was not added until v0.31. The expand-path command was not added until 0.30
 local ass = mp.create_osd_overlay("ass-events")
+if not ass then return msg.error("Script requires minimum mpv version 0.31") end
+
+package.path = mp.command_native({"expand-path", o.module_directory}).."/?.lua;"..package.path
 
 local state = {
     list = {},

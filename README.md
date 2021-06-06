@@ -6,6 +6,8 @@ This script allows users to browse and open files and folders entirely from with
 
 By default only file types compatible with mpv will be shown, but this can be changed in the config file.
 
+This script requires at least mpv v0.31.
+
 ## Keybinds
 
 The following keybind is set by default
