@@ -96,6 +96,7 @@ local state = {
     flag_update = false,
     cursor_style = o.ass_cursor,
     keybinds = nil,
+    co = coroutine.create(function() end),
 
     parser = nil,
     directory = nil,
@@ -402,14 +403,14 @@ function parser_mt:insert_root_item(item, pos)
 end
 
 --parses the given directory or defers to the next parser if nil is returned
-local function choose_and_parse(directory, index)
+local function choose_and_parse(directory, index, co)
     msg.debug("finding parser for", directory)
     local parser, list, opts
     while list == nil and not ( opts and opts.already_deferred ) and index <= #parsers do
         parser = parsers[index]
         if parser:can_parse(directory) then
             msg.trace("attempting parser:", parser.name)
-            list, opts = parser:parse(directory)
+            list, opts = parser:parse(directory, co)
         end
         index = index + 1
     end
@@ -422,8 +423,8 @@ local function choose_and_parse(directory, index)
 end
 
 --runs choose_and_parse starting from the next parser
-function parser_mt:defer(directory)
-    local list, opts = choose_and_parse(directory, self:get_index() + 1)
+function parser_mt:defer(directory, co)
+    local list, opts = choose_and_parse(directory, self:get_index() + 1, co)
     opts.already_deferred = true
     return list, opts
 end
@@ -769,11 +770,11 @@ local function select_prev_directory()
 end
 
 --moves through valid parsers until a one returns a list
-local function scan_directory(directory)
+local function scan_directory(directory, co)
     if directory == "" then return root_parser:parse() end
 
     msg.verbose("scanning files in", directory)
-    local list, opts = choose_and_parse(directory, 1)
+    local list, opts = choose_and_parse(directory, 1, co)
 
     if list == nil then msg.debug("no successful parsers - using root"); return root_parser:parse() end
     opts.parser = parsers[opts.index]
@@ -800,7 +801,7 @@ local function update_list()
         return
     end
 
-    local list, opts = scan_directory(state.directory)
+    local list, opts = scan_directory(state.directory, state.co)
     state.list = list
     state.parser = opts.parser
 
@@ -843,7 +844,12 @@ local function update(moving_adjacent)
     disable_select_mode()
     update_ass()
     state.empty_text = "empty directory"
-    update_list()
+
+    --if opening a new directory we want to clear the previous coroutine if it is still running
+    --it is up to addon authors to be able to handle this forced resumption
+    while (coroutine.status(state.co) ~= "dead") do coroutine.resume(state.co) end
+    state.co = coroutine.create(update_list)
+    coroutine.resume(state.co)
 end
 
 --loads the root list
@@ -958,8 +964,8 @@ end
 ------------------------------------------------------------------------------------------
 
 --recursive function to load directories using the script custom parsers
-local function custom_loadlist_recursive(directory, flag)
-    local list, opts = scan_directory(directory)
+local function custom_loadlist_recursive(directory, flag, co)
+    local list, opts = scan_directory(directory, co)
     if not list or list == root then return end
     directory = opts.directory or directory
     if directory == "" then return end
@@ -968,7 +974,7 @@ local function custom_loadlist_recursive(directory, flag)
         if not sub_extensions[ get_extension(item.name) ] then
             local path = get_full_path(item, directory)
             if item.type == "dir" then
-                if custom_loadlist_recursive(path, flag) then flag = "append" end
+                if custom_loadlist_recursive(path, flag, co) then flag = "append" end
             else
                 mp.commandv("loadfile", path, flag)
                 flag = "append"
@@ -979,21 +985,21 @@ local function custom_loadlist_recursive(directory, flag)
 end
 
 --a wrapper for the custom_loadlist_recursive function to handle the flags
-local function custom_loadlist(directory, flag)
-    flag = custom_loadlist_recursive(directory, flag)
+local function custom_loadlist(directory, flag, co)
+    flag = custom_loadlist_recursive(directory, flag, co)
     if not flag then msg.warn(directory, "contained no valid files") end
     return flag
 end
 
 --loads lists or defers the command to add-ons
-local function loadlist(path, flag)
+local function loadlist(path, flag, co)
     local parser = choose_parser(path)
     if not o.custom_dir_loading and parser == file_parser then
         mp.commandv('loadlist', path, flag == "append-play" and "append" or flag)
         if flag == "append-play" and mp.get_property_bool("core-idle") then mp.commandv("playlist-play-index", 0) end
         return true
     else
-        return custom_loadlist(path, flag)
+        return custom_loadlist(path, flag, co)
     end
 end
 
@@ -1013,9 +1019,9 @@ local function autoload_dir(path)
 end
 
 --runs the loadfile or loadlist command
-local function loadfile(item, flag, autoload)
-    local path = get_full_path(item)
-    if item.type == "dir" then return loadlist(path, flag) end
+local function loadfile(item, flag, local_state, autoload)
+    local path = get_full_path(item, local_state.path)
+    if item.type == "dir" then return loadlist(path, flag, local_state.co) end
 
     if sub_extensions[ get_extension(item.name) ] then
         mp.commandv("sub-add", path, flag == "replace" and "select" or "auto")
@@ -1028,31 +1034,38 @@ end
 
 --opens the selelected file(s)
 local function open_file(flag, autoload)
-    if not state.list[state.selected] then return end
-    if flag == 'replace' then close() end
+    local local_state = {
+        co = nil,
+        path = state.directory
+    }
+    local_state.co = coroutine.create(function()
+        if not state.list[state.selected] then return end
+        if flag == 'replace' then close() end
 
-    --handles multi-selection behaviour
-    if next(state.selection) then
-        local selection = sort_keys(state.selection)
+        --handles multi-selection behaviour
+        if next(state.selection) then
+            local selection = sort_keys(state.selection)
 
-        --the currently selected file will be loaded according to the flag
-        --the flag variable will be switched to append once a file is loaded
-        for i=1, #selection do
-            if loadfile(selection[i], flag) then flag = "append" end
+            --the currently selected file will be loaded according to the flag
+            --the flag variable will be switched to append once a file is loaded
+            for i=1, #selection do
+                if loadfile(selection[i], flag, local_state) then flag = "append" end
+            end
+
+            --reset the selection after
+            state.selection = {}
+            disable_select_mode()
+            update_ass()
+
+        elseif flag == 'replace' then
+            loadfile(state.list[state.selected], flag, local_state, autoload ~= o.autoload)
+            down_dir()
+            close()
+        else
+            loadfile(state.list[state.selected], flag, local_state)
         end
-
-        --reset the selection after
-        state.selection = {}
-        disable_select_mode()
-        update_ass()
-
-    elseif flag == 'replace' then
-        loadfile(state.list[state.selected], flag, autoload ~= o.autoload)
-        down_dir()
-        close()
-    else
-        loadfile(state.list[state.selected], flag)
-    end
+    end)
+    coroutine.resume(local_state.co)
 end
 
 
