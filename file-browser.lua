@@ -966,14 +966,22 @@ end
 --recursive function to load directories using the script custom parsers
 local function custom_loadlist_recursive(directory, flag)
     local list, opts = scan_directory(directory)
-    if not list or list == root then return end
+    if list == root then return end
+
+    --if we can't parse the directory then append it and hope mpv fares better
+    if list == nil then
+        mp.commandv("loadfile", directory, flag)
+        flag = "append"
+        return true
+    end
+
     directory = opts.directory or directory
     if directory == "" then return end
 
     for _, item in ipairs(list) do
         if not sub_extensions[ get_extension(item.name) ] then
             local path = get_full_path(item, directory)
-            if item.type == "dir" then
+            if item.type == "dir" or parseable_extensions[get_extension(item.name)] then
                 if custom_loadlist_recursive(path, flag) then flag = "append" end
             else
                 mp.commandv("loadfile", path, flag)
