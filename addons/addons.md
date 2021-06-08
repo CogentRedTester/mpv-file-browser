@@ -99,11 +99,22 @@ All parsers are provided with a range of API functions to make addons more power
 These functions are added to the parser after being loaded via a metatable, so can be called through the self argument or the parser object.
 These functions are only made available once file-browser has fully imported the parsers, so if a script wants to call them immediately on load they must do so in the `setup` method.
 
-### Utility Functions
+| key                          | type     | arguments                    | returns | description                                                                                                              |
+|------------------------------|----------|------------------------------|---------|--------------------------------------------------------------------------------------------------------------------------|
+| register_parseable_extension | function | string                       | -       | register a file extension that the browser will attempt to open, like a directory - for addons which can parse files     |
+| remove_parseable_extension   | function | string                       | -       | remove a file extension that the browser will attempt to open like a directory                                           |
+| insert_root_item             | method   | item_table, number(optional) | -       | add an item_table (must be a directory) to the root list at the specified position - if number is nil then append to end |
+
+### Advanced Functions
 
 | key           | type     | arguments        | returns                 | description                                                                                                                                            |
 |---------------|----------|------------------|-------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
 | defer         | method   | string           | list_table, opts_table  | forwards the given directory to the next valid parser - can be used to redirect the browser or to modify the results of lower priority parsers         |
+
+### Utility Functions
+
+| key           | type     | arguments        | returns                 | description                                                                                                                                            |
+|---------------|----------|------------------|-------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
 | fix_path      | function | string, boolean  | string                  | takes a path and an is_directory boolean and returns a corrected path                                                                                  |
 | join_path     | function | string, string   | string                  | a wrapper for mp.utils.join_path which adds support for network protocols                                                                              |
 | ass_escape    | function | string           | string                  | returns the string with escaped ass styling codes                                                                                                      |
@@ -113,14 +124,6 @@ These functions are only made available once file-browser has fully imported the
 | valid_dir     | function | string           | boolean                 | tests if the given directory name passes the user set filters (dot directories)                                                                        |
 | filter        | function | list_table       | list_table              | iterates through the given list and removes items that don't pass the filters - acts directly on the given list, it does not create a copy             |
 | sort          | function | list_table       | list_table              | iterates through the given list and sorts the items using file-browsers sorting algorithm - acts directly on the given list, it does not create a copy |
-
-### Adders
-
-These functions allow addons to add defaults to file-browser.
-
-| key              | type   | arguments                    | returns | description                                                                                                              |
-|------------------|--------|------------------------------|---------|--------------------------------------------------------------------------------------------------------------------------|
-| insert_root_item | method | item_table, number(optional) | -       | add an item_table (must be a directory) to the root list at the specified position - if number is nil then append to end |
 
 ### Getters
 

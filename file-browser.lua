@@ -110,6 +110,7 @@ local state = {
 local parsers = {}
 local extensions = {}
 local sub_extensions = {}
+local parseable_extensions = {}
 
 local dvd_device = nil
 local osd_font = ""
@@ -392,6 +393,10 @@ function parser_mt.get_selected_item() return copy_table(state.list[state.select
 function parser_mt.get_open_status() return not state.hidden end
 
 function parser_mt:get_index() return parser_index[self] end
+
+--register file extensions which can be opened by the browser
+function parser_mt.register_parseable_extension(ext) parseable_extensions[ext] = true end
+function parser_mt.remove_parseable_extension(ext) parseable_extensions[ext] = nil end
 
 --add item to root at position pos
 function parser_mt:insert_root_item(item, pos)
@@ -884,7 +889,7 @@ end
 --moves down a directory
 local function down_dir()
     local current = state.list[state.selected]
-    if not current or current.type ~= 'dir' then return end
+    if not current or current.type ~= 'dir' and not parseable_extensions[get_extension(current.name)] then return end
 
     cache:push()
     state.directory = state.directory..current.name
