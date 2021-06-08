@@ -5,19 +5,17 @@
     Vim makes it easy to detect these
 ]]--
 
-local utils = require "mp.utils"
-
 local m3u = {
     priority = 100,
     name = "m3u"
 }
 
-local exts = {
-    m3u = true,
-    m3u8 = true
-}
-
 local full_paths = {}
+
+function m3u:setup()
+    self.register_parseable_extension("m3u")
+    self.register_parseable_extension("m3u8")
+end
 
 function m3u:can_parse(directory)
     return directory:find("m3u8?/?$") and true
@@ -47,37 +45,4 @@ function m3u:parse(directory)
     return list, {filtered = true, sorted = true}
 end
 
---set m3u files as directories so that file-browser will allow the user to open them
-local pl_fixer = {
-    priority = 10,
-    name = "m3u-fixer"
-}
-
-function pl_fixer:can_parse(directory)
-    if directory == "" then return false end
-    return not self.get_protocol(directory) and not exts[ self.get_extension(directory:gsub("/$", "")) ]
-end
-
-function pl_fixer:parse(directory)
-    local list, opts = self:defer(directory)
-    if not list then return nil end
-
-    -- this script will mess with sorting when changing m3u files to be folders
-    -- we don't want that to happen
-    if not opts.sorted then
-        self.sort(list)
-        opts.sorted = true
-    end
-
-    for _, item in ipairs(list) do
-        if exts[ self.get_extension(item.name) ] then
-            item.type = "dir"
-            item.path = item.path or directory..item.name
-            item.label = item.label or item.name
-            item.name = item.name.."/"
-        end
-    end
-    return list, opts
-end
-
-return {m3u, pl_fixer}
+return m3u
