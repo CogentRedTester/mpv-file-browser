@@ -781,7 +781,7 @@ local function scan_directory(directory)
     msg.verbose("scanning files in", directory)
     local list, opts = choose_and_parse(directory, 1)
 
-    if list == nil then msg.debug("no successful parsers - using root"); return root_parser:parse() end
+    if list == nil then msg.debug("no successful parsers found"); return nil end
     opts.parser = parsers[opts.index]
     if not opts.filtered then filter(list) end
     if not opts.sorted then sort(list) end
@@ -802,11 +802,20 @@ local function update_list()
         msg.verbose('found directory in cache')
         cache:apply()
         state.prev_directory = state.directory
-        update_ass()
         return
     end
 
     local list, opts = scan_directory(state.directory)
+
+    --apply fallbacks if the scan failed
+    if not list and cache[1] then
+        msg.verbose("could not read directory")
+        cache:apply()
+        return
+    elseif not list then
+        list, opts = root_parser:parse()
+    end
+
     state.list = list
     state.parser = opts.parser
 
@@ -836,7 +845,6 @@ local function update_list()
 
     select_prev_directory()
     state.prev_directory = state.directory
-    update_ass()
 end
 
 --rescans the folder and updates the list
@@ -850,6 +858,7 @@ local function update(moving_adjacent)
     update_ass()
     state.empty_text = "empty directory"
     update_list()
+    update_ass()
 end
 
 --loads the root list
