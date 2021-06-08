@@ -381,6 +381,7 @@ parser_mt.join_path = join_path
 function parser_mt.get_script_opts() return copy_table(o) end
 function parser_mt.get_extensions() return copy_table(extensions) end
 function parser_mt.get_sub_extensions() return copy_table(sub_extensions) end
+function parser_mt.get_parseable_extensions() return copy_table(parseable_extensions) end
 function parser_mt.get_state() return copy_table(state) end
 function parser_mt.get_dvd_device() return dvd_device end
 function parser_mt.get_parsers() return copy_table(parsers) end

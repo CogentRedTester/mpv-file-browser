@@ -130,22 +130,23 @@ These functions are only made available once file-browser has fully imported the
 These functions allow addons to safely get information from file-browser.
 All tables returned by these functions are copies to ensure addons can't break things.
 
-| key                 | type     | arguments | returns | description                                                                                                           |
-|---------------------|----------|-----------|---------|-----------------------------------------------------------------------------------------------------------------------|
-| get_index           | method   | -         | number  | the index of the parser in order of preference                                                                        |
-| get_script_opts     | function | -         | table   | the table of script opts set by the user - this never gets changed during runtime                                     |
-| get_root            | function | -         | table   | the root table - an array of item_tables                                                                              |
-| get_extensions      | function | -         | table   | a set of valid extensions after applying the user's whitelist/blacklist - in the form {ext1 = true, ext2 = true, ...} |
-| get_sub_extensions  | function | -         | table   | like above but with subtitle extensions - note that subtitles show up in the above list as well                       |
-| get_parsers         | function | -         | table   | an array of the loaded parsers                                                                                        |
-| get_dvd_device      | function | -         | string  | the current dvd-device - formatted to work with file-browser                                                          |
-| get_directory       | function | -         | string  | the current directory open in the browser - formatted to work with file-browser                                       |
-| get_current_file    | function | -         | table   | a table containing the path of the current open file - in the form {directory = "", name = ""}                        |
-| get_current_parser  | function | -         | string  | the string name of the parser used for the currently open directory - as used by custom keybinds                      |
-| get_selected_index  | function | -         | number  | the current index of the cursor - if the list is empty this should return 1                                           |
-| get_selected_item   | function | -         | table   | returns the item_table of the currently selected item - returns nil if no item is selected (empty list)               |
-| get_open_status     | function | -         | boolean | returns true if the browser is currently open and false if not                                                        |
-| get_state           | function | -         | table   | the current state values of the browser - this is probably useless                                                    |
+| key                      | type     | arguments | returns | description                                                                                                           |
+|--------------------------|----------|-----------|---------|-----------------------------------------------------------------------------------------------------------------------|
+| get_index                | method   | -         | number  | the index of the parser in order of preference                                                                        |
+| get_script_opts          | function | -         | table   | the table of script opts set by the user - this never gets changed during runtime                                     |
+| get_root                 | function | -         | table   | the root table - an array of item_tables                                                                              |
+| get_extensions           | function | -         | table   | a set of valid extensions after applying the user's whitelist/blacklist - in the form {ext1 = true, ext2 = true, ...} |
+| get_sub_extensions       | function | -         | table   | like above but with subtitle extensions - note that subtitles show up in the above list as well                       |
+| get_parseable_extensions | function | -         | table   | shows parseable file extensions in the same format as the above functions                                             |
+| get_parsers              | function | -         | table   | an array of the loaded parsers                                                                                        |
+| get_dvd_device           | function | -         | string  | the current dvd-device - formatted to work with file-browser                                                          |
+| get_directory            | function | -         | string  | the current directory open in the browser - formatted to work with file-browser                                       |
+| get_current_file         | function | -         | table   | a table containing the path of the current open file - in the form {directory = "", name = ""}                        |
+| get_current_parser       | function | -         | string  | the string name of the parser used for the currently open directory - as used by custom keybinds                      |
+| get_selected_index       | function | -         | number  | the current index of the cursor - if the list is empty this should return 1                                           |
+| get_selected_item        | function | -         | table   | returns the item_table of the currently selected item - returns nil if no item is selected (empty list)               |
+| get_open_status          | function | -         | boolean | returns true if the browser is currently open and false if not                                                        |
+| get_state                | function | -         | table   | the current state values of the browser - this is probably useless                                                    |
 
 ## Examples
 
