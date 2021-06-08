@@ -18,7 +18,7 @@ function m3u:setup()
 end
 
 function m3u:can_parse(directory)
-    return directory:find("m3u8?/?$") and true
+    return directory:find("m3u8?/?$") and not self.get_protocol(directory)
 end
 
 function m3u:parse(directory)
