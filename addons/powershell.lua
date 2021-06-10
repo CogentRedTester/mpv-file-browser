@@ -14,7 +14,8 @@ local mp = require "mp"
 
 local wn = {
     priority = 109,
-    name = "file"
+    name = "powershell",
+    keybind_name = "file"
 }
 
 local drives = {}

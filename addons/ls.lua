@@ -8,7 +8,8 @@ local mp = require "mp"
 
 local ls = {
     priority = 109,
-    name = "file"
+    name = "ls",
+    keybind_name = "file"
 }
 
 local function command(args)
