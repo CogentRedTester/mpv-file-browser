@@ -1176,7 +1176,7 @@ end
 
 --runs one of the custom commands
 local function custom_command(cmd)
-    if cmd.parser and cmd.parser ~= state.parser.name then return false end
+    if cmd.parser and cmd.parser ~= (state.parser.keybind_name or state.parser.name) then return false end
 
     --saving these values in-case the directory is changes while commands are being passed
     cmd.directory = state.directory
