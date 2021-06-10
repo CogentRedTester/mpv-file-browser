@@ -365,7 +365,24 @@ end
 
 --setting up functions to provide to addons
 local parser_index = {}
+local parser_ids = {}
 local parser_mt = {}
+
+--create a unique id for the given parser
+local existing_ids = {}
+local function set_parser_id(parser)
+    if not existing_ids[parser.name] then
+        existing_ids[parser.name] = true
+        parser_ids[parser] = parser.name
+        return
+    end
+
+    local n = 2
+    while existing_ids[parser.name..n] do n = n + 1 end
+    existing_ids[parser.name..n] = true
+    parser_ids[parser] = parser.name..n
+end
+
 parser_mt.__index = parser_mt
 parser_mt.valid_file = valid_file
 parser_mt.valid_dir = valid_dir
@@ -388,12 +405,14 @@ function parser_mt.get_parsers() return copy_table(parsers) end
 function parser_mt.get_root() return copy_table(root) end
 function parser_mt.get_directory() return state.directory end
 function parser_mt.get_current_file() return copy_table(current_file) end
-function parser_mt.get_current_parser() return state.parser.name end
+function parser_mt.get_current_parser() return state.parser:get_id() end
+function parser_mt.get_current_parser_keyname() return state.parser.keybind_name or state.parser.name end
 function parser_mt.get_selected_index() return state.selected end
 function parser_mt.get_selected_item() return copy_table(state.list[state.selected]) end
 function parser_mt.get_open_status() return not state.hidden end
 
 function parser_mt:get_index() return parser_index[self] end
+function parser_mt:get_id() return parser_ids[self] end
 
 --register file extensions which can be opened by the browser
 function parser_mt.register_parseable_extension(ext) parseable_extensions[ext] = true end
@@ -414,14 +433,14 @@ local function choose_and_parse(directory, index)
     while list == nil and not ( opts and opts.already_deferred ) and index <= #parsers do
         parser = parsers[index]
         if parser:can_parse(directory) then
-            msg.trace("attempting parser:", parser.name)
+            msg.trace("attempting parser:", parser:get_id())
             list, opts = parser:parse(directory)
         end
         index = index + 1
     end
     if not list then return nil, {} end
 
-    msg.debug("list returned from:", parser.name)
+    msg.debug("list returned from:", parser:get_id())
     opts = opts or {}
     if list then opts.index = opts.index or parser_index[parser] end
     return list, opts
@@ -429,6 +448,7 @@ end
 
 --runs choose_and_parse starting from the next parser
 function parser_mt:defer(directory)
+    msg.trace("deferring to other parsers...")
     local list, opts = choose_and_parse(directory, self:get_index() + 1)
     opts.already_deferred = true
     return list, opts
@@ -496,6 +516,9 @@ local file_parser = {
 }
 
 parsers[1] = setmetatable(file_parser, parser_mt)
+setmetatable(root_parser, parser_mt)
+set_parser_id(file_parser)
+set_parser_id(root_parser)
 
 --loading external addons
 if o.addons then
@@ -505,18 +528,17 @@ if o.addons then
 
     for _, file in ipairs(files) do
         if file:sub(-4) == ".lua" then
-            local addon = dofile(addon_dir..file)
-            local addon_parsers = {}
+            local addon_parsers = dofile(addon_dir..file)
 
             --if the table contains a priority key then we assume it isn't an array of parsers
-            if addon.priority then addon_parsers[1] = addon
-            else addon_parsers = addon end
+            if addon_parsers.priority then addon_parsers = {addon_parsers} end
 
             for _, parser in ipairs(addon_parsers) do
                 parser = setmetatable(parser, copy_table(parser_mt))
                 parser.name = parser.name or file:gsub("%-browser%.lua$", ""):gsub("%.lua$", "")
+                set_parser_id(parser)
 
-                msg.verbose("imported parser", parser.name, "from", file)
+                msg.verbose("imported parser", parser:get_id(), "from", file)
                 if type(parser.priority) ~= "number" then error("addon "..file.." needs a numeric priority") end
 
                 table.insert(parsers, parser)
@@ -809,7 +831,9 @@ local function update_list()
 
     --apply fallbacks if the scan failed
     if not list and cache[1] then
-        msg.verbose("could not read directory")
+        --switches settings back to the previously opened directory
+        --to the user it will be like the directory never changed
+        msg.error("could not read directory", state.directory)
         cache:apply()
         return
     elseif not list then
@@ -1111,8 +1135,8 @@ local function format_command_table(t, cmd, items)
             ["%P"] = string.format("%q", cmd.directory or ""),
             ["%d"] = (cmd.directory_label or cmd.directory):match("([^/]+)/?$") or "",
             ["%D"] = string.format("%q", (cmd.directory_label or cmd.directory):match("([^/]+)/$") or ""),
-            ["%r"] = state.parser.name or "",
-            ["%R"] = string.format("%q", state.parser.name or "")
+            ["%r"] = state.parser.keybind_name or state.parser.name or "",
+            ["%R"] = string.format("%q", state.parser.keybind_name or state.parser.name or "")
         })
     end
     return copy

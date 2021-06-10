@@ -11,8 +11,7 @@ Additionally, `method` refers to functions called using the `object:funct()` syn
 ## Overview
 
 File-browser automatically loads any lua files from the `~~/script-modules/file-browser-addons` directory as modules.
-Each addon must return either a single parser table, or an array of parser tables.
-Each parser object must contain the following three members:
+Each addon must return either a single parser table, or an array of parser tables. Each parser object must contain the following three members:
 
 | key       | type   | arguments | returns                    | description                                                                                                                 |
 |-----------|--------|-----------|----------------------------|-----------------------------------------------------------------------------------------------------------------------------|
@@ -22,10 +21,14 @@ Each parser object must contain the following three members:
 
 Additionally, each parser can optionally contain:
 
-| key   | type   | arguments | returns | description                                                                                                                            |
-|-------|--------|-----------|---------|----------------------------------------------------------------------------------------------------------------------------------------|
-| name  | string | -         | -       | the name of the parser used for custom keybinds filters and codes - by default uses the filename with `.lua` or `-browser.lua` removed |
-| setup | method | -         | -       | If it exists this method is automatically run after all parsers are imported and API functions are made available                      |
+| key           | type   | arguments | returns | description                                                                                                                                                     |
+|---------------|--------|-----------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| name          | string | -         | -       | the name of the parser used for debug messages and to create a unique id - by default uses the filename with `.lua` or `-browser.lua` removed                   |
+| keybind_name  | string | -         | -       | the name to use when setting custom keybind filters - uses the value of name by default but can be set manually so that the same keys work with multiple addons |
+| setup         | method | -         | -       | If it exists this method is automatically run after all parsers are imported and API functions are made available                                               |
+
+All parsers are given a unique string ID based on their name. If there are collisions then numbers are appended to the end of the name until a free name is found.
+These IDs are primarily used for debug messages, though they may gain additional 
 
 ## Parsing
 
@@ -66,8 +69,8 @@ None of these values are required, and the opts table can even left as nil when 
 | directory_label | string  | display this label in the header instead of the actual directory - useful to display encoded paths                                        |
 | empty_text      | string  | display this text when the list is empty - can be used for error messages                                                                 |
 | selected_index  | number  | the index of the item on the list to select by default - a.k.a. the cursor position                                                       |
-| already_deferred| boolean | whether or not [defer](#Utility-Functions) was used to create the list, if so then give up if list is nil - set automatically, but can be manually disabled   |
-| index           | number  | index of the parser that successfully returns a list - set automatically, but can be set manually to take ownership                       |
+| already_deferred| boolean | whether or not [defer](#Advanced-Functions) was used to create the list, if so then give up if list is nil - set automatically, but can be manually disabled |
+| index           | number  | index of the parser that successfully returns a list - set automatically, but can be set manually to take ownership (see defer)                       |
 
 `already_deferred` is an optimisation. If a script uses defer and still returns nil, then that means that none of the remaining parsers will be able to parse the path.
 Therefore, it is more efficient to just immediately jump to the root.
@@ -130,23 +133,25 @@ These functions are only made available once file-browser has fully imported the
 These functions allow addons to safely get information from file-browser.
 All tables returned by these functions are copies to ensure addons can't break things.
 
-| key                      | type     | arguments | returns | description                                                                                                           |
-|--------------------------|----------|-----------|---------|-----------------------------------------------------------------------------------------------------------------------|
-| get_index                | method   | -         | number  | the index of the parser in order of preference                                                                        |
-| get_script_opts          | function | -         | table   | the table of script opts set by the user - this never gets changed during runtime                                     |
-| get_root                 | function | -         | table   | the root table - an array of item_tables                                                                              |
-| get_extensions           | function | -         | table   | a set of valid extensions after applying the user's whitelist/blacklist - in the form {ext1 = true, ext2 = true, ...} |
-| get_sub_extensions       | function | -         | table   | like above but with subtitle extensions - note that subtitles show up in the above list as well                       |
-| get_parseable_extensions | function | -         | table   | shows parseable file extensions in the same format as the above functions                                             |
-| get_parsers              | function | -         | table   | an array of the loaded parsers                                                                                        |
-| get_dvd_device           | function | -         | string  | the current dvd-device - formatted to work with file-browser                                                          |
-| get_directory            | function | -         | string  | the current directory open in the browser - formatted to work with file-browser                                       |
-| get_current_file         | function | -         | table   | a table containing the path of the current open file - in the form {directory = "", name = ""}                        |
-| get_current_parser       | function | -         | string  | the string name of the parser used for the currently open directory - as used by custom keybinds                      |
-| get_selected_index       | function | -         | number  | the current index of the cursor - if the list is empty this should return 1                                           |
-| get_selected_item        | function | -         | table   | returns the item_table of the currently selected item - returns nil if no item is selected (empty list)               |
-| get_open_status          | function | -         | boolean | returns true if the browser is currently open and false if not                                                        |
-| get_state                | function | -         | table   | the current state values of the browser - this is probably useless                                                    |
+| key                        | type     | arguments | returns | description                                                                                                           |
+|----------------------------|----------|-----------|---------|-----------------------------------------------------------------------------------------------------------------------|
+| get_id                     | method   | -         | number  | the unique id of the parser                                                                                           |
+| get_index                  | method   | -         | number  | the index of the parser in order of preference                                                                        |
+| get_script_opts            | function | -         | table   | the table of script opts set by the user - this never gets changed during runtime                                     |
+| get_root                   | function | -         | table   | the root table - an array of item_tables                                                                              |
+| get_extensions             | function | -         | table   | a set of valid extensions after applying the user's whitelist/blacklist - in the form {ext1 = true, ext2 = true, ...} |
+| get_sub_extensions         | function | -         | table   | like above but with subtitle extensions - note that subtitles show up in the above list as well                       |
+| get_parseable_extensions   | function | -         | table   | shows parseable file extensions in the same format as the above functions                                             |
+| get_parsers                | function | -         | table   | an array of the loaded parsers                                                                                        |
+| get_dvd_device             | function | -         | string  | the current dvd-device - formatted to work with file-browser                                                          |
+| get_directory              | function | -         | string  | the current directory open in the browser - formatted to work with file-browser                                       |
+| get_current_file           | function | -         | table   | a table containing the path of the current open file - in the form {directory = "", name = ""}                        |
+| get_current_parser         | function | -         | string  | the unique id of the parser used for the currently open directory                                                     |
+| get_current_parser_keyname | function | -         | string  | the string name of the parser used for the currently open directory - as used by custom keybinds                      |
+| get_selected_index         | function | -         | number  | the current index of the cursor - if the list is empty this should return 1                                           |
+| get_selected_item          | function | -         | table   | returns the item_table of the currently selected item - returns nil if no item is selected (empty list)               |
+| get_open_status            | function | -         | boolean | returns true if the browser is currently open and false if not                                                        |
+| get_state                  | function | -         | table   | the current state values of the browser - this is probably useless                                                    |
 
 ## Examples
 
