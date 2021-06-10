@@ -114,6 +114,21 @@ These functions are only made available once file-browser has fully imported the
 |---------------|----------|------------------|-------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
 | defer         | method   | string           | list_table, opts_table  | forwards the given directory to the next valid parser - can be used to redirect the browser or to modify the results of lower priority parsers         |
 
+#### Using `defer`
+
+The `defer` function is very powerful, and can be used by scripts to create virtual directories, or to modify the results of other parsers.
+However, due to how much freedom Lua gives coders, it is impossible for file-browser to ensure that parsers are using defer correctly, which can cause unexpected results.
+The following are a list of recommendations that will increase the compatability with other parsers:
+
+* Always pass all arguments from `parse` into `defer`, using Lua's variable arguments `...` can be a good way to future proof this against any future API changes.
+* Always return the opts table that is returned by defer, this can contain important values for file-browser, as described [above](#The-Opts-Table).
+  * If required modify values in the existing opts table, don't create a new one.
+* Respect the `sorted` and `filtered` values in the opts table. This may mean calling `sort` or `filter` manually.
+* Think about how to handle the `directory_label` field, especially how it might interract with any virtual paths the parser may be maintaining.
+* Think about what to do if the `directory` field is set. The use of this field is somewhat dubious, but it does exist.
+* Think if you want your parser to take full ownership of the results of `defer`, if so consider setting `opts.index = self:get_index()`.
+  * Currently this affects custom keybind filtering, though it may be changed in the future.
+
 ### Utility Functions
 
 | key           | type     | arguments        | returns                 | description                                                                                                                                            |
