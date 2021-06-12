@@ -581,7 +581,7 @@ end
 --detects whether or not to highlight the given entry as being played
 local function highlight_entry(v)
     if current_file.name == nil then return false end
-    if v.type == "dir" then
+    if v.type == "dir" or parseable_extensions[get_extension(v.name) or ""] then
         return current_file.directory:find(get_full_path(v), 1, true)
     else
         return current_file.directory..current_file.name == get_full_path(v)
