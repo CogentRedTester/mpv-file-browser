@@ -785,7 +785,7 @@ end
 local function select_prev_directory()
     if state.prev_directory:find(state.directory, 1, true) == 1 then
         local i = 1
-        while (state.list[i] and state.list[i].type == "dir") do
+        while (state.list[i] and (state.list[i].type == "dir" or parseable_extensions[get_extension(state.list[i].name) or ""])) do
             if state.prev_directory:find(get_full_path(state.list[i]), 1, true) then
                 state.selected = i
                 return
