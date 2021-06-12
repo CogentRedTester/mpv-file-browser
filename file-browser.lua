@@ -188,6 +188,12 @@ local function get_full_path(item, dir)
     return (dir or state.directory)..item.name
 end
 
+local function concatenate_path(item, directory)
+    if directory == "" then return item.name end
+    if directory:sub(-1) == "/" then return directory..item.name end
+    return directory.."/"..item.name
+end
+
 --returns the file extension of the given file
 local function get_extension(filename)
     return filename:match("%.([^%./]+)$")
@@ -926,7 +932,7 @@ local function down_dir()
     if not current or current.type ~= 'dir' and not parseable_extensions[get_extension(current.name)] then return end
 
     cache:push()
-    state.directory = state.directory..current.name
+    state.directory = concatenate_path(current, state.directory)
 
     --we can make some assumptions about the next directory label when moving up or down
     if state.directory_label then state.directory_label = state.directory_label..(current.label or current.name) end
@@ -1003,6 +1009,7 @@ local function custom_loadlist_recursive(directory, flag)
 
     --if we can't parse the directory then append it and hope mpv fares better
     if list == nil then
+        msg.warn("Could not parse", directory, "appending to playlist anyway")
         mp.commandv("loadfile", directory, flag)
         flag = "append"
         return true
@@ -1013,10 +1020,12 @@ local function custom_loadlist_recursive(directory, flag)
 
     for _, item in ipairs(list) do
         if not sub_extensions[ get_extension(item.name) ] then
-            local path = get_full_path(item, directory)
             if item.type == "dir" or parseable_extensions[get_extension(item.name)] then
-                if custom_loadlist_recursive(path, flag) then flag = "append" end
+                if custom_loadlist_recursive( concatenate_path(item, directory) , flag) then flag = "append" end
             else
+                local path = get_full_path(item, directory)
+
+                msg.warn("Appending", path, "to the playlist")
                 mp.commandv("loadfile", path, flag)
                 flag = "append"
             end
@@ -1062,7 +1071,7 @@ end
 --runs the loadfile or loadlist command
 local function loadfile(item, flag, autoload)
     local path = get_full_path(item)
-    if item.type == "dir" then return loadlist(path, flag) end
+    if item.type == "dir" or parseable_extensions[ get_extension(item.name) ] then return loadlist(path, flag) end
 
     if sub_extensions[ get_extension(item.name) ] then
         mp.commandv("sub-add", path, flag == "replace" and "select" or "auto")
