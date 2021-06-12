@@ -309,55 +309,6 @@ end
 
 
 --------------------------------------------------------------------------------------------------------
------------------------------------------Setup Functions------------------------------------------------
---------------------------------------------------------------------------------------------------------
---------------------------------------------------------------------------------------------------------
-
---sets up the compatible extensions list
-local function setup_extensions_list()
-    if not o.filter_files then return end
-
-    --adding file extensions to the set
-    for i=1, #compatible_file_extensions do
-        extensions[compatible_file_extensions[i]] = true
-    end
-
-    --setting up subtitle extensions
-    for i = 1, #subtitle_extensions do
-        extensions[subtitle_extensions[i]] = true
-        sub_extensions[subtitle_extensions[i]] = true
-    end
-
-    --adding extra extensions on the whitelist
-    for str in string.gmatch(o.extension_whitelist, "([^"..o.root_seperators.."]+)") do
-        extensions[str] = true
-    end
-
-    --removing extensions that are in the blacklist
-    for str in string.gmatch(o.extension_blacklist, "([^"..o.root_seperators.."]+)") do
-        extensions[str] = nil
-    end
-end
-
---splits the string into a table on the semicolons
-local function setup_root()
-    root = {}
-    for str in string.gmatch(o.root, "([^"..o.root_seperators.."]+)") do
-        local path = mp.command_native({'expand-path', str})
-        path = fix_path(path, true)
-
-        local temp = {name = path, type = 'dir', label = str, ass = ass_escape(str)}
-
-        root[#root+1] = temp
-    end
-end
-
-setup_extensions_list()
-setup_root()
-
-
-
---------------------------------------------------------------------------------------------------------
 ------------------------------------Parser Object Implementation----------------------------------------
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
@@ -423,6 +374,9 @@ function parser_mt:get_id() return parser_ids[self] end
 --register file extensions which can be opened by the browser
 function parser_mt.register_parseable_extension(ext) parseable_extensions[ext] = true end
 function parser_mt.remove_parseable_extension(ext) parseable_extensions[ext] = nil end
+
+--add a compatible extension to show through the filter, only applies if run during the setup() method
+function parser_mt.add_default_extension(ext) table.insert(compatible_file_extensions, ext) end
 
 --add item to root at position pos
 function parser_mt:insert_root_item(item, pos)
@@ -552,12 +506,9 @@ if o.addons then
         end
     end
     table.sort(parsers, function(a, b) return a.priority < b.priority end)
-end
 
---we want to store the index of each parser and run the setup functions
-for i = #parsers, 1, -1 do
-    parser_index[ parsers[i] ] = i
-    if parsers[i].setup then parsers[i]:setup() end
+    --we want to store the indexes of the parsers
+    for i = #parsers, 1, -1 do parser_index[ parsers[i] ] = i end
 end
 
 
@@ -1274,6 +1225,60 @@ if o.custom_keybinds then
         end
     end
 end
+
+
+--------------------------------------------------------------------------------------------------------
+-----------------------------------------Setup Functions------------------------------------------------
+--------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------
+
+--sets up the compatible extensions list
+local function setup_extensions_list()
+    if not o.filter_files then return end
+
+    --adding file extensions to the set
+    for i=1, #compatible_file_extensions do
+        extensions[compatible_file_extensions[i]] = true
+    end
+
+    --setting up subtitle extensions
+    for i = 1, #subtitle_extensions do
+        extensions[subtitle_extensions[i]] = true
+        sub_extensions[subtitle_extensions[i]] = true
+    end
+
+    --adding extra extensions on the whitelist
+    for str in string.gmatch(o.extension_whitelist, "([^"..o.root_seperators.."]+)") do
+        extensions[str] = true
+    end
+
+    --removing extensions that are in the blacklist
+    for str in string.gmatch(o.extension_blacklist, "([^"..o.root_seperators.."]+)") do
+        extensions[str] = nil
+    end
+end
+
+--splits the string into a table on the semicolons
+local function setup_root()
+    root = {}
+    for str in string.gmatch(o.root, "([^"..o.root_seperators.."]+)") do
+        local path = mp.command_native({'expand-path', str})
+        path = fix_path(path, true)
+
+        local temp = {name = path, type = 'dir', label = str, ass = ass_escape(str)}
+
+        root[#root+1] = temp
+    end
+end
+
+setup_root()
+
+--we want to store the index of each parser and run the setup functions
+for i = #parsers, 1, -1 do
+    if parsers[i].setup then parsers[i]:setup() end
+end
+
+setup_extensions_list()
 
 
 

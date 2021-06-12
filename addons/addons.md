@@ -106,6 +106,7 @@ These functions are only made available once file-browser has fully imported the
 |------------------------------|----------|------------------------------|---------|--------------------------------------------------------------------------------------------------------------------------|
 | register_parseable_extension | function | string                       | -       | register a file extension that the browser will attempt to open, like a directory - for addons which can parse files     |
 | remove_parseable_extension   | function | string                       | -       | remove a file extension that the browser will attempt to open like a directory                                           |
+| add_default_extension        | function | string                       | -       | adds the given extension to the default extension filter whitelist - can only be run inside setup()                      |
 | insert_root_item             | method   | item_table, number(optional) | -       | add an item_table (must be a directory) to the root list at the specified position - if number is nil then append to end |
 
 ### Advanced Functions
