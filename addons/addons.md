@@ -28,7 +28,7 @@ Additionally, each parser can optionally contain:
 | setup         | method | -         | -       | If it exists this method is automatically run after all parsers are imported and API functions are made available                                               |
 
 All parsers are given a unique string ID based on their name. If there are collisions then numbers are appended to the end of the name until a free name is found.
-These IDs are primarily used for debug messages, though they may gain additional 
+These IDs are primarily used for debug messages, though they may gain additional functionality in the future.
 
 ## Parsing
 
