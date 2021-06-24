@@ -790,10 +790,11 @@ local function update_list()
     if not list and cache[1] then
         --switches settings back to the previously opened directory
         --to the user it will be like the directory never changed
-        msg.error("could not read directory", state.directory)
+        msg.warn("could not read directory", state.directory)
         cache:apply()
         return
     elseif not list then
+        msg.warn("could not read directory", state.directory)
         list, opts = root_parser:parse()
     end
 
