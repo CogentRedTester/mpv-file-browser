@@ -1331,10 +1331,10 @@ mp.register_script_message('browse-directory', browse_directory)
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-local ui = nil
+local input = nil
 
-if pcall(function() ui = require "user-input-module" end) then
+if pcall(function() input = require "user-input-module" end) then
     mp.add_key_binding("Alt+o", "browse-directory/get-user-input", function()
-        ui.get_user_input(browse_directory, {text = "[file-browser] open directory:"})
+        input.get_user_input(browse_directory, {request_text = "open directory:"})
     end)
 end
