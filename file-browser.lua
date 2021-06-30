@@ -1145,16 +1145,24 @@ end
 
 --runs one of the custom commands
 local function custom_command(key, state, co)
-    if key.parser and key.parser ~= (state.parser.keybind_name or state.parser.name) then print("1.5") ; return false end
+    if key.parser and key.parser ~= (state.parser.keybind_name or state.parser.name) then return false end
+
+    --the function terminates here if we are running the command on a single item
+    if not (key.multiselect and next(state.selection)) then
+        if key.filter and (not state.list[state.selected] or state.list[state.selected].type ~= key.filter) then return false end
+        run_custom_command(key, { state.list[state.selected] }, state)
+        return true
+    end
+
 
     --runs the command on all multi-selected items
-    if key.multiselect and next(state.selection) then
-        local selection = sort_keys(state.selection, function(item) return not key.filter or item.type == key.filter end)
-        if not next(selection) then return false end
-        if key["multi-type"] == "concat" then
-            return run_custom_command(key, selection, state)
-        end
+    local selection = sort_keys(state.selection, function(item) return not key.filter or item.type == key.filter end)
+    if not next(selection) then return false end
 
+    if key["multi-type"] == "concat" then
+        run_custom_command(key, selection, state)
+
+    elseif key["multi-type"] == "repeat" then
         for i,_ in ipairs(selection) do
             run_custom_command(key, {selection[i]}, state)
 
@@ -1163,24 +1171,14 @@ local function custom_command(key, state, co)
                 coroutine.yield()
             end
         end
-    else
-        --filtering commands
-        if key.filter and state.list[state.selected] and state.list[state.selected].type ~= key.filter then return false end
-        run_custom_command(key, { state.list[state.selected] }, state)
     end
-end
 
---scans the given command table to identify if they contain any custom keybind codes
-local function contains_codes(command_table)
-    for _, value in pairs(command_table) do
-        local type = type(value)
-        if type == "table" then
-            if contains_codes(value) then return true end
-        elseif type == "string" then
-            if value:find("%%["..CUSTOM_KEYBIND_CODES.."]") then return true end
-        end
-    end
-    return false
+    --we passthrough by default if the command is not run on every selected item
+    if key.passthrough ~= nil then return end
+
+    local num_selection = 0
+    for _ in pairs(state.selection) do num_selection = num_selection+1 end
+    return #selection == num_selection
 end
 
 --recursively runs the keybind functions, passing down through the chain
