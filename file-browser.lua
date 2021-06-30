@@ -1183,25 +1183,29 @@ local function contains_codes(command_table)
     return false
 end
 
-local function custom_keybinds(keybind, state, co)
+--recursively runs the keybind functions, passing down through the chain
+--of keybinds with the same key value
+local function run_keybind_recursive(keybind, state, co)
     --these are the native keybinds, which act as the bottom of the recursion
-    if type(keybind) == "function" then return keybind() end
+    --this only occurs if someone overwrites the default keybinds, but has passthrough enabled
+    if type(keybind.command) == "function" then return keybind.command() end
 
     if keybind.passthrough ~= nil then
         custom_command(keybind, state, co)
         if keybind.passthrough == true and keybind.prev_key then
-            custom_keybinds(keybind.prev_key, state, co)
+            run_keybind_recursive(keybind.prev_key, state, co)
         end
     else
         if custom_command(keybind, state, co) == false and keybind.prev_key then
-            custom_keybinds(keybind, state, co)
+            run_keybind_recursive(keybind.prev_key, state, co)
         end
     end
 end
 
 --a wrapper to run a custom keybind as a lua coroutine
 local function run_keybind_coroutine(key)
-    local co = coroutine.create(custom_keybinds)
+    msg.trace("Received custom command:", utils.to_string(key))
+    local co = coroutine.create(run_keybind_recursive)
 
     local state_copy = {
         directory = state.directory,
@@ -1213,6 +1217,19 @@ local function run_keybind_coroutine(key)
         empty_text = state.empty_text
     }
     assert(coroutine.resume(co, key, state_copy, co))
+end
+
+--scans the given command table to identify if they contain any custom keybind codes
+local function contains_codes(command_table)
+    for _, value in pairs(command_table) do
+        local type = type(value)
+        if type == "table" then
+            if contains_codes(value) then return true end
+        elseif type == "string" then
+            if value:find("%%["..CUSTOM_KEYBIND_CODES.."]") then return true end
+        end
+    end
+    return false
 end
 
 --loading the custom keybinds
