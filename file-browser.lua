@@ -1074,93 +1074,161 @@ end
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
+--characters used for custom keybind codes
+local CUSTOM_KEYBIND_CODES = "%fFnNpPdDrR"
+
 --format the item string for either single or multiple items
-local function create_item_string(cmd, items, funct)
+local function create_item_string(key, items, funct)
     if not items[1] then return end
 
     local str = funct(items[1])
     for i = 2, #items do
-        str = str .. ( cmd["concat-string"] or " " ) .. funct(items[i])
+        str = str .. ( key["concat-string"] or " " ) .. funct(items[i])
     end
     return str
 end
 
 --iterates through the command table and substitutes special
 --character codes for the correct strings used for custom functions
-local function format_command_table(t, cmd, items)
+local function format_command_table(key, items, state)
     local copy = {}
-    for i = 1, #t do
-        copy[i] = t[i]:gsub("%%.", {
-            ["%%"] = "%",
-            ["%f"] = create_item_string(cmd, items, function(item) return item and get_full_path(item, cmd.directory) or "" end),
-            ["%F"] = create_item_string(cmd, items, function(item) return string.format("%q", item and get_full_path(item, cmd.directory) or "") end),
-            ["%n"] = create_item_string(cmd, items, function(item) return item and (item.label or item.name) or "" end),
-            ["%N"] = create_item_string(cmd, items, function(item) return string.format("%q", item and (item.label or item.name) or "") end),
-            ["%p"] = cmd.directory or "",
-            ["%P"] = string.format("%q", cmd.directory or ""),
-            ["%d"] = (cmd.directory_label or cmd.directory):match("([^/]+)/?$") or "",
-            ["%D"] = string.format("%q", (cmd.directory_label or cmd.directory):match("([^/]+)/$") or ""),
-            ["%r"] = state.parser.keybind_name or state.parser.name or "",
-            ["%R"] = string.format("%q", state.parser.keybind_name or state.parser.name or "")
-        })
+    for i = 1, #key.command do
+        copy[i] = {}
+
+        for j = 1, #key.command[i] do
+            copy[i][j] = key.command[i][j]:gsub("%%["..CUSTOM_KEYBIND_CODES.."]", {
+                ["%%"] = "%",
+                ["%f"] = create_item_string(key, items, function(item) return item and get_full_path(item, state.directory) or "" end),
+                ["%F"] = create_item_string(key, items, function(item) return string.format("%q", item and get_full_path(item, state.directory) or "") end),
+                ["%n"] = create_item_string(key, items, function(item) return item and (item.label or item.name) or "" end),
+                ["%N"] = create_item_string(key, items, function(item) return string.format("%q", item and (item.label or item.name) or "") end),
+                ["%p"] = state.directory or "",
+                ["%P"] = string.format("%q", key.directory or ""),
+                ["%d"] = (state.directory_label or state.directory):match("([^/]+)/?$") or "",
+                ["%D"] = string.format("%q", (state.directory_label or state.directory):match("([^/]+)/$") or ""),
+                ["%r"] = state.parser.keybind_name or state.parser.name or "",
+                ["%R"] = string.format("%q", state.parser.keybind_name or state.parser.name or "")
+            })
+        end
     end
     return copy
 end
 
 --runs all of the commands in the command table
---recurses to handle nested tables of commands
+--key.command must be an array of command tables compatible with mp.command_native
 --items must be an array of multiple items (when multi-type ~= concat the array will be 1 long)
-local function run_custom_command(t, cmd, items)
-    if type(t[1]) == "table" then
-        for i = 1, #t do
-            run_custom_command(t[i], cmd, items)
-        end
-    else
-        local custom_cmd = cmd.contains_codes and format_command_table(t, cmd, items) or cmd.command
-        msg.debug("running command: " .. utils.to_string(custom_cmd))
-        mp.command_native(custom_cmd)
+local function run_custom_command(key, items, state)
+    local custom_cmds = key.contains_codes and format_command_table(key, items, state) or key.command
+
+    for _, cmd in ipairs(custom_cmds) do
+        msg.debug("running command:", utils.to_string(cmd))
+        mp.command_native(cmd)
     end
-end
-
---runs commands for multiple selected items
---this is if the repeat muti-type is used
-local function recursive_multi_command(cmd, i, length)
-    if i > length then return end
-
-    --filtering commands
-    if cmd.filter and cmd.selection[i].type ~= cmd.filter then
-        msg.verbose("skipping command for selection ")
-    else
-        run_custom_command(cmd.command, cmd, { cmd.selection[i] })
-    end
-
-    --delay running the next command if the delay option is set
-    if not cmd.delay then return recursive_multi_command(cmd, i+1, length)
-    else mp.add_timeout(cmd.delay, function() recursive_multi_command(cmd, i+1, length) end) end
 end
 
 --runs one of the custom commands
-local function custom_command(cmd)
-    if cmd.parser and cmd.parser ~= (state.parser.keybind_name or state.parser.name) then return false end
-
-    --saving these values in-case the directory is changes while commands are being passed
-    cmd.directory = state.directory
-    cmd.directory_label = state.directory_label
+local function custom_command(key, state, co)
+    if key.parser and key.parser ~= (state.parser.keybind_name or state.parser.name) then print("1.5") ; return false end
 
     --runs the command on all multi-selected items
-    if cmd.multiselect and next(state.selection) then
-        cmd.selection = sort_keys(state.selection, function(item) return not cmd.filter or item.type == cmd.filter end)
-        if not next(cmd.selection) then return false end
+    if key.multiselect and next(state.selection) then
+        local selection = sort_keys(state.selection, function(item) return not key.filter or item.type == key.filter end)
+        if not next(selection) then return false end
+        if key["multi-type"] == "concat" then
+            return run_custom_command(key, selection, state)
+        end
 
-        if not cmd["multi-type"] or cmd["multi-type"] == "repeat" then
-            recursive_multi_command(cmd, 1, #cmd.selection)
-        elseif cmd["multi-type"] == "concat" then
-            run_custom_command(cmd.command, cmd, cmd.selection)
+        for i,_ in ipairs(selection) do
+            run_custom_command(key, {selection[i]}, state)
+
+            if key.delay then
+                mp.add_timeout(key.delay, function() coroutine.resume(co) end)
+                coroutine.yield()
+            end
         end
     else
         --filtering commands
-        if cmd.filter and state.list[state.selected] and state.list[state.selected].type ~= cmd.filter then return false end
-        run_custom_command(cmd.command, cmd, { state.list[state.selected] })
+        if key.filter and state.list[state.selected] and state.list[state.selected].type ~= key.filter then return false end
+        run_custom_command(key, { state.list[state.selected] }, state)
+    end
+end
+
+--scans the given command table to identify if they contain any custom keybind codes
+local function contains_codes(command_table)
+    for _, value in pairs(command_table) do
+        local type = type(value)
+        if type == "table" then
+            if contains_codes(value) then return true end
+        elseif type == "string" then
+            if value:find("%%["..CUSTOM_KEYBIND_CODES.."]") then return true end
+        end
+    end
+    return false
+end
+
+local function custom_keybinds(keybind, state, co)
+    --these are the native keybinds, which act as the bottom of the recursion
+    if type(keybind) == "function" then return keybind() end
+
+    if keybind.passthrough ~= nil then
+        custom_command(keybind, state, co)
+        if keybind.passthrough == true and keybind.prev_key then
+            custom_keybinds(keybind.prev_key, state, co)
+        end
+    else
+        if custom_command(keybind, state, co) == false and keybind.prev_key then
+            custom_keybinds(keybind, state, co)
+        end
+    end
+end
+
+--a wrapper to run a custom keybind as a lua coroutine
+local function run_keybind_coroutine(key)
+    local co = coroutine.create(custom_keybinds)
+
+    local state_copy = {
+        directory = state.directory,
+        directory_label = state.directory_label,
+        list = state.list,
+        selected = state.selected,
+        selection = state.selection,
+        parser = state.parser,
+        empty_text = state.empty_text
+    }
+    assert(coroutine.resume(co, key, state_copy, co))
+end
+
+--loading the custom keybinds
+local function setup_custom_keybinds()
+    local path = mp.command_native({"expand-path", "~~/script-opts"}).."/file-browser-keybinds.json"
+    local custom_keybinds, err = assert(io.open( path ))
+    if not custom_keybinds then return end
+
+    local json = custom_keybinds:read("*a")
+    custom_keybinds:close()
+
+    json = utils.parse_json(json)
+    if not json then return error("invalid json syntax for "..path) end
+
+
+    --creates a map of functions for different keys
+    local latest_key = {}
+    for _, keybind in ipairs(state.keybinds) do latest_key[keybind[1]] = keybind[3] end
+
+    for i, keybind in ipairs(json) do
+        keybind.contains_codes = contains_codes(keybind.command)
+
+        --we'll always save the keybinds as an array of command arrays to simplify later parsing
+        if type(keybind.command[1]) ~= "table" then keybind.command = {keybind.command} end
+
+        --this creates a linked list of functions that call the previous if the various filters weren't met
+        --multiselect commands with the same key are all run, it's up to the user to choose filters that don't overlap
+        keybind.prev_key = latest_key[keybind.key]
+
+        --inserting the custom keybind into the keybind array for declaration when file-browser is opened
+        --custom keybinds with matching names will overwrite eachother
+        table.insert(state.keybinds,{ keybind.key, "custom/"..(keybind.name or tostring(i)), function() run_keybind_coroutine(keybind) end, {} })
+        latest_key[keybind.key] = keybind
     end
 end
 
@@ -1182,54 +1250,6 @@ state.keybinds = {
     {'Ctrl+a', 'select_all', select_all, {}}
 }
 
---loading the custom keybinds
-if o.custom_keybinds then
-    local path = mp.command_native({"expand-path", "~~/script-opts"}).."/file-browser-keybinds.json"
-    local custom_keybinds, err = assert(io.open( path ))
-    if custom_keybinds then
-        local json = custom_keybinds:read("*a")
-        custom_keybinds:close()
-
-        json = utils.parse_json(json)
-        if not json then error("invalid json syntax for "..path) end
-
-        local function contains_codes(command_table)
-            for _, value in pairs(command_table) do
-                local type = type(value)
-                if type == "table" then
-                    if contains_codes(value) then return true end
-                elseif type == "string" then
-                    if value:find("%%[fFnNpPdDrR]") then return true end
-                end
-            end
-        end
-
-        local latest_key = {}
-        for _, keybind in ipairs(state.keybinds) do latest_key[keybind[1]] = keybind[3] end
-
-        for i, keybind in ipairs(json) do
-            keybind.contains_codes = contains_codes(keybind.command)
-
-            --this creates a linked list of functions that call the previous if the various filters weren't met
-            --multiselect commands with the same key are all run, it's up to the user to choose filters that don't overlap
-            local prev_key = latest_key[keybind.key]
-            local fn = function()
-                if keybind.passthrough == false then
-                    custom_command(keybind)
-                elseif keybind.passthrough == true then
-                    custom_command(keybind)
-                    if prev_key then prev_key() end
-                elseif keybind.passthrough == nil then
-                    if custom_command(keybind) == false and prev_key then prev_key() end
-                else
-                    custom_command(keybind)
-                end
-            end
-            table.insert(state.keybinds, { keybind.key, "custom/"..(keybind.name or tostring(i)), fn, {} })
-            latest_key[keybind.key] = fn
-        end
-    end
-end
 
 
 --------------------------------------------------------------------------------------------------------
@@ -1284,7 +1304,7 @@ for i = #parsers, 1, -1 do
 end
 
 setup_extensions_list()
-
+setup_custom_keybinds()
 
 
 ------------------------------------------------------------------------------------------
