@@ -102,7 +102,7 @@ This means the lower an item on the list, the higher preference it has.
 However, file-browser implements a layered passthrough system for its keybinds; if a keybind is blocked from running by user filters, then the next highest preference command will be sent, continuing until a command is sent or there are no more keybinds.
 The default dynamic keybinds are considered the lowest priority.
 
-The behaviour of multi-select commands is somewhat unreliable; generally they never run the next highest preference command, unless every selected item fails the filter.
+If a multi-select command is run on multiple items then passthrough will occur if any of the selected items fail the filters.
 
 Passthrough can be forcibly disabled or enabled using the passthrough option.
 When enabled passthrough will always be activate regardless of the state of the filters.
@@ -138,7 +138,6 @@ For example to change the scroll buttons from the arrows to the scroll wheel:
 
 Custom keybinds can be called using the same method, but users must set the `name` value inside the `file-browser-keybinds.json` file.
 To avoid conflicts custom keybinds use the format: `file_browser/dynamic/custom/[name]`.
-
 
 ## Examples
 
