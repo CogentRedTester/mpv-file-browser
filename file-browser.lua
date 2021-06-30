@@ -1251,16 +1251,22 @@ local function insert_custom_keybind(keybind, i)
 end
 
 --loading the custom keybinds
-local function setup_custom_keybinds()
-    local path = mp.command_native({"expand-path", "~~/script-opts"}).."/file-browser-keybinds.json"
-    local custom_keybinds, err = assert(io.open( path ))
-    if not custom_keybinds then return msg.error(err) end
+--can either load keybinds from the config file, from addons, or from both
+local function setup_keybinds()
+    if not o.custom_keybinds and not o.addons then return end
 
-    local json = custom_keybinds:read("*a")
-    custom_keybinds:close()
+    local json
+    if o.custom_keybinds then
+        local path = mp.command_native({"expand-path", "~~/script-opts"}).."/file-browser-keybinds.json"
+        local custom_keybinds, err = assert(io.open( path ))
+        if not custom_keybinds then return msg.error(err) end
 
-    json = utils.parse_json(json)
-    if not json then return error("invalid json syntax for "..path) end
+        json = custom_keybinds:read("*a")
+        custom_keybinds:close()
+
+        json = utils.parse_json(json)
+        if not json then return error("invalid json syntax for "..path) end
+    end
 
     --this is to make the default keybinds compatible with passthrough from custom keybinds
     for _, keybind in ipairs(state.keybinds) do
@@ -1268,16 +1274,20 @@ local function setup_custom_keybinds()
     end
 
     --this loads keybinds from addons
-    for _, parser in ipairs(parsers) do
-        if parser.keybinds then
-            for i, keybind in ipairs(parser.keybinds) do
-                insert_parser_keybind(keybind, parser, i)
+    if o.addons then
+        for _, parser in ipairs(parsers) do
+            if parser.keybinds then
+                for i, keybind in ipairs(parser.keybinds) do
+                    insert_parser_keybind(keybind, parser, i)
+                end
             end
         end
     end
 
-    for i, keybind in ipairs(json) do
-        insert_custom_keybind(keybind, i)
+    if o.custom_keybinds then
+        for i, keybind in ipairs(json) do
+            insert_custom_keybind(keybind, i)
+        end
     end
 end
 
@@ -1339,7 +1349,7 @@ end
 
 --these need to be below the addon setup in case any parsers add custom entries
 setup_extensions_list()
-if o.custom_keybinds then setup_custom_keybinds() end
+setup_keybinds()
 
 
 
