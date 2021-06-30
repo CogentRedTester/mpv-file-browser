@@ -1074,6 +1074,23 @@ end
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
+state.keybinds = {
+    {'ENTER', 'play', function() open_file('replace', false) end, {}},
+    {'Shift+ENTER', 'play_append', function() open_file('append-play', false) end, {}},
+    {'Alt+ENTER', 'play_autoload', function() open_file('replace', true) end, {}},
+    {'ESC', 'close', escape, {}},
+    {'RIGHT', 'down_dir', down_dir, {}},
+    {'LEFT', 'up_dir', up_dir, {}},
+    {'DOWN', 'scroll_down', scroll_down, {repeatable = true}},
+    {'UP', 'scroll_up', scroll_up, {repeatable = true}},
+    {'HOME', 'goto_current', goto_current_dir, {}},
+    {'Shift+HOME', 'goto_root', goto_root, {}},
+    {'Ctrl+r', 'reload', function() cache:clear(); update() end, {}},
+    {'s', 'select_mode', toggle_select_mode, {}},
+    {'S', 'select', toggle_selection, {}},
+    {'Ctrl+a', 'select_all', select_all, {}}
+}
+
 --characters used for custom keybind codes
 local CUSTOM_KEYBIND_CODES = "%fFnNpPdDrR"
 
@@ -1212,43 +1229,27 @@ local function setup_custom_keybinds()
 
 
     --creates a map of functions for different keys
+    --only saves the latest command for that key
     local latest_key = {}
-    for _, keybind in ipairs(state.keybinds) do latest_key[keybind[1]] = keybind[3] end
+
+    --this is to make the default keybinds compatible with passthrough from custom keybinds
+    for _, keybind in ipairs(state.keybinds) do
+        latest_key[keybind[1]] = { key = keybind[1], name = keybind[2], command = keybind[3], flags = keybind[4] }
+    end
 
     for i, keybind in ipairs(json) do
-        keybind.contains_codes = contains_codes(keybind.command)
-
         --we'll always save the keybinds as an array of command arrays to simplify later parsing
         if type(keybind.command[1]) ~= "table" then keybind.command = {keybind.command} end
-
-        --this creates a linked list of functions that call the previous if the various filters weren't met
-        --multiselect commands with the same key are all run, it's up to the user to choose filters that don't overlap
+        keybind.name = "custom/"..(keybind.name or tostring(i))
+        keybind.contains_codes = contains_codes(keybind.command)
         keybind.prev_key = latest_key[keybind.key]
 
         --inserting the custom keybind into the keybind array for declaration when file-browser is opened
         --custom keybinds with matching names will overwrite eachother
-        table.insert(state.keybinds,{ keybind.key, "custom/"..(keybind.name or tostring(i)), function() run_keybind_coroutine(keybind) end, {} })
+        table.insert(state.keybinds, {keybind.key, keybind.name, function() run_keybind_coroutine(keybind) end, {}})
         latest_key[keybind.key] = keybind
     end
 end
-
---dynamic keybinds to set while the browser is open
-state.keybinds = {
-    {'ENTER', 'play', function() open_file('replace', false) end, {}},
-    {'Shift+ENTER', 'play_append', function() open_file('append-play', false) end, {}},
-    {'Alt+ENTER', 'play_autoload', function() open_file('replace', true) end, {}},
-    {'ESC', 'close', escape, {}},
-    {'RIGHT', 'down_dir', down_dir, {}},
-    {'LEFT', 'up_dir', up_dir, {}},
-    {'DOWN', 'scroll_down', scroll_down, {repeatable = true}},
-    {'UP', 'scroll_up', scroll_up, {repeatable = true}},
-    {'HOME', 'goto_current', goto_current_dir, {}},
-    {'Shift+HOME', 'goto_root', goto_root, {}},
-    {'Ctrl+r', 'reload', function() cache:clear(); update() end, {}},
-    {'s', 'select_mode', toggle_select_mode, {}},
-    {'S', 'select', toggle_selection, {}},
-    {'Ctrl+a', 'select_all', select_all, {}}
-}
 
 
 
