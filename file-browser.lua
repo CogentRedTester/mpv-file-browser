@@ -1152,7 +1152,12 @@ local function custom_command(cmd, state, co)
 
     --the function terminates here if we are running the command on a single item
     if not (cmd.multiselect and next(state.selection)) then
-        if cmd.filter and (not state.list[state.selected] or state.list[state.selected].type ~= cmd.filter) then return false end
+        if cmd.filter then
+            if not state.list[state.selected] then return false end
+            if state.list[state.selected].type ~= cmd.filter then return false end
+        end
+        if cmd.contains_codes and not state.list[state.selected] then return false end
+
         run_custom_command(cmd, { state.list[state.selected] }, state)
         return true
     end
