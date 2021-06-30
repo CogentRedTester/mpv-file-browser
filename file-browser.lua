@@ -1094,6 +1094,9 @@ state.keybinds = {
 --characters used for custom keybind codes
 local CUSTOM_KEYBIND_CODES = "%fFnNpPdDrR"
 
+--a map of key-keybinds - only saves the latest keybind if multiple have the same key code
+local top_level_keys = {}
+
 --format the item string for either single or multiple items
 local function create_item_string(cmd, items, funct)
     if not items[1] then return end
@@ -1230,6 +1233,23 @@ local function contains_codes(command_table)
     return false
 end
 
+local function insert_parser_keybind(keybind, parser, i)
+    keybind.name = parser_ids[parser].."/"..(keybind.name or tostring(i))
+end
+
+--inserting the custom keybind into the keybind array for declaration when file-browser is opened
+--custom keybinds with matching names will overwrite eachother
+local function insert_custom_keybind(keybind, i)
+    --we'll always save the keybinds as an array of command arrays to simplify later parsing
+    if type(keybind.command[1]) ~= "table" then keybind.command = {keybind.command} end
+    keybind.contains_codes = contains_codes(keybind.command)
+    keybind.name = "custom/"..(keybind.name or tostring(i))
+    keybind.prev_key = top_level_keys[keybind.key]
+
+    table.insert(state.keybinds, {keybind.key, keybind.name, function() run_keybind_coroutine(keybind) end, {}})
+    top_level_keys[keybind.key] = keybind
+end
+
 --loading the custom keybinds
 local function setup_custom_keybinds()
     local path = mp.command_native({"expand-path", "~~/script-opts"}).."/file-browser-keybinds.json"
@@ -1242,27 +1262,22 @@ local function setup_custom_keybinds()
     json = utils.parse_json(json)
     if not json then return error("invalid json syntax for "..path) end
 
-
-    --creates a map of functions for different keys
-    --only saves the latest command for that key
-    local latest_key = {}
-
     --this is to make the default keybinds compatible with passthrough from custom keybinds
     for _, keybind in ipairs(state.keybinds) do
-        latest_key[keybind[1]] = { key = keybind[1], name = keybind[2], command = keybind[3], flags = keybind[4] }
+        top_level_keys[keybind[1]] = { key = keybind[1], name = keybind[2], command = keybind[3], flags = keybind[4] }
+    end
+
+    --this loads keybinds from addons
+    for _, parser in ipairs(parsers) do
+        if parser.keybinds then
+            for i, keybind in ipairs(parser.keybinds) do
+                insert_parser_keybind(keybind, parser, i)
+            end
+        end
     end
 
     for i, keybind in ipairs(json) do
-        --we'll always save the keybinds as an array of command arrays to simplify later parsing
-        if type(keybind.command[1]) ~= "table" then keybind.command = {keybind.command} end
-        keybind.name = "custom/"..(keybind.name or tostring(i))
-        keybind.contains_codes = contains_codes(keybind.command)
-        keybind.prev_key = latest_key[keybind.key]
-
-        --inserting the custom keybind into the keybind array for declaration when file-browser is opened
-        --custom keybinds with matching names will overwrite eachother
-        table.insert(state.keybinds, {keybind.key, keybind.name, function() run_keybind_coroutine(keybind) end, {}})
-        latest_key[keybind.key] = keybind
+        insert_custom_keybind(keybind, i)
     end
 end
 
