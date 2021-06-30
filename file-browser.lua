@@ -1281,11 +1281,9 @@ local function setup_keybinds()
         for _, parser in ipairs(parsers) do
             if parser.keybinds then
                 for i, keybind in ipairs(parser.keybinds) do
-                    keybind = copy_table(keybind)
-                    if not keybind.key then
-                        keybind.key, keybind.name = keybind[1], keybind[2]
-                        keybind.command, keybind.flags = keybind[3], keybind[4]
-                    end
+                    --if addons use the native array command format, then we need to convert them over to the custom command format
+                    if not keybind.key then keybind = { key = keybind[1], name = keybind[2], command = keybind[3], flags = keybind[4] }
+                    else keybind = copy_table(keybind) end
 
                     keybind.name = parser_ids[parser].."/"..(keybind.name or tostring(i))
                     insert_custom_keybind(keybind)
