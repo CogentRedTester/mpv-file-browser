@@ -145,33 +145,37 @@ local subtitle_extensions = {
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
 
---metatable of methods to manage the cache 
-local __cache = {
-    push = function(self)
-        table.insert(self, {
-            directory = state.directory,
-            directory_label = state.directory_label,
-            list = state.list,
-            selected = state.selected,
-            parser = state.parser,
-            empty_text = state.empty_text
-        })
-    end,
+--metatable of methods to manage the cache
+local __cache = {}
 
-    pop = function(self) table.remove(self) end,
+--inserts latest state values onto the cache stack
+function __cache:push()
+    table.insert(self, {
+        directory = state.directory,
+        directory_label = state.directory_label,
+        list = state.list,
+        selected = state.selected,
+        selection = state.selection,
+        parser = state.parser,
+        empty_text = state.empty_text
+    })
+end
 
-    apply = function(self)
-        for key, value in pairs(self[#self]) do
-            state[key] = value
-        end
-    end,
+function __cache:pop()
+    table.remove(self)
+end
 
-    clear = function(self)
-        for i = 1, #self do
-            self[i] = nil
-        end
+function __cache:apply()
+    for key, value in pairs(self[#self]) do
+        state[key] = value
     end
-}
+end
+
+function __cache:clear()
+    for i = 1, #self do
+        self[i] = nil
+    end
+end
 
 local cache = setmetatable({}, { __index = __cache })
 
