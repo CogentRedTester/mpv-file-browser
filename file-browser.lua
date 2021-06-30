@@ -1192,17 +1192,16 @@ end
 --recursively runs the keybind functions, passing down through the chain
 --of keybinds with the same key value
 local function run_keybind_recursive(keybind, state, co)
-    --these are the native keybinds, which act as the bottom of the recursion
-    --this only occurs if someone overwrites the default keybinds, but has passthrough enabled
-    if type(keybind.command) == "function" then return keybind.command() end
+    --these are for the default keybinds, or from addons which use direct functions
+    local fn = type(keybind.command) == "function" and keybind.command or custom_command
 
     if keybind.passthrough ~= nil then
-        custom_command(keybind, state, co)
+        fn(keybind, state, co)
         if keybind.passthrough == true and keybind.prev_key then
             run_keybind_recursive(keybind.prev_key, state, co)
         end
     else
-        if custom_command(keybind, state, co) == false and keybind.prev_key then
+        if fn(keybind, state, co) == false and keybind.prev_key then
             run_keybind_recursive(keybind.prev_key, state, co)
         end
     end
@@ -1227,6 +1226,7 @@ end
 
 --scans the given command table to identify if they contain any custom keybind codes
 local function contains_codes(command_table)
+    if type(command_table) ~= "table" then return end
     for _, value in pairs(command_table) do
         local type = type(value)
         if type == "table" then
@@ -1238,20 +1238,18 @@ local function contains_codes(command_table)
     return false
 end
 
-local function insert_parser_keybind(keybind, parser, i)
-    keybind.name = parser_ids[parser].."/"..(keybind.name or tostring(i))
-end
-
 --inserting the custom keybind into the keybind array for declaration when file-browser is opened
 --custom keybinds with matching names will overwrite eachother
-local function insert_custom_keybind(keybind, i)
-    --we'll always save the keybinds as an array of command arrays to simplify later parsing
-    if type(keybind.command[1]) ~= "table" then keybind.command = {keybind.command} end
+local function insert_custom_keybind(keybind)
+    --we'll always save the keybinds as either an array of command arrays or a function
+    if type(keybind.command) == "table" and type(keybind.command[1]) ~= "table" then
+        keybind.command = {keybind.command}
+    end
+
     keybind.contains_codes = contains_codes(keybind.command)
-    keybind.name = "custom/"..(keybind.name or tostring(i))
     keybind.prev_key = top_level_keys[keybind.key]
 
-    table.insert(state.keybinds, {keybind.key, keybind.name, function() run_keybind_coroutine(keybind) end, {}})
+    table.insert(state.keybinds, {keybind.key, keybind.name, function() run_keybind_coroutine(keybind) end, keybind.flags or {}})
     top_level_keys[keybind.key] = keybind
 end
 
@@ -1283,7 +1281,14 @@ local function setup_keybinds()
         for _, parser in ipairs(parsers) do
             if parser.keybinds then
                 for i, keybind in ipairs(parser.keybinds) do
-                    insert_parser_keybind(keybind, parser, i)
+                    keybind = copy_table(keybind)
+                    if not keybind.key then
+                        keybind.key, keybind.name = keybind[1], keybind[2]
+                        keybind.command, keybind.flags = keybind[3], keybind[4]
+                    end
+
+                    keybind.name = parser_ids[parser].."/"..(keybind.name or tostring(i))
+                    insert_custom_keybind(keybind)
                 end
             end
         end
@@ -1291,7 +1296,8 @@ local function setup_keybinds()
 
     if o.custom_keybinds then
         for i, keybind in ipairs(json) do
-            insert_custom_keybind(keybind, i)
+            keybind.name = "custom/"..(keybind.name or tostring(i))
+            insert_custom_keybind(keybind)
         end
     end
 end
