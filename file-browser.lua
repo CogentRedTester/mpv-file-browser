@@ -418,6 +418,37 @@ function parser_mt:defer(directory)
     return list, opts
 end
 
+--loading external addons
+local function setup_addons()
+    local addon_dir = mp.command_native({"expand-path", o.addon_directory..'/'})
+    local files = utils.readdir(addon_dir)
+    if not files then error("could not read addon directory") end
+
+    for _, file in ipairs(files) do
+        if file:sub(-4) == ".lua" then
+            local addon_parsers = dofile(addon_dir..file)
+
+            --if the table contains a priority key then we assume it isn't an array of parsers
+            if addon_parsers.priority then addon_parsers = {addon_parsers} end
+
+            for _, parser in ipairs(addon_parsers) do
+                parser = setmetatable(parser, copy_table(parser_mt))
+                parser.name = parser.name or file:gsub("%-browser%.lua$", ""):gsub("%.lua$", "")
+                set_parser_id(parser)
+
+                msg.verbose("imported parser", parser:get_id(), "from", file)
+                if type(parser.priority) ~= "number" then error("addon "..file.." needs a numeric priority") end
+
+                table.insert(parsers, parser)
+            end
+        end
+    end
+    table.sort(parsers, function(a, b) return a.priority < b.priority end)
+
+    --we want to store the indexes of the parsers
+    for i = #parsers, 1, -1 do parser_index[ parsers[i] ] = i end
+end
+
 --parser object for the root
 --this object is not added to the parsers table so that scripts cannot get access to
 --the root table, which is returned directly by parse()
@@ -483,37 +514,6 @@ parsers[1] = setmetatable(file_parser, parser_mt)
 setmetatable(root_parser, parser_mt)
 set_parser_id(file_parser)
 set_parser_id(root_parser)
-
---loading external addons
-if o.addons then
-    local addon_dir = mp.command_native({"expand-path", o.addon_directory..'/'})
-    local files = utils.readdir(addon_dir)
-    if not files then error("could not read addon directory") end
-
-    for _, file in ipairs(files) do
-        if file:sub(-4) == ".lua" then
-            local addon_parsers = dofile(addon_dir..file)
-
-            --if the table contains a priority key then we assume it isn't an array of parsers
-            if addon_parsers.priority then addon_parsers = {addon_parsers} end
-
-            for _, parser in ipairs(addon_parsers) do
-                parser = setmetatable(parser, copy_table(parser_mt))
-                parser.name = parser.name or file:gsub("%-browser%.lua$", ""):gsub("%.lua$", "")
-                set_parser_id(parser)
-
-                msg.verbose("imported parser", parser:get_id(), "from", file)
-                if type(parser.priority) ~= "number" then error("addon "..file.." needs a numeric priority") end
-
-                table.insert(parsers, parser)
-            end
-        end
-    end
-    table.sort(parsers, function(a, b) return a.priority < b.priority end)
-
-    --we want to store the indexes of the parsers
-    for i = #parsers, 1, -1 do parser_index[ parsers[i] ] = i end
-end
 
 
 
@@ -1234,7 +1234,7 @@ end
 local function setup_custom_keybinds()
     local path = mp.command_native({"expand-path", "~~/script-opts"}).."/file-browser-keybinds.json"
     local custom_keybinds, err = assert(io.open( path ))
-    if not custom_keybinds then return end
+    if not custom_keybinds then return msg.error(err) end
 
     local json = custom_keybinds:read("*a")
     custom_keybinds:close()
@@ -1313,14 +1313,19 @@ local function setup_root()
 end
 
 setup_root()
+if o.addons then
+    setup_addons()
 
---we want to store the index of each parser and run the setup functions
-for i = #parsers, 1, -1 do
-    if parsers[i].setup then parsers[i]:setup() end
+    --we want to store the index of each parser and run the setup functions
+    for i = #parsers, 1, -1 do
+        if parsers[i].setup then parsers[i]:setup() end
+    end
 end
 
+--these need to be below the addon setup in case any parsers add custom entries
 setup_extensions_list()
-setup_custom_keybinds()
+if o.custom_keybinds then setup_custom_keybinds() end
+
 
 
 ------------------------------------------------------------------------------------------
