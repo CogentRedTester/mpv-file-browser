@@ -1095,32 +1095,32 @@ state.keybinds = {
 local CUSTOM_KEYBIND_CODES = "%fFnNpPdDrR"
 
 --format the item string for either single or multiple items
-local function create_item_string(key, items, funct)
+local function create_item_string(cmd, items, funct)
     if not items[1] then return end
 
     local str = funct(items[1])
     for i = 2, #items do
-        str = str .. ( key["concat-string"] or " " ) .. funct(items[i])
+        str = str .. ( cmd["concat-string"] or " " ) .. funct(items[i])
     end
     return str
 end
 
 --iterates through the command table and substitutes special
 --character codes for the correct strings used for custom functions
-local function format_command_table(key, items, state)
+local function format_command_table(cmd, items, state)
     local copy = {}
-    for i = 1, #key.command do
+    for i = 1, #cmd.command do
         copy[i] = {}
 
-        for j = 1, #key.command[i] do
-            copy[i][j] = key.command[i][j]:gsub("%%["..CUSTOM_KEYBIND_CODES.."]", {
+        for j = 1, #cmd.command[i] do
+            copy[i][j] = cmd.command[i][j]:gsub("%%["..CUSTOM_KEYBIND_CODES.."]", {
                 ["%%"] = "%",
-                ["%f"] = create_item_string(key, items, function(item) return item and get_full_path(item, state.directory) or "" end),
-                ["%F"] = create_item_string(key, items, function(item) return string.format("%q", item and get_full_path(item, state.directory) or "") end),
-                ["%n"] = create_item_string(key, items, function(item) return item and (item.label or item.name) or "" end),
-                ["%N"] = create_item_string(key, items, function(item) return string.format("%q", item and (item.label or item.name) or "") end),
+                ["%f"] = create_item_string(cmd, items, function(item) return item and get_full_path(item, state.directory) or "" end),
+                ["%F"] = create_item_string(cmd, items, function(item) return string.format("%q", item and get_full_path(item, state.directory) or "") end),
+                ["%n"] = create_item_string(cmd, items, function(item) return item and (item.label or item.name) or "" end),
+                ["%N"] = create_item_string(cmd, items, function(item) return string.format("%q", item and (item.label or item.name) or "") end),
                 ["%p"] = state.directory or "",
-                ["%P"] = string.format("%q", key.directory or ""),
+                ["%P"] = string.format("%q", cmd.directory or ""),
                 ["%d"] = (state.directory_label or state.directory):match("([^/]+)/?$") or "",
                 ["%D"] = string.format("%q", (state.directory_label or state.directory):match("([^/]+)/$") or ""),
                 ["%r"] = state.parser.keybind_name or state.parser.name or "",
@@ -1134,8 +1134,8 @@ end
 --runs all of the commands in the command table
 --key.command must be an array of command tables compatible with mp.command_native
 --items must be an array of multiple items (when multi-type ~= concat the array will be 1 long)
-local function run_custom_command(key, items, state)
-    local custom_cmds = key.contains_codes and format_command_table(key, items, state) or key.command
+local function run_custom_command(cmd, items, state)
+    local custom_cmds = cmd.contains_codes and format_command_table(cmd, items, state) or cmd.command
 
     for _, cmd in ipairs(custom_cmds) do
         msg.debug("running command:", utils.to_string(cmd))
@@ -1144,37 +1144,37 @@ local function run_custom_command(key, items, state)
 end
 
 --runs one of the custom commands
-local function custom_command(key, state, co)
-    if key.parser and key.parser ~= (state.parser.keybind_name or state.parser.name) then return false end
+local function custom_command(cmd, state, co)
+    if cmd.parser and cmd.parser ~= (state.parser.keybind_name or state.parser.name) then return false end
 
     --the function terminates here if we are running the command on a single item
-    if not (key.multiselect and next(state.selection)) then
-        if key.filter and (not state.list[state.selected] or state.list[state.selected].type ~= key.filter) then return false end
-        run_custom_command(key, { state.list[state.selected] }, state)
+    if not (cmd.multiselect and next(state.selection)) then
+        if cmd.filter and (not state.list[state.selected] or state.list[state.selected].type ~= cmd.filter) then return false end
+        run_custom_command(cmd, { state.list[state.selected] }, state)
         return true
     end
 
 
     --runs the command on all multi-selected items
-    local selection = sort_keys(state.selection, function(item) return not key.filter or item.type == key.filter end)
+    local selection = sort_keys(state.selection, function(item) return not cmd.filter or item.type == cmd.filter end)
     if not next(selection) then return false end
 
-    if key["multi-type"] == "concat" then
-        run_custom_command(key, selection, state)
+    if cmd["multi-type"] == "concat" then
+        run_custom_command(cmd, selection, state)
 
-    elseif key["multi-type"] == "repeat" then
+    elseif cmd["multi-type"] == "repeat" then
         for i,_ in ipairs(selection) do
-            run_custom_command(key, {selection[i]}, state)
+            run_custom_command(cmd, {selection[i]}, state)
 
-            if key.delay then
-                mp.add_timeout(key.delay, function() coroutine.resume(co) end)
+            if cmd.delay then
+                mp.add_timeout(cmd.delay, function() coroutine.resume(co) end)
                 coroutine.yield()
             end
         end
     end
 
     --we passthrough by default if the command is not run on every selected item
-    if key.passthrough ~= nil then return end
+    if cmd.passthrough ~= nil then return end
 
     local num_selection = 0
     for _ in pairs(state.selection) do num_selection = num_selection+1 end
@@ -1208,9 +1208,9 @@ local function run_keybind_coroutine(key)
     local state_copy = {
         directory = state.directory,
         directory_label = state.directory_label,
-        list = state.list,
+        list = state.list,                      --the list should remain unchanged once it has been saved to the global state, new directories get new tables
         selected = state.selected,
-        selection = state.selection,
+        selection = copy_table(state.selection),
         parser = state.parser,
         empty_text = state.empty_text
     }
