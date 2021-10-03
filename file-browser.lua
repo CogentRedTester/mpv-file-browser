@@ -418,6 +418,28 @@ function parser_mt:defer(directory)
     return list, opts
 end
 
+--load an external addon
+local function setup_addon(file, path)
+    if file:sub(-4) ~= ".lua" then return msg.verbose(path, "is not a lua file - aborting addon setup") end
+
+    local addon_parsers = dofile(path)
+    if not addon_parsers then return msg.error("addon", path, "did not return a table") end
+
+    --if the table contains a priority key then we assume it isn't an array of parsers
+    if addon_parsers.priority then addon_parsers = {addon_parsers} end
+
+    for _, parser in ipairs(addon_parsers) do
+        parser = setmetatable(parser, copy_table(parser_mt))
+        parser.name = parser.name or file:gsub("%-browser%.lua$", ""):gsub("%.lua$", "")
+        set_parser_id(parser)
+
+        msg.verbose("imported parser", parser:get_id(), "from", file)
+        if type(parser.priority) ~= "number" then return msg.error("parser", parser:get_id(), "needs a numeric priority") end
+
+        table.insert(parsers, parser)
+    end
+end
+
 --loading external addons
 local function setup_addons()
     local addon_dir = mp.command_native({"expand-path", o.addon_directory..'/'})
@@ -425,23 +447,7 @@ local function setup_addons()
     if not files then error("could not read addon directory") end
 
     for _, file in ipairs(files) do
-        if file:sub(-4) == ".lua" then
-            local addon_parsers = dofile(addon_dir..file)
-
-            --if the table contains a priority key then we assume it isn't an array of parsers
-            if addon_parsers.priority then addon_parsers = {addon_parsers} end
-
-            for _, parser in ipairs(addon_parsers) do
-                parser = setmetatable(parser, copy_table(parser_mt))
-                parser.name = parser.name or file:gsub("%-browser%.lua$", ""):gsub("%.lua$", "")
-                set_parser_id(parser)
-
-                msg.verbose("imported parser", parser:get_id(), "from", file)
-                if type(parser.priority) ~= "number" then error("addon "..file.." needs a numeric priority") end
-
-                table.insert(parsers, parser)
-            end
-        end
+        setup_addon(file, addon_dir..file)
     end
     table.sort(parsers, function(a, b) return a.priority < b.priority end)
 
