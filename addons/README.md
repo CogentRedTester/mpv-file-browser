@@ -16,7 +16,9 @@ Any improvements on these addons are welcome.
 
 ## Addon List
 
-The following is a list of addons I have written:
+The following is a list of addons I have written.
+
+*Warning: many of these addons exist as a proof-of-concept, they are not as stable or well supported as the default file-browser script.*
 
 **ls**  
 Implements standard directory parsing using the linux `ls` utility.
@@ -34,7 +36,7 @@ Implements support for ftp file servers. Requires `curl` in the system path.
 Replaces the user's home directory in the directory header with `~/`.
 
 **m3u-browser**  
-Treats m3u playlists as folders which can be opened and browsed.
+Adds limitted support for m3u playlists
 
 **favourites**  
 Implements a virtual directory of favourited files and folders.
