@@ -36,7 +36,10 @@ Implements support for ftp file servers. Requires `curl` in the system path.
 Replaces the user's home directory in the directory header with `~/`.
 
 **m3u-browser**  
-Adds limitted support for m3u playlists
+Adds limitted support for m3u playlists. Requires that [mpv-read-file](https://github.com/CogentRedTester/mpv-read-file) be installed.
+
+**archive-browser**  
+Adds support for archive formats like `zip` and `7z`
 
 **favourites**  
 Implements a virtual directory of favourited files and folders.
