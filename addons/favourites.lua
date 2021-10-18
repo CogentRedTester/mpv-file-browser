@@ -34,6 +34,14 @@ local mp = require "mp"
 local msg = require "mp.msg"
 local utils = require "mp.utils"
 local save_path = mp.command_native({"expand-path", "~~/script-opts/file_browser_favourites"})
+do
+    local file = io.open(save_path, "a+")
+    if not file then
+        msg.error("cannot access file", ("%q"):format(save_path), "make sure that the directory exists")
+        return {}
+    end
+    file:close()
+end
 
 local favourites = nil
 local favs = {
