@@ -163,6 +163,7 @@ local function move_favourite(path, direction)
     write_to_file()
 end
 
+update_favourites()
 mp.register_script_message("favourites/add_favourite", add_favourite)
 mp.register_script_message("favourites/remove_favourite", remove_favourite)
 mp.register_script_message("favourites/move_up", function(path) move_favourite(path, -1) end)
