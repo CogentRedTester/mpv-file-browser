@@ -33,7 +33,7 @@
 local mp = require "mp"
 local msg = require "mp.msg"
 local utils = require "mp.utils"
-local save_path = mp.command_native({"expand-path", "~~/script-opts/file_browser_favourites"})
+local save_path = mp.command_native({"expand-path", "~~/script-opts/file_browser_favourites.txt"})
 do
     local file = io.open(save_path, "a+")
     if not file then
