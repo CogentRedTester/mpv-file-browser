@@ -35,6 +35,9 @@ Implements support for ftp file servers. Requires `curl` in the system path.
 **home-label**  
 Replaces the user's home directory in the directory header with `~/`.
 
+**url-decode**  
+Decodes URL directories to make them more readable. Does not decode the names of items in the list.
+
 **m3u-browser**  
 Adds limitted support for m3u playlists. Requires that [mpv-read-file](https://github.com/CogentRedTester/mpv-read-file) be installed.
 
