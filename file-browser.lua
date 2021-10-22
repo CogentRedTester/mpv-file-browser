@@ -211,7 +211,7 @@ end
 --formats strings for ass handling
 --this function is based on a similar function from https://github.com/mpv-player/mpv/blob/master/player/lua/console.lua#L110
 local function ass_escape(str)
-    str = str:gsub('.', {
+    str = str:gsub('[\\{}\n] ?', {
         ['\\'] = '\\\239\187\191',
         ['{'] = '\\{',
         ['}'] = '\\}',
@@ -219,7 +219,7 @@ local function ass_escape(str)
         -- consecutive newlines
         ['\n'] = '\239\187\191\\N',
         -- Turn leading spaces into hard spaces to prevent ASS from stripping them
-        ['\\N'] = '\\N\\h'
+        ['\\N '] = '\\N\\h'
     })
     str = str:gsub('^ ', '\\h')
     return str
