@@ -209,16 +209,18 @@ local function get_protocol(filename)
 end
 
 --formats strings for ass handling
---this function is taken from https://github.com/mpv-player/mpv/blob/master/player/lua/console.lua#L110
+--this function is based on a similar function from https://github.com/mpv-player/mpv/blob/master/player/lua/console.lua#L110
 local function ass_escape(str)
-    str = str:gsub('\\', '\\\239\187\191')
-    str = str:gsub('{', '\\{')
-    str = str:gsub('}', '\\}')
-    -- Precede newlines with a ZWNBSP to prevent ASS's weird collapsing of
-    -- consecutive newlines
-    str = str:gsub('\n', '\239\187\191\\N')
-    -- Turn leading spaces into hard spaces to prevent ASS from stripping them
-    str = str:gsub('\\N ', '\\N\\h')
+    str = str:gsub('.', {
+        ['\\'] = '\\\239\187\191',
+        ['{'] = '\\{',
+        ['}'] = '\\}',
+        -- Precede newlines with a ZWNBSP to prevent ASS's weird collapsing of
+        -- consecutive newlines
+        ['\n'] = '\239\187\191\\N',
+        -- Turn leading spaces into hard spaces to prevent ASS from stripping them
+        ['\\N'] = '\\N\\h'
+    })
     str = str:gsub('^ ', '\\h')
     return str
 end
