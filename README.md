@@ -75,6 +75,30 @@ They can be enabled by setting `addon` script-opt to yes, and placing the addon 
 
 For a collection of premade addons, and instructions on writing your own addon, see [here](addons/README.md).
 
+## Script Messages
+
+File-browser supports a small number of script messages that allow the user or other scripts to talk with the browser.
+
+### `browse-directory`
+
+`script-message browse-directory [directory]`
+
+Opens the given directory in the browser. If the browser is currently closed it will be opened.
+
+### `get-directory-contents`
+
+`script-message get-directory-contents [directory] [response-string]`
+
+Reads the given directory, and sends the resulting tables to the specified script-message in the format:
+
+`script-message [response-string] [list] [opts]`
+
+The `list` and `opts` tables are formatted as json strings through the `mp.utils.format_json` function.
+See [addons.md](addons/addons.md) for how the tables are structured, and what each field means.
+The `response-string` refers to an arbitrary script-message that the tables should be sent to.
+
+This script-message allows other scripts to utilise file-browser's directory parsing capabilities, as well as those of the file-browser addons.
+
 ## [mpv-user-input](https://github.com/CogentRedTester/mpv-user-input)
 
 mpv-user-input is a script that provides an API to request text input from the user over the OSD.

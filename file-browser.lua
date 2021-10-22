@@ -1329,7 +1329,34 @@ end
 --allows keybinds/other scripts to auto-open specific directories
 mp.register_script_message('browse-directory', browse_directory)
 
+--allows other scripts to request directory contents from file-browser
+mp.register_script_message("get-directory-contents", function(directory, response_str)
+    if not directory then return end
+    directory = mp.command_native({"expand-path", directory}, "")
+    if directory ~= "" then directory = fix_path(directory, true) end
+    msg.verbose(("recieved %q from 'get-directory-contents' script message - returning result to %q"):format(directory, response_str))
 
+    local list, opts = scan_directory(directory)
+
+    --removes invalid json types from the parser object
+    if opts.parser then
+        opts.parser = copy_table(opts.parser)
+        for key, value in pairs(opts.parser) do
+            if type(value) == "function" then
+                opts.parser[key] = nil
+            end
+        end
+    end
+
+    local err, err2
+    list, err = utils.format_json(list)
+    if not list then msg.error(err) end
+
+    opts, err2 = utils.format_json(opts)
+    if not opts then msg.error(err2) end
+
+    mp.commandv("script-message", response_str, list or "", opts or "")
+end)
 
 ------------------------------------------------------------------------------------------
 ----------------------------mpv-user-input Compatability----------------------------------
