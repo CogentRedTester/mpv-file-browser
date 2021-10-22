@@ -1331,7 +1331,9 @@ mp.register_script_message('browse-directory', browse_directory)
 
 --allows other scripts to request directory contents from file-browser
 mp.register_script_message("get-directory-contents", function(directory, response_str)
-    if not directory then return end
+    if not directory then msg.error("did not receive a directory string"); return end
+    if not response_str then msg.error("did not receive a response string"); return end
+
     directory = mp.command_native({"expand-path", directory}, "")
     if directory ~= "" then directory = fix_path(directory, true) end
     msg.verbose(("recieved %q from 'get-directory-contents' script message - returning result to %q"):format(directory, response_str))
