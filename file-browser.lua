@@ -329,7 +329,12 @@ end
 --setting up functions to provide to addons
 local parser_index = {}
 local parser_ids = {}
+
+--setting up the modules and metatables
+local API_mt = {}
 local parser_mt = {}
+package.loaded["file-browser"] = API_mt
+setmetatable(parser_mt, {__index = API_mt})
 
 --create a unique id for the given parser
 local existing_ids = {}
@@ -346,43 +351,42 @@ local function set_parser_id(parser)
     parser_ids[parser] = parser.name..n
 end
 
-parser_mt.__index = parser_mt
-parser_mt.valid_file = valid_file
-parser_mt.valid_dir = valid_dir
-parser_mt.filter = filter
-parser_mt.sort = sort
-parser_mt.ass_escape = ass_escape
-parser_mt.fix_path = fix_path
-parser_mt.get_full_path = get_full_path
-parser_mt.get_extension = get_extension
-parser_mt.get_protocol = get_protocol
-parser_mt.join_path = join_path
+API_mt.valid_file = valid_file
+API_mt.valid_dir = valid_dir
+API_mt.filter = filter
+API_mt.sort = sort
+API_mt.ass_escape = ass_escape
+API_mt.fix_path = fix_path
+API_mt.get_full_path = get_full_path
+API_mt.get_extension = get_extension
+API_mt.get_protocol = get_protocol
+API_mt.join_path = join_path
 
-function parser_mt.clear_cache() cache:clear() end
+function API_mt.clear_cache() cache:clear() end
 
 --we will set these functions once they are declared later in the script
-parser_mt.update_ass = nil
-parser_mt.scan_directory = nil
-parser_mt.rescan_directory = nil
+API_mt.update_ass = nil
+API_mt.scan_directory = nil
+API_mt.rescan_directory = nil
 
 --providing getter and setter functions so that addons can't modify things directly
-function parser_mt.get_script_opts() return copy_table(o) end
-function parser_mt.get_extensions() return copy_table(extensions) end
-function parser_mt.get_sub_extensions() return copy_table(sub_extensions) end
-function parser_mt.get_parseable_extensions() return copy_table(parseable_extensions) end
-function parser_mt.get_state() return copy_table(state) end
-function parser_mt.get_dvd_device() return dvd_device end
-function parser_mt.get_parsers() return copy_table(parsers) end
-function parser_mt.get_root() return copy_table(root) end
-function parser_mt.get_directory() return state.directory end
-function parser_mt.get_current_file() return copy_table(current_file) end
-function parser_mt.get_current_parser() return state.parser:get_id() end
-function parser_mt.get_current_parser_keyname() return state.parser.keybind_name or state.parser.name end
-function parser_mt.get_selected_index() return state.selected end
-function parser_mt.get_selected_item() return copy_table(state.list[state.selected]) end
-function parser_mt.get_open_status() return not state.hidden end
+function API_mt.get_script_opts() return copy_table(o) end
+function API_mt.get_extensions() return copy_table(extensions) end
+function API_mt.get_sub_extensions() return copy_table(sub_extensions) end
+function API_mt.get_parseable_extensions() return copy_table(parseable_extensions) end
+function API_mt.get_state() return copy_table(state) end
+function API_mt.get_dvd_device() return dvd_device end
+function API_mt.get_parsers() return copy_table(parsers) end
+function API_mt.get_root() return copy_table(root) end
+function API_mt.get_directory() return state.directory end
+function API_mt.get_current_file() return copy_table(current_file) end
+function API_mt.get_current_parser() return state.parser:get_id() end
+function API_mt.get_current_parser_keyname() return state.parser.keybind_name or state.parser.name end
+function API_mt.get_selected_index() return state.selected end
+function API_mt.get_selected_item() return copy_table(state.list[state.selected]) end
+function API_mt.get_open_status() return not state.hidden end
 
-function parser_mt.set_selected_index(index)
+function API_mt.set_selected_index(index)
     if type(index) ~= "number" then return false end
     if index < 1 then index = 1 end
     if index > #state.list then index = #state.list end
@@ -394,14 +398,14 @@ function parser_mt:get_index() return parser_index[self] end
 function parser_mt:get_id() return parser_ids[self] end
 
 --register file extensions which can be opened by the browser
-function parser_mt.register_parseable_extension(ext) parseable_extensions[ext] = true end
-function parser_mt.remove_parseable_extension(ext) parseable_extensions[ext] = nil end
+function API_mt.register_parseable_extension(ext) parseable_extensions[ext] = true end
+function API_mt.remove_parseable_extension(ext) parseable_extensions[ext] = nil end
 
 --add a compatible extension to show through the filter, only applies if run during the setup() method
-function parser_mt.add_default_extension(ext) table.insert(compatible_file_extensions, ext) end
+function API_mt.add_default_extension(ext) table.insert(compatible_file_extensions, ext) end
 
 --add item to root at position pos
-function parser_mt.insert_root_item(item, pos)
+function API_mt.insert_root_item(item, pos)
     msg.verbose("adding item to root", item.label or item.name)
     item.ass = item.ass or ass_escape(item.label or item.name)
     item.type = "dir"
@@ -447,7 +451,7 @@ local function setup_addon(file, path)
     if addon_parsers.priority then addon_parsers = {addon_parsers} end
 
     for _, parser in ipairs(addon_parsers) do
-        parser = setmetatable(parser, copy_table(parser_mt))
+        parser = setmetatable(parser, { __index = parser_mt })
         parser.name = parser.name or file:gsub("%-browser%.lua$", ""):gsub("%.lua$", "")
         set_parser_id(parser)
 
@@ -660,7 +664,7 @@ local function update_ass()
     if overflow then append('\\N'..o.ass_footerheader..#state.list-finish..' item(s) remaining') end
     ass:update()
 end
-parser_mt.update_ass = update_ass
+API_mt.update_ass = update_ass
 
 
 
@@ -795,7 +799,7 @@ local function scan_directory(directory)
     if not opts.sorted then sort(list) end
     return list, opts
 end
-parser_mt.scan_directory = scan_directory
+API_mt.scan_directory = scan_directory
 
 --sends update requests to the different parsers
 local function update_list()
@@ -872,7 +876,7 @@ local function update(moving_adjacent)
     update_list()
     update_ass()
 end
-parser_mt.rescan_directory = update
+API_mt.rescan_directory = update
 
 --loads the root list
 local function goto_root()
@@ -991,7 +995,7 @@ local function browse_directory(directory)
     open()
     update()
 end
-parser_mt.browse_directory = browse_directory
+API_mt.browse_directory = browse_directory
 
 
 
@@ -1393,6 +1397,7 @@ end
 
 setup_root()
 if o.addons then
+    --all of the API functions need to be defined before this point for the addons to be able to access them safely
     setup_addons()
 
     --we want to store the index of each parser and run the setup functions

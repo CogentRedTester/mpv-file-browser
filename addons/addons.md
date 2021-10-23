@@ -162,6 +162,9 @@ All parsers are provided with a range of API functions to make addons more power
 These functions are added to the parser after being loaded via a metatable, so can be called through the self argument or the parser object.
 These functions are only made available once file-browser has fully imported the parsers, so if a script wants to call them immediately on load they must do so in the `setup` method.
 
+Additionally, the API is also available through a module, which can be loaded with `require "file-browser"`. The module contains all of the same functions, but does not
+include the methods, they are only available through the parser objects.
+
 | key                          | type     | arguments                    | returns | description                                                                                                              |
 |------------------------------|----------|------------------------------|---------|--------------------------------------------------------------------------------------------------------------------------|
 | register_parseable_extension | function | string                       | -       | register a file extension that the browser will attempt to open, like a directory - for addons which can parse files     |
