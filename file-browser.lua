@@ -420,7 +420,7 @@ local function choose_and_parse(directory, index)
     while list == nil and not ( opts and opts.already_deferred ) and index <= #parsers do
         parser = parsers[index]
         if parser:can_parse(directory) then
-            msg.trace("attempting parser:", parser:get_id())
+            msg.debug("attempting parser:", parser:get_id())
             list, opts = parser:parse(directory)
         end
         index = index + 1
