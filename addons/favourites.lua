@@ -1,33 +1,5 @@
 --[[
     An addon for mpv-file-browser which adds a Favourites path that can be loaded from the ROOT
-
-
-    Designed to work with the following custom keybinds:
-    {
-        "key": "F",
-        "command": ["script-message", "favourites/add_favourite", "%f"]
-    },
-    {
-        "key": "F",
-        "command": ["script-message", "favourites/remove_favourite", "%f"],
-        "parser": "favourites"
-    },
-    {
-        "key": "Ctrl+UP",
-        "command": [
-            ["script-binding", "file_browser/dynamic/scroll_up"],
-            ["script-message", "favourites/move_up", "%f"]
-        ],
-        "parser": "favourites"
-    },
-    {
-        "key": "Ctrl+DOWN",
-        "command": [
-            ["script-binding", "file_browser/dynamic/scroll_down"],
-            ["script-message", "favourites/move_down", "%f"]
-        ],
-        "parser": "favourites"
-    }
 ]]--
 
 local mp = require "mp"
@@ -134,16 +106,27 @@ local function get_favourite(path)
     end
 end
 
+--update the browser with new contents of the file
+local function update_browser()
+    if favs.get_directory():find("[fF]avourites/") then
+        if favs.get_directory():find("[fF]avourites/$") then
+            local cursor = favs.get_selected_index()
+            favs.rescan_directory()
+            favs.set_selected_index(cursor)
+            favs.update_ass()
+        else
+            favs.clear_cache()
+        end
+    end
+end
+
+--write the contents of favourites to the file
 local function write_to_file()
     local file = io.open(save_path, "w+")
     for _, item in ipairs(favourites) do
         file:write(string.format("%s\n", item.path))
     end
     file:close()
-    if favs.get_directory() == "Favourites/" then
-        favs.cursor = favs.get_selected_index()
-        mp.commandv("script-binding", "file_browser/dynamic/reload")
-    end
 end
 
 local function add_favourite(path)
@@ -171,10 +154,39 @@ local function move_favourite(path, direction)
     write_to_file()
 end
 
+local function toggle_favourite(cmd, state, co)
+    local path = favs.get_full_path(state.list[state.selected], state.directory)
+
+    if state.directory:find("[fF]avourites/$") then remove_favourite(path)
+    else add_favourite(path) end
+    update_browser()
+end
+
+local function move_key(cmd, state, co)
+    if not state.directory:find("[fF]avourites/") then return false end
+    local path = favs.get_full_path(state.list[state.selected], state.directory)
+
+    local cursor = favs.get_selected_index()
+    if cmd.name == favs:get_id().."/move_up" then
+        move_favourite(path, -1)
+        favs.set_selected_index(cursor-1)
+    else
+        move_favourite(path, 1)
+        favs.set_selected_index(cursor+1)
+    end
+    update_browser()
+end
+
 update_favourites()
 mp.register_script_message("favourites/add_favourite", add_favourite)
 mp.register_script_message("favourites/remove_favourite", remove_favourite)
 mp.register_script_message("favourites/move_up", function(path) move_favourite(path, -1) end)
 mp.register_script_message("favourites/move_down", function(path) move_favourite(path, 1) end)
+
+favs.keybinds = {
+    { "F", "toggle_favourite", toggle_favourite, {}, },
+    { "Ctrl+UP", "move_up", move_key, {repeatable = true} },
+    { "Ctrl+DOWN", "move_down", move_key, {repeatable = true} },
+}
 
 return favs
