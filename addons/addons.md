@@ -13,11 +13,11 @@ Additionally, `method` refers to functions called using the `object:funct()` syn
 File-browser automatically loads any lua files from the `~~/script-modules/file-browser-addons` directory as modules.
 Each addon must return either a single parser table, or an array of parser tables. Each parser object must contain the following three members:
 
-| key       | type   | arguments | returns                    | description                                                                                                                 |
-|-----------|--------|-----------|----------------------------|-----------------------------------------------------------------------------------------------------------------------------|
-| priority  | number | -         | -                          | a number to determine what order parsers are tested - see [here](#priority-suggestions) for suggested values                |
-| can_parse | method | string    | boolean                    | returns whether or not the given path is compatible with the parser                                                         |
-| parse     | method | string    | list_table, opts_table     | returns an array of item_tables, and a table of options to control how file_browser handles the list                        |
+| key       | type   | arguments | returns                    | description                                                                                                |
+|-----------|--------|-----------|----------------------------|------------------------------------------------------------------------------------------------------------|
+| priority  | number | -         | -                        | a number to determine what order parsers are tested - see [here](#priority-suggestions) for suggested values |
+| can_parse | method | string    | boolean                    | returns whether or not the given path is compatible with the parser                                        |
+| parse     | method | string, parser_state_table | list_table, opts_table | returns an array of item_tables, and a table of options to control how file_browser handles the list |
 
 Additionally, each parser can optionally contain:
 
@@ -39,6 +39,28 @@ The first parser for which `can_parse` returns true will be selected as the pars
 The `parse` method will then be called on the selected parser, which is expected to return either a table of list items, or nil.
 If an empty table is returned then file-browser will treat the directory as empty, otherwise if the list_table is nil then file-browser will attempt to run `parse` on the next parser for which `can_parse` returns true.
 This continues until a parser returns a list_table, or until there are no more parsers, after which the root is loaded instead.
+
+The entire parse operation is run inside of a coroutine, this allows parsers to pause execution to handle asynchronous operations.
+However, if the user attempts to change directories while the coroutine is paused then file-browser will forcibly resume the coroutine until it dies.
+It is up to the addon writer to ensure that they can handle this situation.
+
+### Parser State Table
+
+The `parse` function is passed a state table as its second argument, this contains the following fields.
+
+| key    | type   | description                                   |
+|--------|--------|-----------------------------------------------|
+| source | string | the source of the parse request               |
+| co     | thread | the coroutine that parse is running inside of |
+
+Source can have the following values:
+
+| source         | description                                                     |
+|----------------|-----------------------------------------------------------------|
+| browser        | triggered by the main browser window                            |
+| loadlist       | the browser is scanning the directory to append to the playlist |
+| script-message | triggered by the `get-directory-contents` script-message        |
+| addon          | caused by an addon calling the `scan_directory` API function - note that addons can set a custom state |
 
 ### The List Array
 
@@ -174,13 +196,13 @@ include the methods, they are only available through the parser objects.
 | browse_directory             | function | string                       | -       | clears the cache and opens the given directory in the browser - if the browser is closed then open it                    |
 | update_directory             | function |                              | -       | rescans the current directory - equivalent to Ctrl+r without the cache refresh for higher level directories              |
 | clear_cache                  | function |                              | -       | clears the cache - use if modifying the contents of higher level directories                                             |
-| scan_directory               | function | string  | list_table, opts_table       | starts a new scan for the given directory - note that all parsers are called as normal, so beware infinite recursion     |
+| scan_directory               | function | string, parser_state_table | list_table, opts_table       | starts a new scan for the given directory - note that all parsers are called as normal, so beware infinite recursion     |
 
 ### Advanced Functions
 
-| key           | type     | arguments        | returns                 | description                                                                                                                                            |
-|---------------|----------|------------------|-------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| defer         | method   | string           | list_table, opts_table  | forwards the given directory to the next valid parser - can be used to redirect the browser or to modify the results of lower priority parsers         |
+| key           | type     | arguments        | returns                 | description                     |
+|---------------|----------|------------------|-------------------------|---------------------------------|
+| defer         | method   | string, parser_state_table | list_table, opts_table  | forwards the given directory to the next valid parser - can be used to redirect the browser or to modify the results of lower priority parsers |
 
 #### Using `defer`
 
