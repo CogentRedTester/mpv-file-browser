@@ -11,6 +11,7 @@ Keybinds are declared in the `~~/script-opts/file-browser-keybinds.json` file, t
 | key           | yes      | -          | the key to bind the command to - same syntax as input.conf                                 |
 | command       | yes      | -          | json array of commands and arguments                                                       |
 | name          | no       | numeric id | name of the script-binding - see [modifying default keybinds](#modifying-default-keybinds) |
+| flags         | no       | -          | flags to send to the mpv add_keybind function - see [here](https://mpv.io/manual/master/#lua-scripting-[,flags]]\)) |
 | filter        | no       | -          | run the command on just a file (`file`) or folder (`dir`)                                  |
 | parser        | no       | -          | run the command only in directories provided by the specified parser.                      |
 | multiselect   | no       | `false`    | command is run on all selected items                                                       |
@@ -48,6 +49,19 @@ The parser filter is for filtering keybinds to only work inside directories load
 There are two parsers in the base script, the default parser for native filesystems is called `file`, while the root parser is called `root`.
 Other parsers can be supplied by addons, and use the addon's filename with `-browser.lua` or just `.lua` stripped unless otherwise stated.
 For example `ftp-browser.lua` would have a parser called `ftp`.
+
+The `flags` field is mostly only useful for addons, but can also be useful if one wants a key to be repeatable.
+In this case the the keybind would look like the following:
+
+```json
+{
+    "key": "p",
+    "command": ["print-text", "spam-text"],
+    "flags": {
+        "repeatable": true
+    }
+}
+```
 
 ## Codes
 
@@ -102,7 +116,7 @@ This means the lower an item on the list, the higher preference it has.
 However, file-browser implements a layered passthrough system for its keybinds; if a keybind is blocked from running by user filters, then the next highest preference command will be sent, continuing until a command is sent or there are no more keybinds.
 The default dynamic keybinds are considered the lowest priority.
 
-The behaviour of multi-select commands is somewhat unreliable; generally they never run the next highest preference command, unless every selected item fails the filter.
+If a multi-select command is run on multiple items then passthrough will occur if any of the selected items fail the filters.
 
 Passthrough can be forcibly disabled or enabled using the passthrough option.
 When enabled passthrough will always be activate regardless of the state of the filters.
@@ -138,7 +152,6 @@ For example to change the scroll buttons from the arrows to the scroll wheel:
 
 Custom keybinds can be called using the same method, but users must set the `name` value inside the `file-browser-keybinds.json` file.
 To avoid conflicts custom keybinds use the format: `file_browser/dynamic/custom/[name]`.
-
 
 ## Examples
 
