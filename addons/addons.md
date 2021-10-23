@@ -167,7 +167,11 @@ These functions are only made available once file-browser has fully imported the
 | register_parseable_extension | function | string                       | -       | register a file extension that the browser will attempt to open, like a directory - for addons which can parse files     |
 | remove_parseable_extension   | function | string                       | -       | remove a file extension that the browser will attempt to open like a directory                                           |
 | add_default_extension        | function | string                       | -       | adds the given extension to the default extension filter whitelist - can only be run inside setup()                      |
-| insert_root_item             | method   | item_table, number(optional) | -       | add an item_table (must be a directory) to the root list at the specified position - if number is nil then append to end |
+| insert_root_item             | function | item_table, number(optional) | -       | add an item_table (must be a directory) to the root list at the specified position - if number is nil then append to end |
+| browse_directory             | function | string                       | -       | clears the cache and opens the given directory in the browser - if the browser is closed then open it                    |
+| update_directory             | function |                              | -       | rescans the current directory - equivalent to Ctrl+r without the cache refresh for higher level directories              |
+| clear_cache                  | function |                              | -       | clears the cache - use if modifying the contents of higher level directories                                             |
+| scan_directory               | function | string  | list_table, opts_table       | starts a new scan for the given directory - note that all parsers are called as normal, so beware infinite recursion     |
 
 ### Advanced Functions
 
@@ -192,17 +196,18 @@ The following are a list of recommendations that will increase the compatability
 
 ### Utility Functions
 
-| key           | type     | arguments        | returns                 | description                                                                                                                                            |
-|---------------|----------|------------------|-------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| fix_path      | function | string, boolean  | string                  | takes a path and an is_directory boolean and returns a corrected path                                                                                  |
-| join_path     | function | string, string   | string                  | a wrapper for mp.utils.join_path which adds support for network protocols                                                                              |
-| ass_escape    | function | string           | string                  | returns the string with escaped ass styling codes                                                                                                      |
-| get_extension | function | string           | string                  | returns the file extension of the given file - returns nil if file has no extension                                                                    |
-| get_protocol  | function | string           | string                  | returns the protocol scheme of the given url (https, ftp, etc) - returns nil if path has no url scheme                                                 |
-| valid_file    | function | string           | boolean                 | tests if the given filename passes the user set filters (valid extensions and dot files)                                                               |
-| valid_dir     | function | string           | boolean                 | tests if the given directory name passes the user set filters (dot directories)                                                                        |
-| filter        | function | list_table       | list_table              | iterates through the given list and removes items that don't pass the filters - acts directly on the given list, it does not create a copy             |
-| sort          | function | list_table       | list_table              | iterates through the given list and sorts the items using file-browsers sorting algorithm - acts directly on the given list, it does not create a copy |
+| key           | type     | arguments        | returns    | description                                                                                                                                            |
+|---------------|----------|------------------|------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
+| fix_path      | function | string, boolean  | string     | takes a path and an is_directory boolean and returns a corrected path                                                                                  |
+| join_path     | function | string, string   | string     | a wrapper for mp.utils.join_path which adds support for network protocols                                                                              |
+| get_full_path | function | item_table, string | string   | returns the full path of a given item for a given directory - takes into account item.name/item.path, etc                                              |
+| ass_escape    | function | string           | string     | returns the string with escaped ass styling codes                                                                                                      |
+| get_extension | function | string           | string     | returns the file extension of the given file - returns nil if file has no extension                                                                    |
+| get_protocol  | function | string           | string     | returns the protocol scheme of the given url (https, ftp, etc) - returns nil if path has no url scheme                                                 |
+| valid_file    | function | string           | boolean    | tests if the given filename passes the user set filters (valid extensions and dot files)                                                               |
+| valid_dir     | function | string           | boolean    | tests if the given directory name passes the user set filters (dot directories)                                                                        |
+| filter        | function | list_table       | list_table | iterates through the given list and removes items that don't pass the filters - acts directly on the given list, it does not create a copy             |
+| sort          | function | list_table       | list_table | iterates through the given list and sorts the items using file-browsers sorting algorithm - acts directly on the given list, it does not create a copy |
 
 ### Getters
 
@@ -228,6 +233,12 @@ All tables returned by these functions are copies to ensure addons can't break t
 | get_selected_item          | function | -         | table   | returns the item_table of the currently selected item - returns nil if no item is selected (empty list)               |
 | get_open_status            | function | -         | boolean | returns true if the browser is currently open and false if not                                                        |
 | get_state                  | function | -         | table   | the current state values of the browser - this is probably useless                                                    |
+
+### Setters
+
+| key                        | type     | arguments | returns | description                                                                                                           |
+|----------------------------|----------|-----------|---------|-----------------------------------------------------------------------------------------------------------------------|
+| set_selected_index         | function | -         | number or bool  | sets the cursor position - if the position is not a number return false, if the position is out of bounds move it in bounds, returns the new index |
 
 ## Examples
 

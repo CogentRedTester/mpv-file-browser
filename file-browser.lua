@@ -353,9 +353,17 @@ parser_mt.filter = filter
 parser_mt.sort = sort
 parser_mt.ass_escape = ass_escape
 parser_mt.fix_path = fix_path
+parser_mt.get_full_path = get_full_path
 parser_mt.get_extension = get_extension
 parser_mt.get_protocol = get_protocol
 parser_mt.join_path = join_path
+
+function parser_mt.clear_cache() cache:clear() end
+
+--we will set these functions once they are declared later in the script
+parser_mt.update_ass = nil
+parser_mt.scan_directory = nil
+parser_mt.rescan_directory = nil
 
 --providing getter and setter functions so that addons can't modify things directly
 function parser_mt.get_script_opts() return copy_table(o) end
@@ -374,6 +382,14 @@ function parser_mt.get_selected_index() return state.selected end
 function parser_mt.get_selected_item() return copy_table(state.list[state.selected]) end
 function parser_mt.get_open_status() return not state.hidden end
 
+function parser_mt.set_selected_index(index)
+    if type(index) ~= "number" then return false end
+    if index < 1 then index = 1 end
+    if index > #state.list then index = #state.list end
+    state.selected = index
+    return index
+end
+
 function parser_mt:get_index() return parser_index[self] end
 function parser_mt:get_id() return parser_ids[self] end
 
@@ -385,8 +401,8 @@ function parser_mt.remove_parseable_extension(ext) parseable_extensions[ext] = n
 function parser_mt.add_default_extension(ext) table.insert(compatible_file_extensions, ext) end
 
 --add item to root at position pos
-function parser_mt:insert_root_item(item, pos)
-    msg.verbose(self.name..":", "adding item to root")
+function parser_mt.insert_root_item(item, pos)
+    msg.verbose("adding item to root", item.label or item.name)
     item.ass = item.ass or ass_escape(item.label or item.name)
     item.type = "dir"
     table.insert(root, pos or (#root + 1), item)
@@ -644,6 +660,7 @@ local function update_ass()
     if overflow then append('\\N'..o.ass_footerheader..#state.list-finish..' item(s) remaining') end
     ass:update()
 end
+parser_mt.update_ass = update_ass
 
 
 
@@ -778,6 +795,7 @@ local function scan_directory(directory)
     if not opts.sorted then sort(list) end
     return list, opts
 end
+parser_mt.scan_directory = scan_directory
 
 --sends update requests to the different parsers
 local function update_list()
@@ -854,6 +872,7 @@ local function update(moving_adjacent)
     update_list()
     update_ass()
 end
+parser_mt.rescan_directory = update
 
 --loads the root list
 local function goto_root()
@@ -958,6 +977,21 @@ local function escape()
     end
     close()
 end
+
+--opens a specific directory
+local function browse_directory(directory)
+    if not directory then return end
+    directory = mp.command_native({"expand-path", directory}, "")
+    if directory ~= "" then directory = fix_path(directory, true) end
+    msg.verbose('recieved directory from script message: '..directory)
+
+    if directory == "dvd://" then directory = dvd_device end
+    state.directory = directory
+    cache:clear()
+    open()
+    update()
+end
+parser_mt.browse_directory = browse_directory
 
 
 
@@ -1397,20 +1431,6 @@ end)
 
 --declares the keybind to open the browser
 mp.add_key_binding('MENU','browse-files', toggle)
-
---opens a specific directory
-local function browse_directory(directory)
-    if not directory then return end
-    directory = mp.command_native({"expand-path", directory}, "")
-    if directory ~= "" then directory = fix_path(directory, true) end
-    msg.verbose('recieved directory from script message: '..directory)
-
-    if directory == "dvd://" then directory = dvd_device end
-    state.directory = directory
-    cache:clear()
-    open()
-    update()
-end
 
 --allows keybinds/other scripts to auto-open specific directories
 mp.register_script_message('browse-directory', browse_directory)
