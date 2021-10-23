@@ -11,6 +11,7 @@ Keybinds are declared in the `~~/script-opts/file-browser-keybinds.json` file, t
 | key           | yes      | -          | the key to bind the command to - same syntax as input.conf                                 |
 | command       | yes      | -          | json array of commands and arguments                                                       |
 | name          | no       | numeric id | name of the script-binding - see [modifying default keybinds](#modifying-default-keybinds) |
+| flags         | no       | -          | flags to send to the mpv add_keybind function - see [here](https://mpv.io/manual/master/#lua-scripting-[,flags]]\)) |
 | filter        | no       | -          | run the command on just a file (`file`) or folder (`dir`)                                  |
 | parser        | no       | -          | run the command only in directories provided by the specified parser.                      |
 | multiselect   | no       | `false`    | command is run on all selected items                                                       |
@@ -48,6 +49,19 @@ The parser filter is for filtering keybinds to only work inside directories load
 There are two parsers in the base script, the default parser for native filesystems is called `file`, while the root parser is called `root`.
 Other parsers can be supplied by addons, and use the addon's filename with `-browser.lua` or just `.lua` stripped unless otherwise stated.
 For example `ftp-browser.lua` would have a parser called `ftp`.
+
+The `flags` field is mostly only useful for addons, but can also be useful if one wants a key to be repeatable.
+In this case the the keybind would look like the following:
+
+```json
+{
+    "key": "p",
+    "command": ["print-text", "spam-text"],
+    "flags": {
+        "repeatable": true
+    }
+}
+```
 
 ## Codes
 
