@@ -803,7 +803,13 @@ local function scan_directory(directory, state)
     if not opts.sorted then sort(list) end
     return list, opts
 end
-API_mt.scan_directory = scan_directory
+
+--a wrapper around scan_directory for addon API
+function API_mt.scan_directory(directory, state)
+    if not state then state = { source = "addon" }
+    elseif not state.source then state.source = "addon" end
+    return scan_directory(directory, state)
+end
 
 --sends update requests to the different parsers
 local function update_list()
