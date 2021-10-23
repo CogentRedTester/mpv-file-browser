@@ -25,7 +25,8 @@ Additionally, each parser can optionally contain:
 |---------------|--------|-----------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | name          | string | -         | -       | the name of the parser used for debug messages and to create a unique id - by default uses the filename with `.lua` or `-browser.lua` removed                   |
 | keybind_name  | string | -         | -       | the name to use when setting custom keybind filters - uses the value of name by default but can be set manually so that the same keys work with multiple addons |
-| setup         | method | -         | -       | If it exists this method is automatically run after all parsers are imported and API functions are made available                                               |
+| setup         | method | -         | -       | if it exists this method is automatically run after all parsers are imported and API functions are made available                                               |
+| keybinds      | table  | -         | -       | an array of keybind objects for the browser to set when loading - see [#keybinds]                                                                               |
 
 All parsers are given a unique string ID based on their name. If there are collisions then numbers are appended to the end of the name until a free name is found.
 These IDs are primarily used for debug messages, though they may gain additional functionality in the future.
@@ -95,6 +96,65 @@ Below is a table of suggested priority ranges:
 | 101-109| replacements for the native file parser or fallbacks for the full parsers                                                  | [powershell](powershell.lua)                   |
 | 110    | priority of the native file parser - don't use                                                                             |                                                |
 | 111+   | fallbacks for native parser - potentially alternatives to the default root                                                 |                                                |
+
+## Keybinds
+
+Addons have the ability to set custom keybinds using the `keybinds` field in the `parser` table. `keybinds` must be an array of tables, each of which may be in two forms.
+
+Firstly, the keybind_table may be in the form
+`{ "key", "name", [function], [flags] }`
+where the table is an array whose four values corresond to the four arguments for the [mp.add_key_binding](https://mpv.io/manual/master/#lua-scripting-[,flags]]\)) API function.
+Secondly, the keybind_table may use the same formatting as file-browser's [custom-keybinds](../custom-keybinds.md).
+Using the array form is equivalent to setting `key`, `name`, `command`, and `flags` of the custom-keybind form, and leaving everything else on the defaults.
+
+These keybinds are evaluated only once shortly after the addon is loaded, they cannot be modified dynamically during runtime.
+Keybinds are applied after the default keybinds, but before the custom keybinds. This means that addons can overwrite the
+default keybinds, but that users can ovewrite addon keybinds. Among addons, those with higher priority numbers have their keybinds loaded before those
+with lower priority numbers. Remember that a lower priority value is better.
+Keybind passthrough works the same way, though there is some custom behaviour when it comes to [raw functions](#keybind-functions).
+
+### Keybind Names
+
+In either form the naming of the function is different from custom keybinds. Instead of using the form `file_browser/dynamic/custom/[name]`
+they use the form `file_browser/dynamic/[parser_ID]/[name]`, where `[parser_id]` is a unique string ID for the parser, which can be retrieved using the
+`parser:get_id()` method.
+
+### Keybind Functions
+
+In the array form, the 3rd argument is a function to be executed, and in the custom-keybind form the `command` field is a table of mpv input commands to run.
+However, addons have the option to use either command type for either form, so functions can be placed inside the `command` field, and mpv command strings can be
+placed inside the 3rd cell of the array.
+
+#### Function Call
+
+If one uses the raw function then the functions are called directly in the form:
+
+`fn(keybind, state, coroutine)`
+
+Where `keybind` is the keybind_table of the key being run, `state` is a table of state values at the time of the key press, and `coroutine` is the coroutine object
+that the keybind is being executed inside. Note that even if the array form is used, the `keybind` table will still use the custom-keybind format.
+
+The entire process of running a keybind is handled with a coroutine, so the addon can safely pause and resume the coroutine at will. The `state` table is provided to
+allow addons to keep a record of important state values that may be changed during a paused coroutine.
+
+#### Passthrough
+
+When using a raw function none of the filters will work, it is up to the addon to ensure that their behaviour is correct.
+If the `passthrough` field of the keybind_table is not set, then without filters passthrough behaviour will depend on the return value of the function.
+In order to tell the keybind handler to run the next priority command, the keybind function simply needs to return the value `false` (`nil` is not valid).
+
+#### State Table
+
+The state table contains copies of the following values at the time of the key press:
+
+| key             | description                                                                              |
+|-----------------|------------------------------------------------------------------------------------------|
+| directory       | the current directory                                                                    |
+| directory_label | the current directory_label                                                              |
+| list            | the current list_table                                                                   |
+| selected        | index of the currently selected list item                                                |
+| selection       | table of currently selected items (for multi-select) - in the form { index = true, ... } |
+| parser          | a copy of the parser object that provided the current directory                          |
 
 ## API Functions
 
