@@ -1045,7 +1045,7 @@ local function custom_loadlist_recursive(directory, flag)
             else
                 local path = get_full_path(item, directory)
 
-                msg.warn("Appending", path, "to the playlist")
+                msg.verbose("Appending", path, "to the playlist")
                 mp.commandv("loadfile", path, flag)
                 flag = "append"
             end
@@ -1074,7 +1074,7 @@ local function loadlist(path, flag)
 end
 
 --load playlist entries before and after the currently playing file
-local function autoload_dir(path, state)
+local function autoload_dir(path)
     local pos = 1
     local file_count = 0
     for _,item in ipairs(state.list) do
@@ -1119,7 +1119,7 @@ local function open_file_coroutine(flag, autoload)
         --the currently selected file will be loaded according to the flag
         --the flag variable will be switched to append once a file is loaded
         for i=1, #selection do
-            if loadfile(selection[i], flag, directory) then flag = "append" end
+            if loadfile(selection[i], flag, autoload, directory) then flag = "append" end
         end
 
         disable_select_mode()
