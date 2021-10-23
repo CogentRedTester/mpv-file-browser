@@ -1227,7 +1227,11 @@ local function run_keybind_coroutine(key)
         parser = state.parser,
         empty_text = state.empty_text
     }
-    assert(coroutine.resume(co, key, state_copy, co))
+    local success, err = coroutine.resume(co, key, state_copy, co)
+    if not success then
+        msg.error("error running keybind:", utils.to_string(key))
+        msg.error(err)
+    end
 end
 
 --scans the given command table to identify if they contain any custom keybind codes
