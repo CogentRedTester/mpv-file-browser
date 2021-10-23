@@ -24,7 +24,7 @@ function urldecode:can_parse(directory)
 end
 
 function urldecode:parse(directory, ...)
-    local list, opts = self:defer(directory)
+    local list, opts = self:defer(directory, ...)
     if opts.directory and not self.get_protocol(opts.directory) then return list, opts end
 
     opts.directory_label = decodeURI(opts.directory_label or (opts.directory or directory))
