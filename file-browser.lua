@@ -414,14 +414,14 @@ function API_mt.insert_root_item(item, pos)
 end
 
 --parses the given directory or defers to the next parser if nil is returned
-local function choose_and_parse(directory, index)
+local function choose_and_parse(directory, index, state)
     msg.debug("finding parser for", directory)
     local parser, list, opts
     while list == nil and not ( opts and opts.already_deferred ) and index <= #parsers do
         parser = parsers[index]
         if parser:can_parse(directory) then
             msg.trace("attempting parser:", parser:get_id())
-            list, opts = parser:parse(directory)
+            list, opts = parser:parse(directory, state)
         end
         index = index + 1
     end
@@ -434,9 +434,9 @@ local function choose_and_parse(directory, index)
 end
 
 --runs choose_and_parse starting from the next parser
-function parser_mt:defer(directory)
+function parser_mt:defer(directory, state)
     msg.trace("deferring to other parsers...")
-    local list, opts = choose_and_parse(directory, self:get_index() + 1)
+    local list, opts = choose_and_parse(directory, self:get_index() + 1, state)
     opts.already_deferred = true
     return list, opts
 end
@@ -788,11 +788,14 @@ local function select_prev_directory()
 end
 
 --moves through valid parsers until a one returns a list
-local function scan_directory(directory)
+local function scan_directory(directory, state)
     if directory == "" then return root_parser:parse() end
 
     msg.verbose("scanning files in", directory)
-    local list, opts = choose_and_parse(directory, 1)
+    state.co = coroutine.running()
+    if not state.co then msg.warn("scan_directory should be executed from within a coroutine") ; return end
+
+    local list, opts = choose_and_parse(directory, 1, state)
 
     if list == nil then msg.debug("no successful parsers found"); return nil end
     opts.parser = parsers[opts.index]
@@ -819,7 +822,7 @@ local function update_list()
         return
     end
 
-    local list, opts = scan_directory(state.directory)
+    local list, opts = scan_directory(state.directory, { source = "browser" })
 
     --apply fallbacks if the scan failed
     if not list and cache[1] then
@@ -874,8 +877,16 @@ local function update(moving_adjacent)
     disable_select_mode()
     update_ass()
     state.empty_text = "empty directory"
-    update_list()
-    update_ass()
+
+    --if opening a new directory we want to clear the previous coroutine if it is still running
+    --it is up to addon authors to be able to handle this forced resumption
+    while (state.co and coroutine.status(state.co) ~= "dead") do
+        local success, err = coroutine.resume(state.co)
+        if not success then msg.error(err) end
+    end
+    state.co = coroutine.create(function() update_list(); update_ass() end)
+    local success, err = coroutine.resume(state.co)
+    if not success then msg.error(err) end
 end
 API_mt.rescan_directory = update
 
@@ -1007,7 +1018,7 @@ API_mt.browse_directory = browse_directory
 
 --recursive function to load directories using the script custom parsers
 local function custom_loadlist_recursive(directory, flag)
-    local list, opts = scan_directory(directory)
+    local list, opts = scan_directory(directory, { source = "loadlist" })
     if list == root then return end
 
     --if we can't parse the directory then append it and hope mpv fares better
@@ -1057,7 +1068,7 @@ local function loadlist(path, flag)
 end
 
 --load playlist entries before and after the currently playing file
-local function autoload_dir(path)
+local function autoload_dir(path, state)
     local pos = 1
     local file_count = 0
     for _,item in ipairs(state.list) do
@@ -1072,8 +1083,8 @@ local function autoload_dir(path)
 end
 
 --runs the loadfile or loadlist command
-local function loadfile(item, flag, autoload)
-    local path = get_full_path(item)
+local function loadfile(item, flag, autoload, directory)
+    local path = get_full_path(item, directory)
     if item.type == "dir" or parseable_extensions[ get_extension(item.name) ] then return loadlist(path, flag) end
 
     if sub_extensions[ get_extension(item.name) ] then
@@ -1085,32 +1096,45 @@ local function loadfile(item, flag, autoload)
     end
 end
 
---opens the selelected file(s)
-local function open_file(flag, autoload)
+--handles the open options as a coroutine
+--once loadfile has been run we can no-longer guarantee synchronous execution - the state values may change
+--therefore, we must ensure that any state values that could be used after a loadfile call are saved beforehand
+local function open_file_coroutine(flag, autoload)
     if not state.list[state.selected] then return end
     if flag == 'replace' then close() end
+    local directory = state.directory
 
     --handles multi-selection behaviour
     if next(state.selection) then
         local selection = sort_keys(state.selection)
+        --reset the selection after
+        state.selection = {}
 
         --the currently selected file will be loaded according to the flag
         --the flag variable will be switched to append once a file is loaded
         for i=1, #selection do
-            if loadfile(selection[i], flag) then flag = "append" end
+            if loadfile(selection[i], flag, directory) then flag = "append" end
         end
 
-        --reset the selection after
-        state.selection = {}
         disable_select_mode()
         update_ass()
 
     elseif flag == 'replace' then
-        loadfile(state.list[state.selected], flag, autoload ~= o.autoload)
+        loadfile(state.list[state.selected], flag, autoload ~= o.autoload, directory)
         down_dir()
         close()
     else
-        loadfile(state.list[state.selected], flag)
+        loadfile(state.list[state.selected], flag, directory)
+    end
+end
+
+--opens the selelected file(s)
+local function open_file(flag, autoload_dir)
+    local co = coroutine.create(open_file_coroutine)
+
+    local success, err = coroutine.resume(co, flag, autoload_dir)
+    if not success then
+        msg.error(err)
     end
 end
 
@@ -1414,6 +1438,52 @@ setup_keybinds()
 
 
 ------------------------------------------------------------------------------------------
+------------------------------Other Script Compatability----------------------------------
+------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+
+function scan_directory_json(directory, response_str)
+    if not directory then msg.error("did not receive a directory string"); return end
+    if not response_str then msg.error("did not receive a response string"); return end
+
+    directory = mp.command_native({"expand-path", directory}, "")
+    if directory ~= "" then directory = fix_path(directory, true) end
+    msg.verbose(("recieved %q from 'get-directory-contents' script message - returning result to %q"):format(directory, response_str))
+
+    local list, opts = scan_directory(directory, { source = "script-message" } )
+
+    --removes invalid json types from the parser object
+    if opts.parser then
+        opts.parser = copy_table(opts.parser)
+        for key, value in pairs(opts.parser) do
+            if type(value) == "function" then
+                opts.parser[key] = nil
+            end
+        end
+    end
+
+    local err, err2
+    list, err = utils.format_json(list)
+    if not list then msg.error(err) end
+
+    opts, err2 = utils.format_json(opts)
+    if not opts then msg.error(err2) end
+
+    mp.commandv("script-message", response_str, list or "", opts or "")
+end
+
+local input = nil
+
+if pcall(function() input = require "user-input-module" end) then
+    mp.add_key_binding("Alt+o", "browse-directory/get-user-input", function()
+        input.get_user_input(browse_directory, {request_text = "open directory:"})
+    end)
+end
+
+
+
+
+------------------------------------------------------------------------------------------
 --------------------------------mpv API Callbacks-----------------------------------------
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
@@ -1444,44 +1514,8 @@ mp.register_script_message('browse-directory', browse_directory)
 
 --allows other scripts to request directory contents from file-browser
 mp.register_script_message("get-directory-contents", function(directory, response_str)
-    if not directory then msg.error("did not receive a directory string"); return end
-    if not response_str then msg.error("did not receive a response string"); return end
-
-    directory = mp.command_native({"expand-path", directory}, "")
-    if directory ~= "" then directory = fix_path(directory, true) end
-    msg.verbose(("recieved %q from 'get-directory-contents' script message - returning result to %q"):format(directory, response_str))
-
-    local list, opts = scan_directory(directory)
-
-    --removes invalid json types from the parser object
-    if opts.parser then
-        opts.parser = copy_table(opts.parser)
-        for key, value in pairs(opts.parser) do
-            if type(value) == "function" then
-                opts.parser[key] = nil
-            end
-        end
-    end
-
-    local err, err2
-    list, err = utils.format_json(list)
-    if not list then msg.error(err) end
-
-    opts, err2 = utils.format_json(opts)
-    if not opts then msg.error(err2) end
-
-    mp.commandv("script-message", response_str, list or "", opts or "")
+    local co = coroutine.create(scan_directory_json)
+    local success, err = coroutine.resume(co, directory, response_str)
+    if not success then return err end
 end)
 
-------------------------------------------------------------------------------------------
-----------------------------mpv-user-input Compatability----------------------------------
-------------------------------------------------------------------------------------------
-------------------------------------------------------------------------------------------
-
-local input = nil
-
-if pcall(function() input = require "user-input-module" end) then
-    mp.add_key_binding("Alt+o", "browse-directory/get-user-input", function()
-        input.get_user_input(browse_directory, {request_text = "open directory:"})
-    end)
-end
