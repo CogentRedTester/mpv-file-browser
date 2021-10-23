@@ -1199,10 +1199,11 @@ end
 --of keybinds with the same key value
 local function run_keybind_recursive(keybind, state, co)
     --these are for the default keybinds, or from addons which use direct functions
-    local fn = type(keybind.command) == "function" and keybind.command or custom_command
+    local addon_fn = type(keybind.command) == "function"
+    local fn = addon_fn and keybind.command or custom_command
 
     if keybind.passthrough ~= nil then
-        fn(keybind, state, co)
+        fn(keybind, addon_fn and copy_table(state) or state, co)
         if keybind.passthrough == true and keybind.prev_key then
             run_keybind_recursive(keybind.prev_key, state, co)
         end
@@ -1225,7 +1226,6 @@ local function run_keybind_coroutine(key)
         selected = state.selected,
         selection = copy_table(state.selection),
         parser = state.parser,
-        empty_text = state.empty_text
     }
     local success, err = coroutine.resume(co, key, state_copy, co)
     if not success then
@@ -1275,7 +1275,8 @@ local function setup_keybinds()
 
     --this loads keybinds from addons
     if o.addons then
-        for _, parser in ipairs(parsers) do
+        for i = #parsers, 1, -1 do
+            local parser = parsers[i]
             if parser.keybinds then
                 for i, keybind in ipairs(parser.keybinds) do
                     --if addons use the native array command format, then we need to convert them over to the custom command format
