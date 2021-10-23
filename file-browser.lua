@@ -1268,19 +1268,6 @@ end
 local function setup_keybinds()
     if not o.custom_keybinds and not o.addons then return end
 
-    local json
-    if o.custom_keybinds then
-        local path = mp.command_native({"expand-path", "~~/script-opts"}).."/file-browser-keybinds.json"
-        local custom_keybinds, err = assert(io.open( path ))
-        if not custom_keybinds then return msg.error(err) end
-
-        json = custom_keybinds:read("*a")
-        custom_keybinds:close()
-
-        json = utils.parse_json(json)
-        if not json then return error("invalid json syntax for "..path) end
-    end
-
     --this is to make the default keybinds compatible with passthrough from custom keybinds
     for _, keybind in ipairs(state.keybinds) do
         top_level_keys[keybind[1]] = { key = keybind[1], name = keybind[2], command = keybind[3], flags = keybind[4] }
@@ -1302,7 +1289,18 @@ local function setup_keybinds()
         end
     end
 
+    --loads custom keybinds from file-browser-keybinds.json
     if o.custom_keybinds then
+        local path = mp.command_native({"expand-path", "~~/script-opts"}).."/file-browser-keybinds.json"
+        local custom_keybinds, err = io.open( path )
+        if not custom_keybinds then return error(err) end
+
+        local json = custom_keybinds:read("*a")
+        custom_keybinds:close()
+
+        json = utils.parse_json(json)
+        if not json then return error("invalid json syntax for "..path) end
+
         for i, keybind in ipairs(json) do
             keybind.name = "custom/"..(keybind.name or tostring(i))
             insert_custom_keybind(keybind)
