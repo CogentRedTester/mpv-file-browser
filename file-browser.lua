@@ -335,6 +335,7 @@ local API_mt = {}
 local parser_mt = {}
 package.loaded["file-browser"] = API_mt
 setmetatable(parser_mt, {__index = API_mt})
+parser_mt.__index = parser_mt
 
 --create a unique id for the given parser
 local existing_ids = {}
@@ -451,7 +452,7 @@ local function setup_addon(file, path)
     if addon_parsers.priority then addon_parsers = {addon_parsers} end
 
     for _, parser in ipairs(addon_parsers) do
-        parser = setmetatable(parser, { __index = parser_mt })
+        parser = setmetatable(parser, parser_mt)
         parser.name = parser.name or file:gsub("%-browser%.lua$", ""):gsub("%.lua$", "")
         set_parser_id(parser)
 
