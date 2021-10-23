@@ -1437,6 +1437,7 @@ end)
 
 --declares the keybind to open the browser
 mp.add_key_binding('MENU','browse-files', toggle)
+mp.add_key_binding('Ctrl+o','open-browser', open)
 
 --allows keybinds/other scripts to auto-open specific directories
 mp.register_script_message('browse-directory', browse_directory)

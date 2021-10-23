@@ -10,11 +10,12 @@ This script requires at least mpv v0.31.
 
 ## Keybinds
 
-The following keybind is set by default
+The following keybinds are set by default
 
 | Key         | Name          | Description                                                                   |
 |-------------|---------------|-------------------------------------------------------------------------------|
 | MENU        | browse-files  | toggles the browser                                                           |
+| Ctrl+o      | open-browser  | opens the browser                                                             |
 
 The following dynamic keybinds are only set while the browser is open:
 
