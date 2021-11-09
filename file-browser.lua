@@ -1130,7 +1130,7 @@ local function open_file_coroutine(flag, autoload)
         down_dir()
         close()
     else
-        loadfile(state.list[state.selected], flag, directory)
+        loadfile(state.list[state.selected], flag, false, directory)
     end
 end
 
