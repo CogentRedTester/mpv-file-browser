@@ -251,6 +251,7 @@ All tables returned by these functions are copies to ensure addons can't break t
 | get_parsers                | function | -         | table   | an array of the loaded parsers                                                                                        |
 | get_dvd_device             | function | -         | string  | the current dvd-device - formatted to work with file-browser                                                          |
 | get_directory              | function | -         | string  | the current directory open in the browser - formatted to work with file-browser                                       |
+| get_list                   | function | -         | table   | the list_table for the currently open directory                                                                       |
 | get_current_file           | function | -         | table   | a table containing the path of the current open file - in the form {directory = "", name = ""}                        |
 | get_current_parser         | function | -         | string  | the unique id of the parser used for the currently open directory                                                     |
 | get_current_parser_keyname | function | -         | string  | the string name of the parser used for the currently open directory - as used by custom keybinds                      |
