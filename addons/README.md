@@ -50,6 +50,10 @@ Implements a virtual directory of favourited files and folders.
 **powershell**  
 Read the contents of select drives using powershell instead of the inbuilt mpv API.
 
+**find**  
+Allows one to search the contents of the directory with `Ctrl+f`. Use `Ctrl+F` for Lua pattern support. Use `n` to cycle through results.
+Requires [mpv-user-input](https://github.com/CogentRedTester/mpv-user-input).
+
 **[dvd-browser](https://github.com/CogentRedTester/mpv-dvd-browser)**  
 This script implements support for DVD titles using the `lsdvd` commandline utility.
 When playing a dvd, or when moving into the `--dvd-device` directory, the add-on loads up the DVD titles.
