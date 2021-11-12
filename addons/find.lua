@@ -46,23 +46,32 @@ local function main(key, state, co)
         query = query:gsub("([%^%$%(%)%%%.%[%]%*%+%-])", "%%%1")
     end
 
-    --keep cycling through the search results if any are found
-    repeat
-        local found_result
-        for index, item in ipairs(state.list) do
-            if (compare(item.label or item.name, query)) then
-                found_result = true
-                browser.set_selected_index(index)
-                latest_coroutine = co
-                coroutine.yield()
+    local results = {}
 
-                if browser.get_directory() ~= state.directory then
-                    latest_coroutine = nil
-                    return
-                end
+    for index, item in ipairs(state.list) do
+        if compare(item.label or item.name, query) then
+            table.insert(results, index)
+        end
+    end
+
+    if (#results < 1) then
+        msg.warn("No matching items for '"..query.."'")
+        return
+    end
+
+    --keep cycling through the search results if any are found
+    while (true) do
+        for _, index in ipairs(results) do
+            browser.set_selected_index(index)
+            latest_coroutine = co
+            coroutine.yield()
+
+            if browser.get_directory() ~= state.directory then
+                latest_coroutine = nil
+                return
             end
         end
-    until not found_result
+    end
 end
 
 local function step_find()
