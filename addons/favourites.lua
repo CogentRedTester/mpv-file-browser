@@ -40,7 +40,7 @@ function favs:setup()
     for _, item in ipairs(root) do
         if item.name:find("Favourites/?$") then fav_exists = true end
     end
-    if not fav_exists then self:insert_root_item({name = "Favourites/", label = "Favourites"}, 1) end
+    if not fav_exists then self.insert_root_item({name = "Favourites/", label = "Favourites"}, 1) end
 end
 
 local function update_favourites()
