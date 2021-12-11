@@ -41,9 +41,6 @@ Decodes URL directories to make them more readable. Does not decode the names of
 **m3u-browser**  
 Adds limitted support for m3u playlists. Requires that [mpv-read-file](https://github.com/CogentRedTester/mpv-read-file) be installed.
 
-**archive-browser**  
-Adds support for archive formats like `zip` and `7z`
-
 **favourites**  
 Implements a virtual directory of favourited files and folders.
 
