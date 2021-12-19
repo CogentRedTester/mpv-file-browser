@@ -182,13 +182,13 @@ local __cache = {}
 --inserts latest state values onto the cache stack
 function __cache:push()
     table.insert(self, {
-        directory = state.directory,
-        directory_label = state.directory_label,
-        list = state.list,
-        selected = state.selected,
-        selection = state.selection,
-        parser = state.parser,
-        empty_text = state.empty_text
+        directory = state.directory or false,
+        directory_label = state.directory_label or false,
+        list = state.list or false,
+        selected = state.selected or false,
+        selection = state.selection or false,
+        parser = state.parser or false,
+        empty_text = state.empty_text or false
     })
 end
 
@@ -198,7 +198,8 @@ end
 
 function __cache:apply()
     for key, value in pairs(self[#self]) do
-        state[key] = value
+        if value then state[key] = value
+        else state[key] = nil end
     end
 end
 
