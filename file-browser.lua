@@ -77,7 +77,7 @@ local o = {
 
     font_name_header = "",
     font_name_body = "",
-    font_name_wrapper = "",
+    font_name_wrappers = "",
     font_name_folder = "",
     font_name_cursor = ""
 }
@@ -94,7 +94,7 @@ local style = {
     -- full line styles
     header = ([[{\r\q2\fs%d\c&00ccff&\fn%s}]]):format(o.font_size_header, o.font_name_header),
     body = ([[{\r\q2\fs%d\c&Hffffff&\fn%s}]]):format(o.font_size_body, o.font_name_body),
-    footer_header = ([[{\r\q2\fs%d\c&00ccff&\fn%s}]]):format(o.font_size_wrappers, o.font_name_wrapper),
+    footer_header = ([[{\r\q2\fs%d\c&00ccff&\fn%s}]]):format(o.font_size_wrappers, o.font_name_wrappers),
 
     --small section styles (for colours)
     multiselect = ([[{\c&Hfcad88&}]]),
