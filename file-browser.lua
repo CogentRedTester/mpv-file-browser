@@ -254,6 +254,11 @@ local function ass_escape(str)
     return str
 end
 
+--escape lua pattern characters
+local function pattern_escape(str)
+    return str:gsub("([%^%$%(%)%%%.%[%]%*%+%-])", "%%%1")
+end
+
 --standardises filepaths across systems
 local function fix_path(str, is_directory)
     str = str:gsub([[\]],[[/]])
@@ -386,6 +391,7 @@ API_mt.valid_dir = valid_dir
 API_mt.filter = filter
 API_mt.sort = sort
 API_mt.ass_escape = ass_escape
+API_mt.pattern_escape = pattern_escape
 API_mt.fix_path = fix_path
 API_mt.get_full_path = get_full_path
 API_mt.get_extension = get_extension
@@ -1442,12 +1448,12 @@ local function setup_extensions_list()
     end
 
     --adding extra extensions on the whitelist
-    for str in string.gmatch(o.extension_whitelist, "([^"..o.root_seperators.."]+)") do
+    for str in string.gmatch(o.extension_whitelist, "([^"..pattern_escape(o.root_seperators).."]+)") do
         extensions[str] = true
     end
 
     --removing extensions that are in the blacklist
-    for str in string.gmatch(o.extension_blacklist, "([^"..o.root_seperators.."]+)") do
+    for str in string.gmatch(o.extension_blacklist, "([^"..pattern_escape(o.root_seperators).."]+)") do
         extensions[str] = nil
     end
 end
@@ -1455,7 +1461,7 @@ end
 --splits the string into a table on the semicolons
 local function setup_root()
     root = {}
-    for str in string.gmatch(o.root, "([^"..o.root_seperators.."]+)") do
+    for str in string.gmatch(o.root, "([^"..pattern_escape(o.root_seperators).."]+)") do
         local path = mp.command_native({'expand-path', str})
         path = fix_path(path, true)
 
