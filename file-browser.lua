@@ -70,15 +70,10 @@ local o = {
     --directory to load external modules - currently just user-input-module
     module_directory = "~~/script-modules",
 
-    --ass tags
-    ass_header = "{\\q2\\fs35\\c&00ccff&}",
-    ass_body = "{\\q2\\fs25\\c&Hffffff&}",
-    ass_selected = "{\\c&Hfce788&}",
-    ass_multiselect = "{\\c&Hfcad88&}",
-    ass_playing = "{\\c&H33ff66&}",
-    ass_playingselected = [[{\c&H22b547&}]],
-    ass_footerheader = "{\\c&00ccff&\\fs16}",
-    ass_cursor = "{\\c&00ccff&}"
+    --style settings
+    font_size_header = 35,
+    font_size_body = 25,
+    font_size_wrappers = 16,
 }
 
 opt.read_options(o, 'file_browser')
@@ -89,12 +84,26 @@ if not ass then return msg.error("Script requires minimum mpv version 0.31") end
 
 package.path = mp.command_native({"expand-path", o.module_directory}).."/?.lua;"..package.path
 
+local style = {
+    -- full line styles
+    header = ([[{\r\q2\fs%d\c&00ccff&}]]):format(o.font_size_header),
+    body = ([[{\r\q2\fs%d\c&Hffffff&}]]):format(o.font_size_body),
+    footer_header = ([[{\r\q2\fs%d\c&00ccff&}]]):format(o.font_size_wrappers),
+
+    --small section styles (for colours)
+    selected = [[{\c&Hfce788&}]],
+    multiselect = [[{\c&Hfcad88&}]],
+    playing = [[{\c&H33ff66&}]],
+    playing_selected = [[{\c&H22b547&}]],
+    cursor = [[{\c&00ccff&}]]
+}
+
 local state = {
     list = {},
     selected = 1,
     hidden = true,
     flag_update = false,
-    cursor_style = o.ass_cursor,
+    cursor_style = style.cursor,
     keybinds = nil,
 
     parser = nil,
@@ -607,7 +616,7 @@ local function update_ass()
 
     local dir_name = state.directory_label or state.directory
     if dir_name == "" then dir_name = "ROOT" end
-    append(o.ass_header)
+    append(style.header)
     append(ass_escape(dir_name)..'\\N ----------------------------------------------------')
     newline()
 
@@ -641,25 +650,25 @@ local function update_ass()
     if not overflow then finish = #state.list end
 
     --adding a header to show there are items above in the list
-    if start > 1 then append(o.ass_footerheader..(start-1)..' item(s) above\\N\\N') end
+    if start > 1 then append(style.footer_header..(start-1)..' item(s) above\\N\\N') end
 
     for i=start, finish do
         local v = state.list[i]
         local playing_file = highlight_entry(v)
-        append(o.ass_body)
+        append(style.body)
 
         --handles custom styles for different entries
-        if i == state.selected then append(state.cursor_style..o.cursor_icon.."\\h"..o.ass_body)
+        if i == state.selected then append(state.cursor_style..o.cursor_icon.."\\h"..style.body)
         else append(o.indent_icon.."\\h") end
 
         --sets the selection colour scheme
         local multiselected = state.selection[i]
-        if multiselected then append(o.ass_multiselect)
-        elseif i == state.selected then append(o.ass_selected) end
+        if multiselected then append(style.multiselect)
+        elseif i == state.selected then append(style.selected) end
 
         --prints the currently-playing icon and style
-        if playing_file and multiselected then append(o.ass_playingselected)
-        elseif playing_file then append(o.ass_playing) end
+        if playing_file and multiselected then append(style.playing_selected)
+        elseif playing_file then append(style.playing) end
 
         --sets the folder icon
         if v.type == 'dir' then append(o.folder_icon.."\\h") end
@@ -672,7 +681,7 @@ local function update_ass()
         newline()
     end
 
-    if overflow then append('\\N'..o.ass_footerheader..#state.list-finish..' item(s) remaining') end
+    if overflow then append('\\N'..style.footer_header..#state.list-finish..' item(s) remaining') end
     ass:update()
 end
 API_mt.update_ass = update_ass
@@ -686,7 +695,7 @@ API_mt.update_ass = update_ass
 
 --disables multiselect
 local function disable_select_mode()
-    state.cursor_style = o.ass_cursor
+    state.cursor_style = style.cursor
     state.multiselect_start = nil
     state.initial_selection = {}
 end
@@ -694,7 +703,7 @@ end
 --enables multiselect
 local function enable_select_mode()
     state.multiselect_start = state.selected
-    state.cursor_style = o.ass_multiselect
+    state.cursor_style = style.multiselect
 
     --saving a copy of the original state
     for key, value in pairs(state.selection) do
