@@ -71,6 +71,8 @@ local o = {
     module_directory = "~~/script-modules",
 
     --style settings
+    font_bold_header = true,
+
     font_size_header = 35,
     font_size_body = 25,
     font_size_wrappers = 16,
@@ -79,7 +81,18 @@ local o = {
     font_name_body = "",
     font_name_wrappers = "",
     font_name_folder = "",
-    font_name_cursor = ""
+    font_name_cursor = "",
+
+    font_colour_header = "00ccff",
+    font_colour_body = "ffffff",
+    font_colour_wrappers = "00ccff",
+    font_colour_cursor = "00ccff",
+
+    font_colour_multiselect = "fcad88",
+    font_colour_selected = "fce788",
+    font_colour_playing = "33ff66",
+    font_colour_playing_multiselected = "22b547"
+
 }
 
 opt.read_options(o, 'file_browser')
@@ -92,19 +105,19 @@ package.path = mp.command_native({"expand-path", o.module_directory}).."/?.lua;"
 
 local style = {
     -- full line styles
-    header = ([[{\r\q2\fs%d\c&00ccff&\fn%s}]]):format(o.font_size_header, o.font_name_header),
-    body = ([[{\r\q2\fs%d\c&Hffffff&\fn%s}]]):format(o.font_size_body, o.font_name_body),
-    footer_header = ([[{\r\q2\fs%d\c&00ccff&\fn%s}]]):format(o.font_size_wrappers, o.font_name_wrappers),
+    header = ([[{\r\q2\b%s\fs%d\fn%s\c&H%s&}]]):format((o.font_bold_header and "1" or "0"), o.font_size_header, o.font_name_header, o.font_colour_header),
+    body = ([[{\r\q2\fs%d\fn%s\c&H%s&}]]):format(o.font_size_body, o.font_name_body, o.font_colour_body),
+    footer_header = ([[{\r\q2\fs%d\fn%s\c&H%s&}]]):format(o.font_size_wrappers, o.font_name_wrappers, o.font_colour_wrappers),
 
     --small section styles (for colours)
-    multiselect = ([[{\c&Hfcad88&}]]),
-    selected = [[{\c&Hfce788&}]],
-    playing = [[{\c&H33ff66&}]],
-    playing_selected = [[{\c&H22b547&}]],
+    multiselect = ([[{\c&H%s&}]]):format(o.font_colour_multiselect),
+    selected = ([[{\c&H%s&}]]):format(o.font_colour_selected),
+    playing = ([[{\c&H%s&}]]):format(o.font_colour_playing),
+    playing_selected = ([[{\c&H%s&}]]):format(o.font_colour_playing_multiselected),
 
     --icon styles
-    cursor = ([[{\c&00ccff&\fn%s}]]):format(o.font_name_cursor),
-    folder = ([[\fn%s]]):format(o.font_name_folder)
+    cursor = ([[{\fn%s\c&H%s&}]]):format(o.font_name_cursor, o.font_colour_cursor),
+    folder = ([[{\fn%s}]]):format(o.font_name_folder)
 }
 
 local state = {
@@ -683,7 +696,7 @@ local function update_ass()
         elseif playing_file then append(style.playing) end
 
         --sets the folder icon
-        if v.type == 'dir' then append(o.folder_icon.."\\h") end
+        if v.type == 'dir' then append(style.folder..o.folder_icon.."\\h".."{\\fn"..o.font_name_body.."}") end
 
         --adds the actual name of the item
         append(v.ass or v.label or v.name)
