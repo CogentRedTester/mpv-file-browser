@@ -74,6 +74,12 @@ local o = {
     font_size_header = 35,
     font_size_body = 25,
     font_size_wrappers = 16,
+
+    font_name_header = "",
+    font_name_body = "",
+    font_name_wrapper = "",
+    font_name_folder = "",
+    font_name_cursor = ""
 }
 
 opt.read_options(o, 'file_browser')
@@ -86,16 +92,19 @@ package.path = mp.command_native({"expand-path", o.module_directory}).."/?.lua;"
 
 local style = {
     -- full line styles
-    header = ([[{\r\q2\fs%d\c&00ccff&}]]):format(o.font_size_header),
-    body = ([[{\r\q2\fs%d\c&Hffffff&}]]):format(o.font_size_body),
-    footer_header = ([[{\r\q2\fs%d\c&00ccff&}]]):format(o.font_size_wrappers),
+    header = ([[{\r\q2\fs%d\c&00ccff&\fn%s}]]):format(o.font_size_header, o.font_name_header),
+    body = ([[{\r\q2\fs%d\c&Hffffff&\fn%s}]]):format(o.font_size_body, o.font_name_body),
+    footer_header = ([[{\r\q2\fs%d\c&00ccff&\fn%s}]]):format(o.font_size_wrappers, o.font_name_wrapper),
 
     --small section styles (for colours)
+    multiselect = ([[{\c&Hfcad88&}]]),
     selected = [[{\c&Hfce788&}]],
-    multiselect = [[{\c&Hfcad88&}]],
     playing = [[{\c&H33ff66&}]],
     playing_selected = [[{\c&H22b547&}]],
-    cursor = [[{\c&00ccff&}]]
+
+    --icon styles
+    cursor = ([[{\c&00ccff&\fn%s}]]):format(o.font_name_cursor),
+    folder = ([[\fn%s]]):format(o.font_name_folder)
 }
 
 local state = {
@@ -103,7 +112,6 @@ local state = {
     selected = 1,
     hidden = true,
     flag_update = false,
-    cursor_style = style.cursor,
     keybinds = nil,
 
     parser = nil,
@@ -122,7 +130,6 @@ local sub_extensions = {}
 local parseable_extensions = {}
 
 local dvd_device = nil
-local osd_font = ""
 local current_file = {
     directory = nil,
     name = nil
@@ -658,8 +665,13 @@ local function update_ass()
         append(style.body)
 
         --handles custom styles for different entries
-        if i == state.selected then append(state.cursor_style..o.cursor_icon.."\\h"..style.body)
-        else append(o.indent_icon.."\\h") end
+        if i == state.selected then
+            append(style.cursor)
+            append((state.multiselect_start and style.multiselect or "")..o.cursor_icon)
+            append("\\h"..style.body)
+        else
+            append(o.indent_icon.."\\h"..style.body)
+        end
 
         --sets the selection colour scheme
         local multiselected = state.selection[i]
@@ -674,9 +686,6 @@ local function update_ass()
         if v.type == 'dir' then append(o.folder_icon.."\\h") end
 
         --adds the actual name of the item
-        --the osd font is explicitly set to counterract users
-        --changing the font to support custom icons
-        append("{\\fn"..osd_font.."}")
         append(v.ass or v.label or v.name)
         newline()
     end
@@ -695,7 +704,6 @@ API_mt.update_ass = update_ass
 
 --disables multiselect
 local function disable_select_mode()
-    state.cursor_style = style.cursor
     state.multiselect_start = nil
     state.initial_selection = {}
 end
@@ -703,7 +711,6 @@ end
 --enables multiselect
 local function enable_select_mode()
     state.multiselect_start = state.selected
-    state.cursor_style = style.multiselect
 
     --saving a copy of the original state
     for key, value in pairs(state.selection) do
@@ -1512,9 +1519,6 @@ end
 --------------------------------mpv API Callbacks-----------------------------------------
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
-
---keeps track of the osd_font
-mp.observe_property("osd-font", "string", function(_,font) osd_font = font end)
 
 --we don't want to add any overhead when the browser isn't open
 mp.observe_property('path', 'string', function(_,path)
