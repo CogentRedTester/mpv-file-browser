@@ -43,7 +43,7 @@ local function main(key, state, co)
     if browser.get_directory() ~= state.directory then msg.warn("directory changed - find aborted") end
 
     if key.name == "find/find" then
-        query = query:gsub("([%^%$%(%)%%%.%[%]%*%+%-])", "%%%1")
+        query = browser.pattern_escape(query)
     end
 
     local results = {}
