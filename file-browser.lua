@@ -104,6 +104,8 @@ if not ass then return msg.error("Script requires minimum mpv version 0.31") end
 package.path = mp.command_native({"expand-path", o.module_directory}).."/?.lua;"..package.path
 
 local style = {
+    global = [[{\an7}]],
+
     -- full line styles
     header = ([[{\r\q2\b%s\fs%d\fn%s\c&H%s&}]]):format((o.font_bold_header and "1" or "0"), o.font_size_header, o.font_name_header, o.font_colour_header),
     body = ([[{\r\q2\fs%d\fn%s\c&H%s&}]]):format(o.font_size_body, o.font_name_body, o.font_colour_body),
@@ -638,7 +640,7 @@ end
 local function update_ass()
     if state.hidden then state.flag_update = true ; return end
 
-    ass.data = ""
+    ass.data = style.global
 
     local dir_name = state.directory_label or state.directory
     if dir_name == "" then dir_name = "ROOT" end
