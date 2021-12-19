@@ -179,17 +179,17 @@ local subtitle_extensions = {
 --metatable of methods to manage the cache
 local __cache = {}
 
+__cache.cached_values = {
+    "directory", "directory_label", "list", "selected", "selection", "parser", "empty_text"
+}
+
 --inserts latest state values onto the cache stack
 function __cache:push()
-    table.insert(self, {
-        directory = state.directory or false,
-        directory_label = state.directory_label or false,
-        list = state.list or false,
-        selected = state.selected or false,
-        selection = state.selection or false,
-        parser = state.parser or false,
-        empty_text = state.empty_text or false
-    })
+    local t = {}
+    for _, value in ipairs(self.cached_values) do
+        t[value] = state[value]
+    end
+    table.insert(self, t)
 end
 
 function __cache:pop()
@@ -197,9 +197,9 @@ function __cache:pop()
 end
 
 function __cache:apply()
-    for key, value in pairs(self[#self]) do
-        if value then state[key] = value
-        else state[key] = nil end
+    local t = self[#self]
+    for _, value in ipairs(self.cached_values) do
+        state[value] = t[value]
     end
 end
 
