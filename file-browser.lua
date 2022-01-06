@@ -1263,7 +1263,7 @@ end
 --key.command must be an array of command tables compatible with mp.command_native
 --items must be an array of multiple items (when multi-type ~= concat the array will be 1 long)
 local function run_custom_command(cmd, items, state)
-    local custom_cmds = cmd.contains_codes and format_command_table(cmd, items, state) or cmd.command
+    local custom_cmds = cmd.codes and format_command_table(cmd, items, state) or cmd.command
 
     for _, cmd in ipairs(custom_cmds) do
         msg.debug("running command:", utils.to_string(cmd))
@@ -1281,12 +1281,15 @@ local function custom_command(cmd, state, co)
             if not state.list[state.selected] then return false end
             if state.list[state.selected].type ~= cmd.filter then return false end
         end
-        if cmd.contains_codes and not state.list[state.selected] then return false end
+
+        --if the directory is empty, and this command needs to work on an item, then abort and fallback to the next command
+        if cmd.codes and not state.list[state.selected] then
+            if cmd.codes["%f"] or cmd.codes["%F"] or cmd.codes["%n"] or cmd.codes["%N"] then return false end
+        end
 
         run_custom_command(cmd, { state.list[state.selected] }, state)
         return true
     end
-
 
     --runs the command on all multi-selected items
     local selection = sort_keys(state.selection, function(item) return not cmd.filter or item.type == cmd.filter end)
@@ -1356,17 +1359,17 @@ local function run_keybind_coroutine(key)
 end
 
 --scans the given command table to identify if they contain any custom keybind codes
-local function contains_codes(command_table)
-    if type(command_table) ~= "table" then return end
+local function scan_for_codes(command_table, codes)
+    if type(command_table) ~= "table" then return codes end
     for _, value in pairs(command_table) do
         local type = type(value)
         if type == "table" then
-            if contains_codes(value) then return true end
+            scan_for_codes(value, codes)
         elseif type == "string" then
-            if value:find("%%["..CUSTOM_KEYBIND_CODES.."]") then return true end
+            value:gsub("%%["..CUSTOM_KEYBIND_CODES.."]", function(code) codes[code] = true end)
         end
     end
-    return false
+    return codes
 end
 
 --inserting the custom keybind into the keybind array for declaration when file-browser is opened
@@ -1377,7 +1380,8 @@ local function insert_custom_keybind(keybind)
         keybind.command = {keybind.command}
     end
 
-    keybind.contains_codes = contains_codes(keybind.command)
+    keybind.codes = scan_for_codes(keybind.command, {})
+    if not next(keybind.codes) then keybind.codes = nil end
     keybind.prev_key = top_level_keys[keybind.key]
 
     table.insert(state.keybinds, {keybind.key, keybind.name, function() run_keybind_coroutine(keybind) end, keybind.flags or {}})
