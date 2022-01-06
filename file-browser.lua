@@ -1317,6 +1317,8 @@ end
 --recursively runs the keybind functions, passing down through the chain
 --of keybinds with the same key value
 local function run_keybind_recursive(keybind, state, co)
+    msg.trace("Attempting custom command:", utils.to_string(keybind))
+
     --these are for the default keybinds, or from addons which use direct functions
     local addon_fn = type(keybind.command) == "function"
     local fn = addon_fn and keybind.command or custom_command
@@ -1335,7 +1337,7 @@ end
 
 --a wrapper to run a custom keybind as a lua coroutine
 local function run_keybind_coroutine(key)
-    msg.trace("Received custom command:", utils.to_string(key))
+    msg.debug("Received custom keybind "..key.key)
     local co = coroutine.create(run_keybind_recursive)
 
     local state_copy = {
