@@ -481,11 +481,56 @@ function parser_mt:defer(directory, state)
     return list, opts
 end
 
+--loads the addon with a custom environment
+local function load_addon_environment(file, path)
+    local name = file:gsub("%-browser%.lua$", ""):gsub("%.lua$", "")
+    local name_sqbr = '[addon/'..name..']'
+
+    local addon_environment = setmetatable({}, { __index = _G })
+    addon_environment.mp = setmetatable({}, { __index = mp} )
+
+    addon_environment.mp.msg = {
+        log = function(level, ...) mp.log(level, name_sqbr, ...) end,
+        fatal = function(...) return mp.log("fatal", name_sqbr, ...) end,
+        error = function(...) return mp.log("error", name_sqbr, ...) end,
+        warn = function(...) return mp.log("warn", name_sqbr, ...) end,
+        info = function(...) return mp.log("info", name_sqbr, ...) end,
+        verbose = function(...) return mp.log("v", name_sqbr, ...) end,
+        debug = function(...) return mp.log("debug", name_sqbr, ...) end,
+        trace = function(...) return mp.log("trace", name_sqbr, ...) end,
+    }
+    addon_environment.print = addon_environment.mp.msg.info
+
+    --for some reason require always keeps using the original package table instead
+    --of the new package table, so we have to add a special case
+    local original_require = require
+    addon_environment.require = function(module)
+        if module == "mp.msg" then return addon_environment.mp.msg end
+        return original_require(module)
+    end
+
+    local chunk, err
+    if setfenv then
+        chunk, err = loadfile(path)
+        if not chunk then msg.error(err) ; return end
+
+        setfenv(chunk, addon_environment)
+    else
+---@diagnostic disable-next-line: redundant-parameter
+        chunk, err = loadfile(path, "bt", addon_environment)
+        if not chunk then msg.error(err) ; return end
+    end
+
+    local success, result = pcall(chunk)
+    if not success then msg.error(result) ; return end
+    return result
+end
+
 --load an external addon
 local function setup_addon(file, path)
     if file:sub(-4) ~= ".lua" then return msg.verbose(path, "is not a lua file - aborting addon setup") end
 
-    local addon_parsers = dofile(path)
+    local addon_parsers = load_addon_environment(file, path)
     if not addon_parsers then return msg.error("addon", path, "did not return a table") end
 
     --if the table contains a priority key then we assume it isn't an array of parsers
