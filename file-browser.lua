@@ -57,6 +57,10 @@ local o = {
     --move the browser there even if this option is set to false
     default_to_working_directory = false,
 
+    --cache all directories to improve navigation speed
+    --cache is periodically cleared by the garbage collector
+    cache = true,
+
     --allows custom icons be set to fix incompatabilities with some fonts
     --the `\h` character is a hard space to add padding between the symbol and the text
     folder_icon = "🖿",
@@ -176,40 +180,45 @@ local subtitle_extensions = {
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
 
---metatable of methods to manage the cache
-local __cache = {}
+local cache = setmetatable({}, { __mode = "v" })
 
-__cache.cached_values = {
+--metatable of methods to manage the history
+local __history = {}
+
+__history.historyd_values = {
     "directory", "directory_label", "list", "selected", "selection", "parser", "empty_text"
 }
 
---inserts latest state values onto the cache stack
-function __cache:push()
+--inserts latest state values onto the history stack
+function __history:push()
     local t = {}
-    for _, value in ipairs(self.cached_values) do
+    for _, value in ipairs(self.historyd_values) do
         t[value] = state[value]
     end
     table.insert(self, t)
 end
 
-function __cache:pop()
+function __history:pop()
     table.remove(self)
 end
 
-function __cache:apply()
+function __history:apply()
     local t = self[#self]
-    for _, value in ipairs(self.cached_values) do
+    for _, value in ipairs(self.historyd_values) do
         state[value] = t[value]
     end
 end
 
-function __cache:clear()
+function __history:clear()
     for i = 1, #self do
         self[i] = nil
     end
+
+    --this will clear the cache, as it is a weak table
+    collectgarbage()
 end
 
-local cache = setmetatable({}, { __index = __cache })
+local history = setmetatable({}, { __index = __history })
 
 
 
@@ -401,7 +410,7 @@ API_mt.get_extension = get_extension
 API_mt.get_protocol = get_protocol
 API_mt.join_path = join_path
 
-function API_mt.clear_cache() cache:clear() end
+function API_mt.clear_history() history:clear() end
 
 --we will set these functions once they are declared later in the script
 API_mt.update_ass = nil
@@ -840,6 +849,10 @@ local function scan_directory(directory, state)
     if directory == "" then return root_parser:parse() end
 
     msg.verbose("scanning files in", directory)
+    if o.cache then
+        if cache[directory] then return cache[directory].list, cache[directory].opts end
+    end
+
     state.co = coroutine.running()
     if not state.co then msg.warn("scan_directory should be executed from within a coroutine") ; return end
 
@@ -849,6 +862,8 @@ local function scan_directory(directory, state)
     opts.parser = parsers[opts.index]
     if not opts.filtered then filter(list) end
     if not opts.sorted then sort(list) end
+
+    cache[directory] = { list = list, opts = opts }
     return list, opts
 end
 
@@ -866,12 +881,12 @@ local function update_list()
     state.selected = 1
     state.selection = {}
 
-    --loads the current directry from the cache to save loading time
+    --loads the current directry from the history to save loading time
     --there will be a way to forcibly reload the current directory at some point
-    --the cache is in the form of a stack, items are taken off the stack when the dir moves up
-    if cache[1] and cache[#cache].directory == state.directory then
-        msg.verbose('found directory in cache')
-        cache:apply()
+    --the history is in the form of a stack, items are taken off the stack when the dir moves up
+    if history[1] and history[#history].directory == state.directory then
+        msg.verbose('found directory in history')
+        history:apply()
         state.prev_directory = state.directory
         return
     end
@@ -879,11 +894,11 @@ local function update_list()
     local list, opts = scan_directory(state.directory, { source = "browser" })
 
     --apply fallbacks if the scan failed
-    if not list and cache[1] then
+    if not list and history[1] then
         --switches settings back to the previously opened directory
         --to the user it will be like the directory never changed
         msg.warn("could not read directory", state.directory)
-        cache:apply()
+        history:apply()
         return
     elseif not list then
         msg.warn("could not read directory", state.directory)
@@ -905,10 +920,10 @@ local function update_list()
     state.empty_text = opts.empty_text or state.empty_text
 
     --we assume that directory is only changed when redirecting to a different location
-    --therefore, the cache should be wiped
+    --therefore, the history should be wiped
     if opts.directory then
         state.directory = opts.directory
-        cache:clear()
+        history:clear()
     end
 
     if opts.selected_index then
@@ -954,7 +969,7 @@ end
 --switches to the directory of the currently playing file
 local function goto_current_dir()
     state.directory = current_file.directory
-    cache:clear()
+    history:clear()
     state.selected = 1
     update()
 end
@@ -976,7 +991,7 @@ local function up_dir()
     if state.directory_label then state.directory_label = state.directory_label:match("^(.+/)[^/]+/$") end
 
     update(true)
-    cache:pop()
+    history:pop()
 end
 
 --moves down a directory
@@ -984,7 +999,7 @@ local function down_dir()
     local current = state.list[state.selected]
     if not current or current.type ~= 'dir' and not parseable_extensions[get_extension(current.name)] then return end
 
-    cache:push()
+    history:push()
     state.directory = concatenate_path(current, state.directory)
 
     --we can make some assumptions about the next directory label when moving up or down
@@ -1057,7 +1072,7 @@ local function browse_directory(directory)
 
     if directory == "dvd://" then directory = dvd_device end
     state.directory = directory
-    cache:clear()
+    history:clear()
     open()
     update()
 end
@@ -1210,7 +1225,7 @@ state.keybinds = {
     {'UP', 'scroll_up', scroll_up, {repeatable = true}},
     {'HOME', 'goto_current', goto_current_dir, {}},
     {'Shift+HOME', 'goto_root', goto_root, {}},
-    {'Ctrl+r', 'reload', function() cache:clear(); update() end, {}},
+    {'Ctrl+r', 'reload', function() history:clear(); update() end, {}},
     {'s', 'select_mode', toggle_select_mode, {}},
     {'S', 'select', toggle_selection, {}},
     {'Ctrl+a', 'select_all', select_all, {}}
