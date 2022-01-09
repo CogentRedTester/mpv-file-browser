@@ -248,18 +248,29 @@ end
 
 --formats strings for ass handling
 --this function is based on a similar function from https://github.com/mpv-player/mpv/blob/master/player/lua/console.lua#L110
-local function ass_escape(str)
-    str = str:gsub('[\\{}\n] ?', {
+local function ass_escape(str, replace_newline)
+    if replace_newline == true then replace_newline = "\\\239\187\191n" end
+
+    --escape the invalid single characters
+    str = str:gsub('[\\{}\n]', {
+        -- There is no escape for '\' in ASS (I think?) but '\' is used verbatim if
+        -- it isn't followed by a recognised character, so add a zero-width
+        -- non-breaking space
         ['\\'] = '\\\239\187\191',
         ['{'] = '\\{',
         ['}'] = '\\}',
         -- Precede newlines with a ZWNBSP to prevent ASS's weird collapsing of
         -- consecutive newlines
         ['\n'] = '\239\187\191\\N',
-        -- Turn leading spaces into hard spaces to prevent ASS from stripping them
-        ['\\N '] = '\\N\\h'
     })
+
+    -- Turn leading spaces into hard spaces to prevent ASS from stripping them
+    str = str:gsub('\\N ', '\\N\\h')
     str = str:gsub('^ ', '\\h')
+
+    if replace_newline then
+        str = str:gsub("\\N", replace_newline)
+    end
     return str
 end
 
@@ -665,7 +676,8 @@ local function update_ass()
     local dir_name = state.directory_label or state.directory
     if dir_name == "" then dir_name = "ROOT" end
     append(style.header)
-    append(ass_escape(dir_name)..'\\N ----------------------------------------------------')
+    append(ass_escape(dir_name, style.cursor.."\\\239\187\191n"..style.header))
+    append('\\N ----------------------------------------------------')
     newline()
 
     if #state.list < 1 then
@@ -727,7 +739,7 @@ local function update_ass()
         if v.type == 'dir' then append(style.folder..o.folder_icon.."\\h".."{\\fn"..o.font_name_body.."}") end
 
         --adds the actual name of the item
-        append(v.ass or v.label or v.name)
+        append(v.ass or ass_escape(v.label or v.name, true))
         newline()
     end
 
@@ -915,7 +927,7 @@ local function update_list()
     --this only matters when displaying the list on the screen, so it doesn't need to be in the scan function
     if not opts.escaped then
         for i = 1, #list do
-            list[i].ass = list[i].ass or ass_escape(list[i].label or list[i].name)
+            list[i].ass = list[i].ass or ass_escape(list[i].label or list[i].name, true)
         end
     end
 
@@ -1507,7 +1519,7 @@ local function setup_root()
         local path = mp.command_native({'expand-path', str})
         path = fix_path(path, true)
 
-        local temp = {name = path, type = 'dir', label = str, ass = ass_escape(str)}
+        local temp = {name = path, type = 'dir', label = str, ass = ass_escape(str, true)}
 
         root[#root+1] = temp
     end
