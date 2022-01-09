@@ -343,16 +343,26 @@ local function sort_keys(t, include_item)
 end
 
 --copies a table without leaving any references to the original
-local function copy_table(t)
+--uses a structured clone algorithm to maintain cyclic references
+local function copy_table_recursive(t, references)
     if not t then return nil end
     local copy = {}
+    references[t] = copy
+
     for key, value in pairs(t) do
         if type(value) == "table" then
-            if value == t then copy[key] = copy
-            else copy[key] = copy_table(value) end
-        else copy[key] = value end
+            if references[value] then copy[key] = references[value]
+            else copy[key] = copy_table_recursive(value, references) end
+        else
+            copy[key] = value end
     end
     return copy
+end
+
+--a wrapper around copy_table to provide the reference table
+local function copy_table(t)
+    --this is to handle cyclic table references
+    return copy_table_recursive(t, {})
 end
 
 
