@@ -52,6 +52,11 @@ local o = {
     --when enabled the keybind disables autoload for the file
     autoload = false,
 
+    --if autoload is triggered by selecting the currently playing file, then
+    --the current file will have it's watch-later config saved before being closed
+    --essentially the current file will not be restarted
+    autoload_save_current = true,
+
     --when opening the browser in idle mode prefer the current working directory over the root
     --note that the working directory is set as the 'current' directory regardless, so `home` will
     --move the browser there even if this option is set to false
@@ -1131,13 +1136,21 @@ end
 
 --load playlist entries before and after the currently playing file
 local function autoload_dir(path)
+    if o.autoload_save_current and path == current_file.path then
+        mp.commandv("write-watch-later-config") end
+
+    --loads the currently selected file, clearing the playlist in the process
+    mp.commandv("loadfile", path)
+
     local pos = 1
     local file_count = 0
     for _,item in ipairs(state.list) do
         if item.type == "file" and not sub_extensions[ get_extension(item.name) ] then
             local p = get_full_path(item)
+
             if p == path then pos = file_count
             else mp.commandv("loadfile", p, "append") end
+
             file_count = file_count + 1
         end
     end
@@ -1147,13 +1160,14 @@ end
 --runs the loadfile or loadlist command
 local function loadfile(item, flag, autoload, directory)
     local path = get_full_path(item, directory)
-    if item.type == "dir" or parseable_extensions[ get_extension(item.name) ] then return loadlist(path, flag) end
+    if item.type == "dir" or parseable_extensions[ get_extension(item.name) ] then
+        return loadlist(path, flag) end
 
     if sub_extensions[ get_extension(item.name) ] then
         mp.commandv("sub-add", path, flag == "replace" and "select" or "auto")
     else
-        mp.commandv('loadfile', path, flag)
-        if autoload then autoload_dir(path) end
+        if autoload then autoload_dir(path)
+        else mp.commandv('loadfile', path, flag) end
         return true
     end
 end
