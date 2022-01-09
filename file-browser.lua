@@ -944,19 +944,23 @@ local function update(moving_adjacent)
 end
 API_mt.rescan_directory = update
 
+--the base function for moving to a directory
+local function goto_directory(directory)
+    state.directory = directory
+    cache:clear()
+    update()
+end
+
 --loads the root list
 local function goto_root()
-    msg.verbose('loading root')
-    state.directory = ""
-    update()
+    msg.verbose('jumping to root')
+    goto_directory("")
 end
 
 --switches to the directory of the currently playing file
 local function goto_current_dir()
-    state.directory = current_file.directory
-    cache:clear()
-    state.selected = 1
-    update()
+    msg.verbose('jumping to current directory')
+    goto_directory(current_file.directory)
 end
 
 --moves up a directory
@@ -1049,17 +1053,18 @@ local function escape()
 end
 
 --opens a specific directory
+--supports relative directories
 local function browse_directory(directory)
     if not directory then return end
     directory = mp.command_native({"expand-path", directory}, "")
+    directory = join_path( mp.get_property("working-directory", ""), directory )
+
     if directory ~= "" then directory = fix_path(directory, true) end
     msg.verbose('recieved directory from script message: '..directory)
 
     if directory == "dvd://" then directory = dvd_device end
-    state.directory = directory
-    cache:clear()
+    goto_directory(directory)
     open()
-    update()
 end
 API_mt.browse_directory = browse_directory
 
