@@ -237,13 +237,13 @@ local function concatenate_path(item, directory)
 end
 
 --returns the file extension of the given file
-local function get_extension(filename)
-    return filename:match("%.([^%./]+)$")
+local function get_extension(filename, def)
+    return filename:match("%.([^%./]+)$") or def
 end
 
 --returns the protocol scheme of the given url, or nil if there is none
-local function get_protocol(filename)
-    return filename:match("^(%a%w*)://")
+local function get_protocol(filename, def)
+    return filename:match("^(%a%w*)://") or def
 end
 
 --formats strings for ass handling
@@ -302,7 +302,7 @@ end
 
 local function valid_file(file)
     if o.filter_dot_files and (file:sub(1,1) == ".") then return false end
-    if o.filter_files and not extensions[ get_extension(file) ] then return false end
+    if o.filter_files and not extensions[ get_extension(file, "") ] then return false end
     return true
 end
 
@@ -630,7 +630,7 @@ end
 --detects whether or not to highlight the given entry as being played
 local function highlight_entry(v)
     if current_file.name == nil then return false end
-    if v.type == "dir" or parseable_extensions[get_extension(v.name) or ""] then
+    if v.type == "dir" or parseable_extensions[get_extension(v.name, "")] then
         return current_file.directory:find(get_full_path(v), 1, true)
     else
         return current_file.path == get_full_path(v)
@@ -837,7 +837,7 @@ end
 local function select_prev_directory()
     if state.prev_directory:find(state.directory, 1, true) == 1 then
         local i = 1
-        while (state.list[i] and (state.list[i].type == "dir" or parseable_extensions[get_extension(state.list[i].name) or ""])) do
+        while (state.list[i] and (state.list[i].type == "dir" or parseable_extensions[get_extension(state.list[i].name, "")])) do
             if state.prev_directory:find(get_full_path(state.list[i]), 1, true) then
                 state.selected = i
                 return
@@ -1005,7 +1005,7 @@ end
 --moves down a directory
 local function down_dir()
     local current = state.list[state.selected]
-    if not current or current.type ~= 'dir' and not parseable_extensions[get_extension(current.name)] then return end
+    if not current or current.type ~= 'dir' and not parseable_extensions[get_extension(current.name, "")] then return end
 
     cache:push()
     state.directory = concatenate_path(current, state.directory)
@@ -1111,8 +1111,8 @@ local function custom_loadlist_recursive(directory, flag)
     if directory == "" then return end
 
     for _, item in ipairs(list) do
-        if not sub_extensions[ get_extension(item.name) ] then
-            if item.type == "dir" or parseable_extensions[get_extension(item.name)] then
+        if not sub_extensions[ get_extension(item.name, "") ] then
+            if item.type == "dir" or parseable_extensions[get_extension(item.name, "")] then
                 if custom_loadlist_recursive( concatenate_path(item, directory) , flag) then flag = "append" end
             else
                 local path = get_full_path(item, directory)
@@ -1156,7 +1156,7 @@ local function autoload_dir(path)
     local pos = 1
     local file_count = 0
     for _,item in ipairs(state.list) do
-        if item.type == "file" and not sub_extensions[ get_extension(item.name) ] then
+        if item.type == "file" and not sub_extensions[ get_extension(item.name, "") ] then
             local p = get_full_path(item)
 
             if p == path then pos = file_count
@@ -1171,10 +1171,10 @@ end
 --runs the loadfile or loadlist command
 local function loadfile(item, flag, autoload, directory)
     local path = get_full_path(item, directory)
-    if item.type == "dir" or parseable_extensions[ get_extension(item.name) ] then
+    if item.type == "dir" or parseable_extensions[ get_extension(item.name, "") ] then
         return loadlist(path, flag) end
 
-    if sub_extensions[ get_extension(item.name) ] then
+    if sub_extensions[ get_extension(item.name, "") ] then
         mp.commandv("sub-add", path, flag == "replace" and "select" or "auto")
     else
         if autoload then autoload_dir(path)
