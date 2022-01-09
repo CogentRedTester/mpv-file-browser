@@ -147,7 +147,8 @@ local parseable_extensions = {}
 local dvd_device = nil
 local current_file = {
     directory = nil,
-    name = nil
+    name = nil,
+    path = nil
 }
 
 local root = nil
@@ -616,7 +617,7 @@ local function highlight_entry(v)
     if v.type == "dir" or parseable_extensions[get_extension(v.name) or ""] then
         return current_file.directory:find(get_full_path(v), 1, true)
     else
-        return current_file.directory..current_file.name == get_full_path(v)
+        return current_file.path == get_full_path(v)
     end
 end
 
@@ -626,6 +627,7 @@ local function update_current_directory(_, filepath)
     if filepath == nil then 
         current_file.directory = fix_path( mp.get_property("working-directory", ""), true)
         current_file.name = nil
+        current_file.path = nil
         return
     elseif filepath:find("dvd://") == 1 then
         filepath = dvd_device..filepath:match("dvd://(.*)")
@@ -635,6 +637,7 @@ local function update_current_directory(_, filepath)
     local exact_path = join_path(workingDirectory, filepath)
     exact_path = fix_path(exact_path, false)
     current_file.directory, current_file.name = utils.split_path(exact_path)
+    current_file.path = exact_path
 end
 
 --refreshes the ass text using the contents of the list
