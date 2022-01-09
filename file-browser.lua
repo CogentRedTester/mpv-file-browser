@@ -484,10 +484,12 @@ end
 --loads the addon with a custom environment
 local function load_addon_environment(file, path)
     local name = file:gsub("%-browser%.lua$", ""):gsub("%.lua$", "")
-    local name_sqbr = '[addon/'..name..']'
+    local name_sqbr = '['..name..']'
 
     local addon_environment = setmetatable({}, { __index = _G })
     addon_environment.mp = setmetatable({}, { __index = mp} )
+    addon_environment.mp.script_name = mp.get_script_name().."/"..name
+    addon_environment.mp.get_script_name = function() return addon_environment.mp.script_name end
 
     addon_environment.mp.msg = {
         log = function(level, ...) mp.log(level, name_sqbr, ...) end,
@@ -505,6 +507,7 @@ local function load_addon_environment(file, path)
     --of the new package table, so we have to add a special case
     local original_require = require
     addon_environment.require = function(module)
+        if module == "mp" then return addon_environment.mp end
         if module == "mp.msg" then return addon_environment.mp.msg end
         return original_require(module)
     end
