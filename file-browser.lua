@@ -416,6 +416,7 @@ API_mt.get_full_path = get_full_path
 API_mt.get_extension = get_extension
 API_mt.get_protocol = get_protocol
 API_mt.join_path = join_path
+API_mt.copy_table = copy_table
 
 function API_mt.clear_cache() cache:clear() end
 

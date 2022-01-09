@@ -234,6 +234,7 @@ The following are a list of recommendations that will increase the compatability
 | valid_dir     | function | string           | boolean    | tests if the given directory name passes the user set filters (dot directories)                                                                        |
 | filter        | function | list_table       | list_table | iterates through the given list and removes items that don't pass the filters - acts directly on the given list, it does not create a copy             |
 | sort          | function | list_table       | list_table | iterates through the given list and sorts the items using file-browsers sorting algorithm - acts directly on the given list, it does not create a copy |
+| copy_table    | function | table            | table      | recursively makes a deep copy of the given table and returns it, maintaining any cyclical references                                                   |
 
 ### Getters
 
