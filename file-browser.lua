@@ -488,6 +488,8 @@ local function load_addon_environment(file, path)
 
     local addon_environment = setmetatable({}, { __index = _G })
     addon_environment.mp = setmetatable({}, { __index = mp} )
+    addon_environment.package = setmetatable({}, { __index = package} )
+    addon_environment.package.loaded = setmetatable({}, { __index = package.loaded} )
     addon_environment.mp.script_name = mp.get_script_name().."/"..name
     addon_environment.mp.get_script_name = function() return addon_environment.mp.script_name end
 
@@ -503,14 +505,16 @@ local function load_addon_environment(file, path)
     }
     addon_environment.print = addon_environment.mp.msg.info
 
-    --for some reason require always keeps using the original package table instead
-    --of the new package table, so we have to add a special case
-    local original_require = require
-    addon_environment.require = function(module)
-        if module == "mp" then return addon_environment.mp end
-        if module == "mp.msg" then return addon_environment.mp.msg end
-        return original_require(module)
+    local function searcher(module)
+        if module == "mp" then return function() return addon_environment.mp end end
+        if module == "mp.msg" then return function() return addon_environment.mp.msg end end
+        if module == "mp.options" then return package.preload["mp.options"] end
+        return nil
     end
+
+    addon_environment.package.loaded["mp"] = nil
+    addon_environment.package.loaded["mp.msg"] = nil
+    table.insert(setfenv and addon_environment.package.loaders or addon_environment.package.searchers, 1, searcher)
 
     local chunk, err
     if setfenv then
