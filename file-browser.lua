@@ -1556,7 +1556,7 @@ setup_keybinds()
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-function scan_directory_json(directory, response_str)
+local function scan_directory_json(directory, response_str)
     if not directory then msg.error("did not receive a directory string"); return end
     if not response_str then msg.error("did not receive a response string"); return end
 
@@ -1627,6 +1627,6 @@ mp.register_script_message('browse-directory', browse_directory)
 mp.register_script_message("get-directory-contents", function(directory, response_str)
     local co = coroutine.create(scan_directory_json)
     local success, err = coroutine.resume(co, directory, response_str)
-    if not success then return err end
+    if not success then msg.error(err) end
 end)
 
