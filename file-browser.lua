@@ -440,6 +440,7 @@ function API_mt.clear_cache() cache:clear() end
 API_mt.update_ass = nil
 API_mt.scan_directory = nil
 API_mt.rescan_directory = nil
+API_mt.browse_directory = nil
 
 --providing getter and setter functions so that addons can't modify things directly
 function API_mt.get_script_opts() return copy_table(o) end
@@ -882,7 +883,7 @@ local function scan_directory(directory, state)
 
     msg.verbose("scanning files in", directory)
     state.co = coroutine.running()
-    if not state.co then msg.warn("scan_directory should be executed from within a coroutine") ; return end
+    if not state.co then msg.error("scan_directory should be executed from within a coroutine - aborting scan") ; return end
 
     local list, opts = choose_and_parse(directory, 1, state)
 
