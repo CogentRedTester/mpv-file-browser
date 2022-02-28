@@ -110,3 +110,4 @@ If `user-input.lua` is loaded by mpv, and `user-input-module` is in the `~~/scri
 ## Configuration
 
 See [file_browser.conf](file_browser.conf) for the full list of options and their default values.
+The file is placed in the `~~/script-opts/` folder.
