@@ -40,7 +40,7 @@ local function main(key, state, co)
     coroutine.yield()
 
     if not query then return msg.debug(error) end
-    if browser.get_directory() ~= state.directory then msg.warn("directory changed - find aborted") end
+    if browser.get_directory() ~= state.directory then return msg.warn("directory changed - find aborted") end
 
     if key.name == "find/find" then
         query = browser.pattern_escape(query)
