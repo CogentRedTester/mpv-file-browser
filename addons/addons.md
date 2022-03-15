@@ -129,7 +129,7 @@ None of these values are required, and the opts table can even left as nil when 
 |-----------------|---------|-------------------------------------------------------------------------------------------------------------------------------------------|
 | filtered        | boolean | if true file-browser will not run the standard filter() function on the list                                                              |
 | sorted          | boolean | if true file-browser will not sort the list                                                                                               |
-| directory       | string  | changes the browser directory to this - used for redirecting to other locations                                                           |
+| directory       | string  | changes the browser directory to this - used for redirecting to other locations **[deprecated]**                                            |
 | directory_label | string  | display this label in the header instead of the actual directory - useful to display encoded paths                                        |
 | empty_text      | string  | display this text when the list is empty - can be used for error messages                                                                 |
 | selected_index  | number  | the index of the item on the list to select by default - a.k.a. the cursor position                                                       |
@@ -399,7 +399,7 @@ The following are a list of recommendations that will increase the compatability
   * If required modify values in the existing opts table, don't create a new one.
 * Respect the `sorted` and `filtered` values in the opts table. This may mean calling `sort` or `filter` manually.
 * Think about how to handle the `directory_label` field, especially how it might interract with any virtual paths the parser may be maintaining.
-* Think about what to do if the `directory` field is set. The use of this field is somewhat dubious, but it does exist.
+* Think about what to do if the `directory` field is set. This field is deprecated, so you could probably get away with not handling this.
 * Think if you want your parser to take full ownership of the results of `defer`, if so consider setting `opts.index = self:get_index()`.
   * Currently this affects custom keybind filtering, though it may be changed in the future.
 
