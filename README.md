@@ -95,7 +95,9 @@ Reads the given directory, and sends the resulting tables to the specified scrip
 
 `script-message [response-string] [list] [opts]`
 
-The `list` and `opts` tables are formatted as json strings through the `mp.utils.format_json` function.
+The [list](https://github.com/CogentRedTester/mpv-file-browser/blob/master/addons/addons.md#the-list-array)
+and [opts](https://github.com/CogentRedTester/mpv-file-browser/blob/master/addons/addons.md#the-opts-table)
+tables are formatted as json strings through the `mp.utils.format_json` function.
 See [addons.md](addons/addons.md) for how the tables are structured, and what each field means.
 The `response-string` refers to an arbitrary script-message that the tables should be sent to.
 
