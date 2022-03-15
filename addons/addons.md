@@ -36,7 +36,7 @@ Here is an extremely simple example of an addon creating a parser table and retu
 ```lua
 local parser = {
     priority = 100,
-    name = "example"        -- this parser will have the id 'example' or 'example_#' if there are dupicates
+    name = "example"        -- this parser will have the id 'example' or 'example_#' if there are duplicates
 }
 
 function parser:can_parse(directory)
@@ -129,7 +129,7 @@ None of these values are required, and the opts table can even left as nil when 
 |-----------------|---------|-------------------------------------------------------------------------------------------------------------------------------------------|
 | filtered        | boolean | if true file-browser will not run the standard filter() function on the list                                                              |
 | sorted          | boolean | if true file-browser will not sort the list                                                                                               |
-| directory       | string  | changes the browser directory to this - used for redirecting to other locations **[deprecated]**                                            |
+| directory       | string  | **[deprecated]** - ges the browser directory to this - used for redirecting to other locations                                            |
 | directory_label | string  | display this label in the header instead of the actual directory - useful to display encoded paths                                        |
 | empty_text      | string  | display this text when the list is empty - can be used for error messages                                                                 |
 | selected_index  | number  | the index of the item on the list to select by default - a.k.a. the cursor position                                                       |
@@ -262,7 +262,7 @@ Where `keybind` is the keybind_table of the key being run, `state` is a table of
 that the keybind is being executed inside.
 
 The `keybind` table uses the same fields as defined
-in [custom-keybinds.md](../custom-keybinds.md). Any random extra fields the user places in
+in [custom-keybinds.md](../custom-keybinds.md). Any random extra fields placed in the original
 `file-browser-keybinds.json` will likely show up as well (this is not guaranteed).
 Note that even if the array form is used, the `keybind` table will still use the custom-keybind format.
 
@@ -271,21 +271,21 @@ allow addons to keep a record of important state values that may be changed duri
 
 #### State Table
 
-The state table contains copies of the following values at the time of the key press:
+The state table contains copies of the following values at the time of the key press.
 
 | key             | description                                                                              |
 |-----------------|------------------------------------------------------------------------------------------|
 | directory       | the current directory                                                                    |
-| directory_label | the current directory_label                                                              |
+| directory_label | the current directory_label - can (and often will) be `nil`                              |
 | list            | the current list_table                                                                   |
 | selected        | index of the currently selected list item                                                |
-| selection       | table of currently selected items (for multi-select) - in the form { index = true, ... } |
+| selection       | table of currently selected items (for multi-select) - in the form { index = true, ... } - always available even if the `multiselect` flag is not set |
 | parser          | a copy of the parser object that provided the current directory                          |
 
 The following example shows the implementation of the `delete_files` keybind using the state values:
 
 ```lua
-local fb = require "file-browser"       -- see #API-Functions and #Utility-Functions
+local fb = require "file-browser"       -- see #api-functions and #utility-functions
 
 local function main(keybind, state, co)
     for index, item in state.list do
@@ -438,8 +438,8 @@ return home_label
 
 | key           | type     | arguments        | returns    | description                                                                                                                                            |
 |---------------|----------|------------------|------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| fix_path      | function | string, boolean  | string     | takes a path and an is_directory boolean and returns a corrected path                                                                                  |
-| join_path     | function | string, string   | string     | a wrapper for mp.utils.join_path which adds support for network protocols                                                                              |
+| fix_path      | function | string, boolean  | string     | takes a path and an is_directory boolean and returns a file-browser compatible path                                                                    |
+| join_path     | function | string, string   | string     | a wrapper for `mp.utils.join_path` which adds support for network protocols                                                                            |
 | get_full_path | function | item_table, string | string   | returns the full path of a given item for a given directory - takes into account item.name/item.path, etc                                              |
 | ass_escape    | function | string, string   | string     | returns the string with escaped ass styling codes - the 2nd argument allows optionally replacing newlines with the given string, or `\n` if set to `true`|
 | pattern_escape| function | string           | string     | returns the string with special lua pattern characters escaped                                                                                         |
@@ -469,13 +469,13 @@ All tables returned by these functions are copies to ensure addons can't break t
 | get_dvd_device             | function | -         | string  | the current dvd-device - formatted to work with file-browser                                                          |
 | get_directory              | function | -         | string  | the current directory open in the browser - formatted to work with file-browser                                       |
 | get_list                   | function | -         | table   | the list_table for the currently open directory                                                                       |
-| get_current_file           | function | -         | table   | a table containing the path of the current open file - in the form {directory = "", name = "", path = ""}                        |
+| get_current_file           | function | -         | table   | a table containing the path of the current open file - in the form {directory = "", name = "", path = ""}             |
 | get_current_parser         | function | -         | string  | the unique id of the parser used for the currently open directory                                                     |
 | get_current_parser_keyname | function | -         | string  | the string name of the parser used for the currently open directory - as used by custom keybinds                      |
 | get_selected_index         | function | -         | number  | the current index of the cursor - if the list is empty this should return 1                                           |
 | get_selected_item          | function | -         | table   | returns the item_table of the currently selected item - returns nil if no item is selected (empty list)               |
 | get_open_status            | function | -         | boolean | returns true if the browser is currently open and false if not                                                        |
-| get_state                  | function | -         | table   | the current state values of the browser - this is probably useless                                                    |
+| get_state                  | function | -         | table   | the current state values of the browser - not documented and subject to change at any time - adding a proper getter for anything is a valid request |
 
 ### Setters
 
