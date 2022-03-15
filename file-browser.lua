@@ -416,9 +416,13 @@ local function set_parser_id(parser)
     end
 
     local n = 2
-    while existing_ids[parser.name..n] do n = n + 1 end
-    existing_ids[parser.name..n] = true
-    parser_ids[parser] = parser.name..n
+    local name = parser.name.."_"..n
+    while existing_ids[name] do
+        n = n + 1
+        name = parser.name.."_"..n
+    end
+    existing_ids[name] = true
+    parser_ids[parser] = name
 end
 
 API_mt.valid_file = valid_file
