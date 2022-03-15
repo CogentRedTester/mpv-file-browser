@@ -2,6 +2,8 @@
 
 Addons provide ways for file-browser to parse non-native directory structures. This document describes how one can create their own custom addon.
 
+If you have an independent script but want to use file-browser's parsing capabilities, perhaps to make use of existing addons, then look [here](https://github.com/CogentRedTester/mpv-file-browser#get-directory-contents).
+
 ## Terminology
 
 For the purpose of this document addons refer to the scripts being loaded while parsers are the objects the scripts return.
