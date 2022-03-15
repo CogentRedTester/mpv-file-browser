@@ -31,6 +31,30 @@ Additionally, each parser can optionally contain:
 All parsers are given a unique string ID based on their name. If there are collisions then numbers are appended to the end of the name until a free name is found.
 These IDs are primarily used for debug messages, though they may gain additional functionality in the future.
 
+Here is an extremely simple example of an addon creating a parser table and returning it to file-browser.
+
+```lua
+local parser = {
+    priority = 100,
+    name = "example"        -- this parser will have the id 'example' or 'example_#' if there are dupicates
+}
+
+function parser:can_parse(directory)
+    return directory == "Example/"
+end
+
+function parser:parse(directory, state)
+    local list, opts
+    ------------------------------
+    --- populate the list here ---
+    ------------------------------
+    return list, opts
+end
+
+return parser
+
+```
+
 ## Parsing
 
 When a directory is loaded file-browser will iterate through the list of parsers from lowest to highest priority.
@@ -79,6 +103,23 @@ File-browser expects that `type` and `name` will be set for each item, so leavin
 File-browser also assumes that all directories end in a `/` when appending name, and that there will be no backslashes.
 The API function [`fix_path`](#Utility-Functions) can be used to ensure that paths conform to file-browser rules.
 
+Here is an example of a static list table being returned by the `parse` method.
+This would allow one to specify a custom list of items.
+
+```lua
+function parser:parse(directory, state)
+    local list = {
+        { name = "first/", type = "dir" },
+        { name = "second/", type = "dir" },
+        { name = "third/", type = "dir" },
+        { name = "file%01", type = "file", label = "file1" },
+        { name = "file2", type = "file", path = "https://youtube.com/video" },
+    }
+
+    return list
+end
+```
+
 ### The Opts Table
 
 The options table allows scripts to better control how they are handled by file-browser.
@@ -94,6 +135,22 @@ None of these values are required, and the opts table can even left as nil when 
 | selected_index  | number  | the index of the item on the list to select by default - a.k.a. the cursor position                                                       |
 | already_deferred| boolean | whether or not [defer](#Advanced-Functions) was used to create the list, if so then give up if list is nil - set automatically, but can be manually disabled |
 | index           | number  | index of the parser that successfully returns a list - set automatically, but can be set manually to take ownership (see defer)                       |
+
+The previous static example, but modified so that file browser does not try to filter or re-order the list:
+
+```lua
+function parser:parse(directory, state)
+    local list = {
+        { name = "first/", type = "dir" },
+        { name = "second/", type = "dir" },
+        { name = "third/", type = "dir" },
+        { name = "file%01", type = "file", label = "file1" },
+        { name = "file2", type = "file", path = "https://youtube.com/video" },
+    }
+
+    return list, { sorted = true, filtered = true }
+end
+```
 
 `already_deferred` is an optimisation. If a script uses defer and still returns nil, then that means that none of the remaining parsers will be able to parse the path.
 Therefore, it is more efficient to just immediately jump to the root.
@@ -126,13 +183,36 @@ Addons have the ability to set custom keybinds using the `keybinds` field in the
 Firstly, the keybind_table may be in the form
 `{ "key", "name", [function], [flags] }`
 where the table is an array whose four values corresond to the four arguments for the [mp.add_key_binding](https://mpv.io/manual/master/#lua-scripting-[,flags]]\)) API function.
+
+```lua
+local function main(keybind, state, co)
+    -- deletes files
+end
+
+parser.keybinds = {
+    { "Alt+DEL", "delete_files", main, {} },
+}
+```
+
 Secondly, the keybind_table may use the same formatting as file-browser's [custom-keybinds](../custom-keybinds.md).
 Using the array form is equivalent to setting `key`, `name`, `command`, and `flags` of the custom-keybind form, and leaving everything else on the defaults.
+
+```lua
+parser.keybinds = {
+    {
+        key = "Alt+DEL",
+        name = "delete_files",
+        command = {"run", "rm", "%F"},
+        filter = "files"
+    }
+}
+```
 
 These keybinds are evaluated only once shortly after the addon is loaded, they cannot be modified dynamically during runtime.
 Keybinds are applied after the default keybinds, but before the custom keybinds. This means that addons can overwrite the
 default keybinds, but that users can ovewrite addon keybinds. Among addons, those with higher priority numbers have their keybinds loaded before those
-with lower priority numbers. Remember that a lower priority value is better.
+with lower priority numbers.
+Remember that a lower priority value is better, they will overwrite already loaded keybinds.
 Keybind passthrough works the same way, though there is some custom behaviour when it comes to [raw functions](#keybind-functions).
 
 ### Keybind Names
@@ -141,11 +221,36 @@ In either form the naming of the function is different from custom keybinds. Ins
 they use the form `file_browser/dynamic/[parser_ID]/[name]`, where `[parser_id]` is a unique string ID for the parser, which can be retrieved using the
 `parser:get_id()` method.
 
+### Native Functions vs Command Tables
+
+There are two ways of specifying the behaviour of a keybind.
+In the array form, the 3rd argument is a function to be executed, and in the custom-keybind form the `command` field is a table of mpv input commands to run.
+
+These two ways of specifying commands are independant of how the overall keybind is defined.
+What this means is that the command field of the custom-keybinds syntax can be an array, and the
+3rd value in the array syntax can be a table of mpv commands.
+
+```lua
+local function main(keybind, state, co)
+    -- deletes files
+end
+
+-- this is a valid keybind table
+parser.keybinds = {
+    { "Alt+DEL", "delete_files", {"run", "rm", "%F"}, {} },
+
+    {
+        key = "Alt+DEL",
+        name = "delete_files",
+        command = main,
+        filter = "files"
+    }
+}
+```
+
 ### Keybind Functions
 
-In the array form, the 3rd argument is a function to be executed, and in the custom-keybind form the `command` field is a table of mpv input commands to run.
-However, addons have the option to use either command type for either form, so functions can be placed inside the `command` field, and mpv command strings can be
-placed inside the 3rd cell of the array.
+This section details the use of keybind functions.
 
 #### Function Call
 
@@ -154,16 +259,15 @@ If one uses the raw function then the functions are called directly in the form:
 `fn(keybind, state, coroutine)`
 
 Where `keybind` is the keybind_table of the key being run, `state` is a table of state values at the time of the key press, and `coroutine` is the coroutine object
-that the keybind is being executed inside. Note that even if the array form is used, the `keybind` table will still use the custom-keybind format.
+that the keybind is being executed inside.
+
+The `keybind` table uses the same fields as defined
+in [custom-keybinds.md](../custom-keybinds.md). Any random extra fields the user places in
+`file-browser-keybinds.json` will likely show up as well (this is not guaranteed).
+Note that even if the array form is used, the `keybind` table will still use the custom-keybind format.
 
 The entire process of running a keybind is handled with a coroutine, so the addon can safely pause and resume the coroutine at will. The `state` table is provided to
 allow addons to keep a record of important state values that may be changed during a paused coroutine.
-
-#### Passthrough
-
-When using a raw function none of the filters will work, it is up to the addon to ensure that their behaviour is correct.
-If the `passthrough` field of the keybind_table is not set, then without filters passthrough behaviour will depend on the return value of the function.
-In order to tell the keybind handler to run the next priority command, the keybind function simply needs to return the value `false` (`nil` is not valid).
 
 #### State Table
 
@@ -178,14 +282,94 @@ The state table contains copies of the following values at the time of the key p
 | selection       | table of currently selected items (for multi-select) - in the form { index = true, ... } |
 | parser          | a copy of the parser object that provided the current directory                          |
 
+The following example shows the implementation of the `delete_files` keybind using the state values:
+
+```lua
+local fb = require "file-browser"       -- see #API-Functions and #Utility-Functions
+
+local function main(keybind, state, co)
+    for index, item in state.list do
+        if state.selection[index] and item.type == "file" then
+            os.remove( fb.get_full_path(item, state.directory) )
+        end
+    end
+end
+
+parser.keybinds = {
+    { "Alt+DEL", "delete_files", main, {} },
+}
+```
+
+#### Passthrough
+
+If the `passthrough` field of the keybind_table is set to `true` or `false` then file-browser will
+handle everything. However, if the passthrough field is not set (meaning the bahviour should be automatic)
+then it is up to the addon to ensure that they are
+correctly notifying when the operation failed and a passthrough should occur.
+In order to tell the keybind handler to run the next priority command, the keybind function simply needs to return the value `false`,
+any other value (including `nil`) will be treated as a successful operation.
+
+The below example only allows removing files from the `/tmp/` directory and allows other
+keybinds to run in different directories:
+
+```lua
+local fb = require "file-browser"       -- see #api-functions and #utility-functions
+
+local function main(keybind, state, co)
+    if state.directory ~= "/tmp/" then return false end
+
+    for index, item in state.list do
+        if state.selection[index] and item.type == "file" then
+            os.remove( fb.get_full_path(item, state.directory) )
+        end
+    end
+end
+
+parser.keybinds = {
+    { "Alt+DEL", "delete_files", main, {} },
+}
+```
+
 ## API Functions
 
 All parsers are provided with a range of API functions to make addons more powerful.
 These functions are added to the parser after being loaded via a metatable, so can be called through the self argument or the parser object.
 These functions are only made available once file-browser has fully imported the parsers, so if a script wants to call them immediately on load they must do so in the `setup` method.
 
+```lua
+local parser = {
+    priority = 100,
+}
+
+function parser:setup()
+    -- same operations
+    self.insert_root_item({ name = "Example/", type = "dir" })
+    parser.insert_root_item({ name = "Example/", type = "dir" })
+end
+
+-- will not work since the API hasn't been added to the parser yet
+parser.insert_root_item({ name = "Example/", type = "dir" })
+
+return parser
+```
+
 Additionally, the API is also available through a module, which can be loaded with `require "file-browser"`. The module contains all of the same functions, but does not
 include the methods, they are only available through the parser objects.
+This is the recommended way of calling [Utility Functions](#utility-functions).
+
+```lua
+local fb = require "file-browser"
+
+local parser = {
+    priority = 100,
+}
+
+function parser:setup()
+    fb.insert_root_item({ name = "Example/", type = "dir" })
+end
+
+return parser
+```
 
 | key                          | type     | arguments                    | returns | description                                                                                                              |
 |------------------------------|----------|------------------------------|---------|--------------------------------------------------------------------------------------------------------------------------|
@@ -218,6 +402,37 @@ The following are a list of recommendations that will increase the compatability
 * Think about what to do if the `directory` field is set. The use of this field is somewhat dubious, but it does exist.
 * Think if you want your parser to take full ownership of the results of `defer`, if so consider setting `opts.index = self:get_index()`.
   * Currently this affects custom keybind filtering, though it may be changed in the future.
+
+The [home-label](https://github.com/CogentRedTester/mpv-file-browser/blob/master/addons/home-label.lua)
+addon provides a good simple example of the safe use of defer. It lets the normal file
+parser load the home directory, then modifies the directory label.
+
+```lua
+local mp = require "mp"
+local fb = require "file-browser"
+
+local home = fb.fix_path(mp.command_native({"expand-path", "~/"}), true)
+
+local home_label = {
+    priority = 100
+}
+
+function home_label:can_parse(directory)
+    return directory:sub(1, home:len()) == home
+end
+
+function home_label:parse(directory, ...)
+    local list, opts = self:defer(directory, ...)
+
+    if (not opts.directory or opts.directory == directory) and not opts.directory_label then
+        opts.directory_label = "~/"..(directory:sub(home:len()+1) or "")
+    end
+
+    return list, opts
+end
+
+return home_label
+```
 
 ### Utility Functions
 
