@@ -1437,6 +1437,16 @@ local function insert_custom_keybind(keybind)
     --we'll always save the keybinds as either an array of command arrays or a function
     if type(keybind.command) == "table" and type(keybind.command[1]) ~= "table" then
         keybind.command = {keybind.command}
+
+    -- add a filter for the parser so that addons don't need to
+    elseif type(keybind.command) == "function" then
+        keybind.command = function(cmd, state, co)
+            if  cmd.parser and cmd.parser ~=
+                (state.parser.keybind_name or state.parser.name) then
+                return false
+            end
+            return keybind.command(cmd, state, co)
+        end
     end
 
     keybind.codes = scan_for_codes(keybind.command, {})
