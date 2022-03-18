@@ -79,7 +79,7 @@ function favs:parse(directory, ...)
         local list, opts = self:defer(full_path or "", ...)
 
         if not list then return nil end
-        opts.index = self:get_index()
+        opts.id = self:get_id()
         if opts.directory_label then
             opts.directory_label = opts.directory_label:gsub(full_paths[name], "Favourites/"..name..'/')
             if opts.directory_label:find("Favourites/") ~= 1 then opts.directory_label = nil end
