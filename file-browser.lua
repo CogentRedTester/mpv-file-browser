@@ -171,9 +171,11 @@ local state = {
     selection = {}
 }
 
+--the parser table actually contains 3 entries for each parser
+--a numeric entry which represents the priority of the parsers and has the parser object as the value
+--a string entry representing the id of each parser and with the parser object as the value
+--and a table entry with the parser itself as the key and a table value in the form { id = %s, index = %d }
 local parsers = {}
-local parser_index = {}
-local parser_ids = {}
 
 local extensions = {}
 local sub_extensions = {}
@@ -744,7 +746,7 @@ local function choose_and_parse(directory, index, state)
 
     msg.debug("list returned from:", parser:get_id())
     opts = opts or {}
-    if list then opts.index = opts.index or parser_index[parser] end
+    if list then opts.id = opts.id or parser:get_id() end
     return list, opts
 end
 
@@ -760,7 +762,8 @@ local function scan_directory(directory, state)
     local list, opts = choose_and_parse(directory, 1, state)
 
     if list == nil then msg.debug("no successful parsers found"); return nil end
-    opts.parser = parsers[opts.index]
+    opts.parser = parsers[opts.id]
+
     if not opts.filtered then API.filter(list) end
     if not opts.sorted then API.sort(list) end
     return list, opts
@@ -1319,7 +1322,7 @@ local function setup_keybinds()
                     if not keybind.key then keybind = { key = keybind[1], name = keybind[2], command = keybind[3], flags = keybind[4] }
                     else keybind = API.copy_table(keybind) end
 
-                    keybind.name = parser_ids[parser].."/"..(keybind.name or tostring(i))
+                    keybind.name = parsers[parser].id.."/"..(keybind.name or tostring(i))
                     insert_custom_keybind(keybind)
                 end
             end
@@ -1421,8 +1424,8 @@ function API.set_selected_index(index)
     return index
 end
 
-function parser_API:get_index() return parser_index[self] end
-function parser_API:get_id() return parser_ids[self] end
+function parser_API:get_index() return parsers[self].index end
+function parser_API:get_id() return parsers[self].id end
 
 --runs choose_and_parse starting from the next parser
 function parser_API:defer(directory, state)
@@ -1464,22 +1467,19 @@ end
 --------------------------------------------------------------------------------------------------------
 
 --create a unique id for the given parser
-local existing_ids = {}
 local function set_parser_id(parser)
-    if not existing_ids[parser.name] then
-        existing_ids[parser.name] = true
-        parser_ids[parser] = parser.name
-        return
+    local name = parser.name
+    if parsers[name] then
+        local n = 2
+        name = parser.name.."_"..n
+        while parsers[name] do
+            n = n + 1
+            name = parser.name.."_"..n
+        end
     end
 
-    local n = 2
-    local name = parser.name.."_"..n
-    while existing_ids[name] do
-        n = n + 1
-        name = parser.name.."_"..n
-    end
-    existing_ids[name] = true
-    parser_ids[parser] = name
+    parsers[name] = parser
+    parsers[parser] = { id = name }
 end
 
 --loads an addon in a separate environment
@@ -1549,7 +1549,7 @@ local function setup_addons()
     table.sort(parsers, function(a, b) return a.priority < b.priority end)
 
     --we want to store the indexes of the parsers
-    for i = #parsers, 1, -1 do parser_index[ parsers[i] ] = i end
+    for i = #parsers, 1, -1 do parsers[ parsers[i] ].index = i end
 end
 
 --sets up the compatible extensions list

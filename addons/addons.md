@@ -163,7 +163,7 @@ None of these values are required, and the opts table can even left as nil when 
 | empty_text      | string  | display this text when the list is empty - can be used for error messages                                                                 |
 | selected_index  | number  | the index of the item on the list to select by default - a.k.a. the cursor position                                                       |
 | already_deferred| boolean | whether or not [defer](#Advanced-Functions) was used to create the list, if so then give up if list is nil - set automatically, but can be manually disabled |
-| index           | number  | index of the parser that successfully returns a list - set automatically, but can be set manually to take ownership (see defer)                       |
+| id              | number  | id of the parser that successfully returns a list - set automatically, but can be set manually to take ownership (see defer)              |
 
 The previous static example, but modified so that file browser does not try to filter or re-order the list:
 
@@ -185,9 +185,9 @@ end
 Therefore, it is more efficient to just immediately jump to the root.
 It is up to the addon author to manually disable this if their use of `defer` conflicts with this assumption.
 
-`index` is used to declare ownership of a page. The name of the parser that has ownership is used for custom-keybinds parser filtering.
-When using `defer` index will be the index of whichever parser first returned a list.
-This is the only situation when a parser may want to set index manually.
+`id` is used to declare ownership of a page. The name of the parser that has ownership is used for custom-keybinds parser filtering.
+When using `defer` id will be the id of whichever parser first returned a list.
+This is the only situation when a parser may want to set id manually.
 
 ## Priority Suggestions
 
@@ -431,8 +431,8 @@ The following are a list of recommendations that will increase the compatability
 * Respect the `sorted` and `filtered` values in the opts table. This may mean calling `sort` or `filter` manually.
 * Think about how to handle the `directory_label` field, especially how it might interract with any virtual paths the parser may be maintaining.
 * Think about what to do if the `directory` field is set. This field is deprecated, so you could probably get away with not handling this.
-* Think if you want your parser to take full ownership of the results of `defer`, if so consider setting `opts.index = self:get_index()`.
-  * Currently this affects custom keybind filtering, though it may be changed in the future.
+* Think if you want your parser to take full ownership of the results of `defer`, if so consider setting `opts.id = self:get_id()`.
+  * Currently this only affects custom keybind filtering, though it may be changed in the future.
 
 The [home-label](https://github.com/CogentRedTester/mpv-file-browser/blob/master/addons/home-label.lua)
 addon provides a good simple example of the safe use of defer. It lets the normal file
@@ -489,8 +489,8 @@ All tables returned by these functions are copies to ensure addons can't break t
 
 | key                        | type     | arguments | returns | description                                                                                                           |
 |----------------------------|----------|-----------|---------|-----------------------------------------------------------------------------------------------------------------------|
-| get_id                     | method   | -         | number  | the unique id of the parser                                                                                           |
-| get_index                  | method   | -         | number  | the index of the parser in order of preference                                                                        |
+| get_id                     | method   | -         | number  | the unique id of the parser - used internally to set ownership of list results for cutom-keybind filtering            |
+| get_index                  | method   | -         | number  | the index of the parser in order of preference - `defer` uses this internally                                         |
 | get_script_opts            | function | -         | table   | the table of script opts set by the user - this never gets changed during runtime                                     |
 | get_root                   | function | -         | table   | the root table - an array of item_tables                                                                              |
 | get_extensions             | function | -         | table   | a set of valid extensions after applying the user's whitelist/blacklist - in the form {ext1 = true, ext2 = true, ...} |
