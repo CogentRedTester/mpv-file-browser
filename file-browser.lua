@@ -250,7 +250,7 @@ local cache = setmetatable({}, { __index = __cache })
 
 --------------------------------------------------------------------------------------------------------
 -----------------------------------------Utility Functions----------------------------------------------
---------------------------------------------------------------------------------------------------------
+---------------------------------------Part of the addon API--------------------------------------------
 --------------------------------------------------------------------------------------------------------
 
 --get the full path for the current file
@@ -1335,7 +1335,7 @@ end
 
 
 --------------------------------------------------------------------------------------------------------
-----------------------------------------------API Setup-------------------------------------------------
+-------------------------------------------API Functions------------------------------------------------
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
 
@@ -1445,6 +1445,26 @@ local function set_parser_id(parser)
     parser_ids[parser] = name
 end
 
+--loads an addon in a separate environment
+local function load_addon(path)
+    local addon_environment = setmetatable({}, { __index = _G })
+    local chunk, err
+    if setfenv then
+        --since I stupidly named a function loadfile I need to specify the global one
+        --I've been using the name too long to want to change it now
+        chunk, err = _G.loadfile(path)
+        if not chunk then return msg.error(err) end
+        setfenv(chunk, addon_environment)
+    else
+        chunk, err = _G.loadfile(path, "bt", addon_environment)
+        if not chunk then return msg.error(err) end
+    end
+
+    local success, result = pcall(chunk)
+    if not success then return msg.error(result) end
+    return result
+end
+
 --setup an internal or external parser
 local function setup_parser(parser, file)
     parser = setmetatable(parser, { __index = parser_API })
@@ -1469,7 +1489,7 @@ end
 local function setup_addon(file, path)
     if file:sub(-4) ~= ".lua" then return msg.verbose(path, "is not a lua file - aborting addon setup") end
 
-    local addon_parsers = dofile(path)
+    local addon_parsers = load_addon(path)
     if not addon_parsers then return msg.error("addon", path, "did not return a table") end
 
     --if the table contains a priority key then we assume it isn't an array of parsers
