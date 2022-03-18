@@ -253,6 +253,15 @@ local cache = setmetatable({}, { __index = __cache })
 ---------------------------------------Part of the addon API--------------------------------------------
 --------------------------------------------------------------------------------------------------------
 
+--implements table.pack if on lua 5.1
+if not table.pack then
+    function table.pack(...)
+        local t = {...}
+        t.n = select("#", ...)
+        return t
+    end
+end
+
 --get the full path for the current file
 function API.get_full_path(item, dir)
     if item.path then return item.path end
@@ -773,8 +782,16 @@ local function update_list()
         state.prev_directory = state.directory
         return
     end
-
+    local directory = state.directory
     local list, opts = scan_directory(state.directory, { source = "browser" })
+
+    --if the running coroutine isn't the one stored in the state variable, then the user
+    --changed directories while the coroutine was paused, and this operation should be aborted
+    if coroutine.running() ~= state.co then
+        msg.verbose("current coroutine does not match browser's expected coroutine - aborting the parse")
+        msg.debug("expected:", state.directory, "received:", directory)
+        return
+    end
 
     --apply fallbacks if the scan failed
     if not list and cache[1] then
@@ -832,10 +849,6 @@ local function update(moving_adjacent)
 
     --if opening a new directory we want to clear the previous coroutine if it is still running
     --it is up to addon authors to be able to handle this forced resumption
-    while (state.co and coroutine.status(state.co) ~= "dead") do
-        local success, err = coroutine.resume(state.co)
-        if not success then msg.error(err) end
-    end
     state.co = coroutine.create(function() update_list(); update_ass() end)
     local success, err = coroutine.resume(state.co)
     if not success then msg.error(err) end
@@ -1417,6 +1430,30 @@ function parser_API:defer(directory, state)
     local list, opts = choose_and_parse(directory, self:get_index() + 1, state)
     opts.already_deferred = true
     return list, opts
+end
+
+--a wrapper around coroutine.yield that aborts the coroutine if
+--the parse request was cancelled by the user
+--the coroutine is 
+function parse_state_API:yield(...)
+    local co = coroutine.running()
+    local is_browser = co == state.co
+    if self.source == "browser" and not is_browser then
+        msg.error("current coroutine does not match browser's expected coroutine - did you unsafely yield before this?")
+        error("current coroutine does not match browser's expected coroutine - aborting the parse")
+    end
+
+    local result = table.pack(coroutine.yield(...))
+    if is_browser and co ~= state.co then
+        msg.verbose("browser no longer waiting for list - aborting parse")
+        error("browser is no longer waiting for list - aborting parse")
+    end
+    return unpack(result, 1, result.n)
+end
+
+--checks if the current coroutine is the one handling the browser's request
+function parse_state_API:is_coroutine_current()
+    return coroutine.running() == state.co
 end
 
 

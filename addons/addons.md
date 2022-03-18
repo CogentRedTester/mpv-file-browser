@@ -67,17 +67,18 @@ If an empty table is returned then file-browser will treat the directory as empt
 This continues until a parser returns a list_table, or until there are no more parsers, after which the root is loaded instead.
 
 The entire parse operation is run inside of a coroutine, this allows parsers to pause execution to handle asynchronous operations.
-However, if the user attempts to change directories while the coroutine is paused then file-browser will forcibly resume the coroutine until it dies.
-It is up to the addon writer to ensure that they can handle this situation.
+Please read [coroutines](#coroutines) for all the details.
 
-### Parser State Table
+### Parse State Table
 
 The `parse` function is passed a state table as its second argument, this contains the following fields.
 
 | key    | type   | description                                   |
 |--------|--------|-----------------------------------------------|
 | source | string | the source of the parse request               |
-| co     | thread | the coroutine that parse is running inside of |
+| co     | thread | the coroutine running the parse - also found through `coroutine.running()` |
+| yield  | method | a wrapper around `coroutine.yield()` - see [coroutines](#coroutines) |
+| is_coroutine_current | method | returns if the browser is waiting on the current coroutine to populate the list |
 
 Source can have the following values:
 
@@ -87,6 +88,32 @@ Source can have the following values:
 | loadlist       | the browser is scanning the directory to append to the playlist |
 | script-message | triggered by the `get-directory-contents` script-message        |
 | addon          | caused by an addon calling the `scan_directory` API function - note that addons can set a custom state |
+
+#### Coroutines
+
+Any calls to `parse()` (or `can_parse()`, but you should never be yielding inside there) are done in a [Lua coroutine](https://www.lua.org/manual/5.1/manual.html#2.11).
+This means that you can arbitrarily pause the parse operation if you need to wait for some asynchronous operation to complete,
+such as waiting for user input, or for a network request to complete.
+
+Making these operations asynchronous has performance
+advantages as well, for example recursively opening a network directory tree could cause the browser to freeze
+for a long period of time. If the network query were asynchronous then the browser would only freeze during actual operations,
+during network operations it would be free for the user interract with. The browser has even been designed so that
+a loadfile/loadlist operation saves it's own copy of the current directory, so even if the user hops around like crazy the original
+open operation will still occur in the correct order (though there's nothing stopping them starting a new operation which will cause
+random ordering.)
+
+However, there is one downside to this behaviour. If the parse operation is requested by the browser, then it is
+possible for the user to change directories while the coroutine is yielded. If you were to resume the coroutine
+in that situation, then any operations you do are wasted, and unexpected bahaviour could happen.
+file-browser will automatically detect when it receives a list from an aborted coroutine, so there is no risk
+of the current list being replaced, but any other logic in your script will continue until `parse` returns.
+
+To fix this there are two methods available in the state table, the `yield()` method is a wrapper around `coroutine.yield()` that
+detects when the browser has abandoned the parse, and automatically kills the coroutine by throwing an error.
+The `is_coroutine_current()` method simply compares if the current coroutine (as returned by `coroutine.current()`) matches the
+coroutine that the browser is waiting for. Remember this is only a problem when the browser is the source of the request,
+if the request came from a script-message, or from a loadlist command there are no issues.
 
 ### The List Array
 
@@ -383,6 +410,8 @@ return parser
 | update_directory             | function |                              | -       | rescans the current directory - equivalent to Ctrl+r without the cache refresh for higher level directories              |
 | clear_cache                  | function |                              | -       | clears the cache - use if modifying the contents of higher level directories                                             |
 | scan_directory               | function | string, parser_state_table | list_table, opts_table       | starts a new scan for the given directory - note that all parsers are called as normal, so beware infinite recursion     |
+
+Note that the `scan_directory()` function must be called from inside a [coroutine](#coroutines).
 
 ### Advanced Functions
 
