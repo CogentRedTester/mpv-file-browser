@@ -41,12 +41,6 @@ local o = {
     filter_dot_dirs = false,
     filter_dot_files = false,
 
-    --when loading a directory from the browser use the scripts
-    --parsing code to load the contents of the folder (using filters and sorting)
-    --this means that files will be added to the playlist identically
-    --to how they appear in the browser, rather than leaving it to mpv
-    custom_dir_loading = false,
-
     --this option reverses the behaviour of the alt+ENTER keybind
     --when disabled the keybind is required to enable autoload for the file
     --when enabled the keybind disables autoload for the file
@@ -387,13 +381,6 @@ end
 ------------------------------------Parser Object Implementation----------------------------------------
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
-
---chooses which parser to use for the specific path starting from index
-local function choose_parser(path, index)
-    for i = index or 1, #parsers, 1 do
-        if parsers[i]:can_parse(path) then return parsers[i] end
-    end
-end
 
 --setting up functions to provide to addons
 local parser_index = {}
@@ -1152,23 +1139,12 @@ local function custom_loadlist_recursive(directory, flag)
     return flag == "append"
 end
 
+
 --a wrapper for the custom_loadlist_recursive function to handle the flags
-local function custom_loadlist(directory, flag)
+local function loadlist(directory, flag)
     flag = custom_loadlist_recursive(directory, flag)
     if not flag then msg.warn(directory, "contained no valid files") end
     return flag
-end
-
---loads lists or defers the command to add-ons
-local function loadlist(path, flag)
-    local parser = choose_parser(path)
-    if not o.custom_dir_loading and parser == file_parser then
-        mp.commandv('loadlist', path, flag == "append-play" and "append" or flag)
-        if flag == "append-play" and mp.get_property_bool("core-idle") then mp.commandv("playlist-play-index", 0) end
-        return true
-    else
-        return custom_loadlist(path, flag)
-    end
 end
 
 --load playlist entries before and after the currently playing file
