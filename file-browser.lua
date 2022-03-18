@@ -121,7 +121,7 @@ end
 local API = {}
 package.loaded["file-browser"] = setmetatable({}, { __index = API })
 
-local parser_API = setmetatable({}, { __index = API })
+local parser_API = setmetatable({}, { __index = package.loaded["file-browser"] })
 local parse_state_API = {}
 
 --------------------------------------------------------------------------------------------------------
