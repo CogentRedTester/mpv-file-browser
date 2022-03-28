@@ -3,7 +3,8 @@
 ]]
 
 local urldecode = {
-    priority = 5
+    priority = 5,
+    version = "1.0.0"
 }
 
 --decodes a URL address

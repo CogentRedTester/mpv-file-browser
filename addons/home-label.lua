@@ -8,7 +8,8 @@ local fb = require "file-browser"
 local home = fb.fix_path(mp.command_native({"expand-path", "~/"}), true)
 
 local home_label = {
-    priority = 100
+    priority = 100,
+    version = "1.0.0"
 }
 
 function home_label:can_parse(directory)

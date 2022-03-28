@@ -8,6 +8,7 @@ local mp = require "mp"
 
 local ls = {
     priority = 109,
+    version = "1.0.0",
     name = "ls",
     keybind_name = "file"
 }

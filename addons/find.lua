@@ -14,7 +14,9 @@ local msg = require "mp.msg"
 local browser = require "file-browser"
 local input = require "user-input-module"
 
-local find = {}
+local find = {
+    version = "1.0.0"
+}
 local latest_coroutine = nil
 
 local function compare(name, query)

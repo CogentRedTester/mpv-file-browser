@@ -17,6 +17,7 @@ end
 
 local favourites = nil
 local favs = {
+    version = "1.0.0",
     priority = 30,
     cursor = 1
 }

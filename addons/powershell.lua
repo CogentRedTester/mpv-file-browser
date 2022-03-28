@@ -15,6 +15,7 @@ local msg = require "mp.msg"
 
 local wn = {
     priority = 109,
+    version = "1.0.0",
     name = "powershell",
     keybind_name = "file"
 }
