@@ -1480,9 +1480,9 @@ local function check_api_version(parser)
     if not major or not minor then
         return msg.error("Invalid version number")
     elseif major ~= API_MAJOR then
-        return msg.error("parser has wrong major version number, expected", ("v%d.x.x"):format(API_MAJOR), "got", 'v'..version)
+        return msg.error("parser", parser.name, "has wrong major version number, expected", ("v%d.x.x"):format(API_MAJOR), "got", 'v'..version)
     elseif minor > API_MINOR then
-        msg.warn("parser has newer minor version number than API, expected", ("v%d.%d.x"):format(API_MAJOR, API_MINOR), "got", 'v'..version)
+        msg.warn("parser", parser.name, "has newer minor version number than API, expected", ("v%d.%d.x"):format(API_MAJOR, API_MINOR), "got", 'v'..version)
     end
     return true
 end
