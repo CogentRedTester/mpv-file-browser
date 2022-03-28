@@ -1653,6 +1653,7 @@ local function scan_directory_json(directory, response_str)
     msg.verbose(("recieved %q from 'get-directory-contents' script message - returning result to %q"):format(directory, response_str))
 
     local list, opts = scan_directory(directory, { source = "script-message" } )
+    list.API_VERSION, opts.API_VERSION = API_VERSION, API_VERSION
 
     --removes invalid json types from the parser object
     if opts.parser then
