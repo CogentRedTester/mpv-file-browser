@@ -1475,20 +1475,14 @@ local API_MAJOR, API_MINOR, API_PATCH = API_VERSION:match("(%d+)%.(%d+)%.(%d+)")
 local function check_api_version(parser)
     local version = parser.version or "1.0.0"
 
-    local major, minor, patch = version:match("(%d+)%.(%d+)%.(%d+)")
-    if not major then
-        major, minor = version:match("(%d+)%.(%d+)")
-        patch = 0
-    end
+    local major, minor = version:match("(%d+)%.(%d+)")
 
-    if not major or not minor or not patch then
+    if not major or not minor then
         return msg.error("Invalid version number")
     elseif major ~= API_MAJOR then
         return msg.error("parser has wrong major version number, expected", ("v%d.x.x"):format(API_MAJOR), "got", 'v'..version)
-    elseif minor ~= API_MINOR then
-        msg.warn("parser has wrong minor version number, expected", ("v%d.%d.x"):format(API_MAJOR, API_MINOR), "got", 'v'..version)
-    elseif patch > API_PATCH then
-        msg.warn("parser uses newer patch, current patch number is", ("v%d.%d.%d"):format(API_MAJOR, API_MINOR, API_PATCH), "parser uses", 'v'..version)
+    elseif minor > API_MINOR then
+        msg.warn("parser has newer minor version number than API, expected", ("v%d.%d.x"):format(API_MAJOR, API_MINOR), "got", 'v'..version)
     end
     return true
 end
