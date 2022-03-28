@@ -108,6 +108,9 @@ opt.read_options(o, 'file_browser')
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
 
+--sets the version for the file-browser API
+API_VERSION = "1.0.0"
+
 --switch the main script to a different environment so that the
 --executed lua code cannot access our global variales
 if setfenv then
@@ -118,7 +121,7 @@ end
 
 --creates a table for the API functions
 --adds one metatable redirect to prevent addon authors from accidentally breaking file-browser
-local API = {}
+local API = { API_VERSION = API_VERSION }
 package.loaded["file-browser"] = setmetatable({}, { __index = API })
 
 local parser_API = setmetatable({}, { __index = package.loaded["file-browser"] })
@@ -1466,6 +1469,30 @@ end
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
 
+local API_MAJOR, API_MINOR, API_PATCH = API_VERSION:match("(%d+)%.(%d+)%.(%d+)")
+
+--checks if the given parser has a valid version number
+local function check_api_version(parser)
+    local version = parser.version or "1.0.0"
+
+    local major, minor, patch = version:match("(%d+)%.(%d+)%.(%d+)")
+    if not major then
+        major, minor = version:match("(%d+)%.(%d+)")
+        patch = 0
+    end
+
+    if not major or not minor or not patch then
+        return msg.error("Invalid version number")
+    elseif major ~= API_MAJOR then
+        return msg.error("parser has wrong major version number, expected", ("v%d.x.x"):format(API_MAJOR), "got", 'v'..version)
+    elseif minor ~= API_MINOR then
+        msg.warn("parser has wrong minor version number, expected", ("v%d.%d.x"):format(API_MAJOR, API_MINOR), "got", 'v'..version)
+    elseif patch > API_PATCH then
+        msg.warn("parser uses newer patch, current patch number is", ("v%d.%d.%d"):format(API_MAJOR, API_MINOR, API_PATCH), "parser uses", 'v'..version)
+    end
+    return true
+end
+
 --create a unique id for the given parser
 local function set_parser_id(parser)
     local name = parser.name
@@ -1506,6 +1533,8 @@ end
 local function setup_parser(parser, file)
     parser = setmetatable(parser, { __index = parser_API })
     parser.name = parser.name or file:gsub("%-browser%.lua$", ""):gsub("%.lua$", "")
+
+    if not check_api_version(parser) then return msg.error("aborting load of parser", parser.name, "from", file) end
     set_parser_id(parser)
 
     msg.verbose("imported parser", parser:get_id(), "from", file)
