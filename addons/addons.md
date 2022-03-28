@@ -1,4 +1,4 @@
-# How to Write an Addon
+# How to Write an Addon - API v1.0.0
 
 Addons provide ways for file-browser to parse non-native directory structures. This document describes how one can create their own custom addon.
 
@@ -10,6 +10,24 @@ For the purpose of this document addons refer to the scripts being loaded while 
 An addon can return multiple parsers, but when they only returns one the terms are almost synonymous.
 Additionally, `method` refers to functions called using the `object:funct()` syntax, and hence have access to the self object, whereas `function` is the standard `object.funct()` syntax.
 
+## API Version
+
+The API version, shown in the title of this document, allows file-browser to ensure that addons are using the correct
+version of the API. It follows [semantic versioning](https://semver.org/) conventions of `MAJOR.MINOR.PATCH`.
+A parser sets its version string with the `version` field, as seen [below](#overview).
+
+Any change that breaks backwards compatability will cause the major version number to increase.
+A parser MUST have the same version number as the API, otherwise an error message will be printed and the parser will
+not be loaded.
+
+A minor version number denotes a change to the API that is backwards compatible. This includes additional API functions,
+or extra fields in tables that were previously unused. It may also include additional arguments to existing functions that
+add additional behaviour without changing the old behaviour.
+If the parser's minor version number is greater than the API_VERSION, then a warning is printed to the console.
+
+Patch numbers denote bug fixes, and are ignored when loading an addon.
+For this reason addon authors are allowed to leave the patch number out of their version tag and just use `MAJOR.MINOR`.
+
 ## Overview
 
 File-browser automatically loads any lua files from the `~~/script-modules/file-browser-addons` directory as modules.
@@ -18,6 +36,7 @@ Each addon must return either a single parser table, or an array of parser table
 | key       | type   | arguments | returns                    | description                                                                                                |
 |-----------|--------|-----------|----------------------------|------------------------------------------------------------------------------------------------------------|
 | priority  | number | -         | -                        | a number to determine what order parsers are tested - see [here](#priority-suggestions) for suggested values |
+| version   | string | -         | -                        | the API version the parser is using - see [API Version](#api-version)                                        |
 | can_parse | method | string    | boolean                    | returns whether or not the given path is compatible with the parser                                        |
 | parse     | method | string, parser_state_table | list_table, opts_table | returns an array of item_tables, and a table of options to control how file_browser handles the list |
 
@@ -359,11 +378,34 @@ parser.keybinds = {
 }
 ```
 
-## API Functions
+## The API
 
-All parsers are provided with a range of API functions to make addons more powerful.
-These functions are added to the parser after being loaded via a metatable, so can be called through the self argument or the parser object.
-These functions are only made available once file-browser has fully imported the parsers, so if a script wants to call them immediately on load they must do so in the `setup` method.
+The API is available through a module, which can be loaded with `require "file-browser"`.
+The API provides a variety of different values and functions for an addon to use
+in order to make them more powerful.
+
+```lua
+local fb = require "file-browser"
+
+local parser = {
+    priority = 100,
+}
+
+function parser:setup()
+    fb.insert_root_item({ name = "Example/", type = "dir" })
+end
+
+return parser
+```
+
+### Parser API
+
+In addition to the standard API there is also an extra parser API that provides
+several parser specific methods,
+labeled `method` below instead of `function`. This API is added to the parser
+object after it is loaded by file-browser,
+so if a script wants to call them immediately on load they must do so in the `setup` method.
+All the standard API functions are also available in the parser API.
 
 ```lua
 local parser = {
@@ -382,26 +424,11 @@ parser.insert_root_item({ name = "Example/", type = "dir" })
 return parser
 ```
 
-Additionally, the API is also available through a module, which can be loaded with `require "file-browser"`. The module contains all of the same functions, but does not
-include the methods, they are only available through the parser objects.
-This is the recommended way of calling [Utility Functions](#utility-functions).
-
-```lua
-local fb = require "file-browser"
-
-local parser = {
-    priority = 100,
-}
-
-function parser:setup()
-    fb.insert_root_item({ name = "Example/", type = "dir" })
-end
-
-return parser
-```
+### General Functions
 
 | key                          | type     | arguments                    | returns | description                                                                                                              |
 |------------------------------|----------|------------------------------|---------|--------------------------------------------------------------------------------------------------------------------------|
+| API_VERSION                  | string   | -                            | -       | the current API version in use                                                                                           |
 | register_parseable_extension | function | string                       | -       | register a file extension that the browser will attempt to open, like a directory - for addons which can parse files     |
 | remove_parseable_extension   | function | string                       | -       | remove a file extension that the browser will attempt to open like a directory                                           |
 | add_default_extension        | function | string                       | -       | adds the given extension to the default extension filter whitelist - can only be run inside setup()                      |
