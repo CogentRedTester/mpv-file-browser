@@ -1573,6 +1573,18 @@ local function setup_addons()
 
     --we want to store the indexes of the parsers
     for i = #parsers, 1, -1 do parsers[ parsers[i] ].index = i end
+
+    --we want to run the setup functions for each addon
+    for index, parser in ipairs(parsers) do
+        if parser.setup then
+            local success, err = pcall(function() parser:setup() end)
+            if not success then
+                msg.error(err)
+                msg.error("parser", parser:get_id(), "threw an error in the setup method - removing from list of parsers")
+                table.remove(parsers, index)
+            end
+        end
+    end
 end
 
 --sets up the compatible extensions list
@@ -1620,11 +1632,6 @@ setup_parser(file_parser, "file-browser.lua")
 if o.addons then
     --all of the API functions need to be defined before this point for the addons to be able to access them safely
     setup_addons()
-
-    --we want to store the index of each parser and run the setup functions
-    for i = #parsers, 1, -1 do
-        if parsers[i].setup then parsers[i]:setup() end
-    end
 end
 
 --these need to be below the addon setup in case any parsers add custom entries
