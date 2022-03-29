@@ -853,8 +853,8 @@ local function update(moving_adjacent)
     update_ass()
     state.empty_text = "empty directory"
 
-    --if opening a new directory we want to clear the previous coroutine if it is still running
-    --it is up to addon authors to be able to handle this forced resumption
+    --the directory is always handled within a coroutine to allow addons to
+    --pause execution for asynchronous operations
     state.co = coroutine.create(function() update_list(); update_ass() end)
     local success, err = coroutine.resume(state.co)
     if not success then msg.error(err) end
