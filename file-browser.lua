@@ -1528,8 +1528,8 @@ local function setup_parser(parser, file)
     parser = setmetatable(parser, { __index = parser_API })
     parser.name = parser.name or file:gsub("%-browser%.lua$", ""):gsub("%.lua$", "")
 
-    if not check_api_version(parser) then return msg.error("aborting load of parser", parser.name, "from", file) end
     set_parser_id(parser)
+    if not check_api_version(parser) then return msg.error("aborting load of parser", parser:get_id(), "from", file) end
 
     msg.verbose("imported parser", parser:get_id(), "from", file)
 
