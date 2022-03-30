@@ -180,6 +180,11 @@ local state = {
 --and a table entry with the parser itself as the key and a table value in the form { id = %s, index = %d }
 local parsers = {}
 
+--this table contains the parse_state tables for every parse operation indexed with the coroutine used for the parse
+--this table has weakly referenced keys, meaning that once the coroutine for a parse is no-longer used by anything that
+--field in the table will be removed by the garbage collector
+local parse_states = setmetatable({}, { __mode = "k"})
+
 local extensions = {}
 local sub_extensions = {}
 local parseable_extensions = {}
@@ -734,9 +739,10 @@ local function select_prev_directory()
 end
 
 --parses the given directory or defers to the next parser if nil is returned
-local function choose_and_parse(directory, index, parse_state)
+local function choose_and_parse(directory, index)
     msg.debug("finding parser for", directory)
     local parser, list, opts
+    local parse_state = parse_states[coroutine.running()]
     while list == nil and not ( opts and opts.already_deferred ) and index <= #parsers do
         parser = parsers[index]
         if parser:can_parse(directory) then
@@ -755,18 +761,19 @@ end
 
 --moves through valid parsers until a one returns a list
 local function scan_directory(directory, parse_state)
-    if directory == "" then return root_parser:parse() end
-
     msg.verbose("scanning files in", directory)
+    parse_state.directory = directory
 
     --in lua 5.1 there is only one return value which will be nil if run from the main thread
     --in lua 5.2 main will be true if running from the main thread
     local co, main = coroutine.running()
-    parse_state.co = not main and co
-    if not parse_state.co then return msg.error("scan_directory should be executed from within a coroutine - aborting scan") end
+    if main or not co then return msg.error("scan_directory should be executed from within a coroutine - aborting scan") end
 
     setmetatable(parse_state, { __index = parse_state_API })
-    local list, opts = choose_and_parse(directory, 1, parse_state)
+    parse_states[co] = parse_state
+
+    if directory == "" then return root_parser:parse() end
+    local list, opts = choose_and_parse(directory, 1)
 
     if list == nil then return msg.debug("no successful parsers found") end
     opts.parser = parsers[opts.id]
@@ -1435,10 +1442,9 @@ function parser_API:get_index() return parsers[self].index end
 function parser_API:get_id() return parsers[self].id end
 
 --runs choose_and_parse starting from the next parser
-function parser_API:defer(directory, state)
+function parser_API:defer(directory)
     msg.trace("deferring to other parsers...")
-    local list, opts = choose_and_parse(directory, self:get_index() + 1, state)
-    opts.already_deferred = true
+    local list, opts = choose_and_parse(directory, self:get_index() + 1)
     return list, opts
 end
 

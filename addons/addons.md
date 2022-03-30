@@ -95,7 +95,7 @@ The `parse` function is passed a state table as its second argument, this contai
 | key    | type   | description                                   |
 |--------|--------|-----------------------------------------------|
 | source | string | the source of the parse request               |
-| co     | thread | the coroutine running the parse - also found through `coroutine.running()` |
+| directory | string | the directory of the parse request - for debugging purposes |
 | yield  | method | a wrapper around `coroutine.yield()` - see [coroutines](#coroutines) |
 | is_coroutine_current | method | returns if the browser is waiting on the current coroutine to populate the list |
 
@@ -107,6 +107,10 @@ Source can have the following values:
 | loadlist       | the browser is scanning the directory to append to the playlist |
 | script-message | triggered by the `get-directory-contents` script-message        |
 | addon          | caused by an addon calling the `scan_directory` API function - note that addons can set a custom state |
+
+Note that all calls to any `parse` function during a specific parse request will be given the same parse_state table.
+This theoretically allows parsers to communicate with parsers of a lower priority (or modify how they see source information),
+but no guarantees are made that specific keys will remain unused by the API.
 
 #### Coroutines
 
@@ -444,7 +448,7 @@ Note that the `scan_directory()` function must be called from inside a [coroutin
 
 | key           | type     | arguments        | returns                 | description                     |
 |---------------|----------|------------------|-------------------------|---------------------------------|
-| defer         | method   | string, parser_state_table | list_table, opts_table  | forwards the given directory to the next valid parser - can be used to redirect the browser or to modify the results of lower priority parsers |
+| defer         | method   | string | list_table, opts_table  | forwards the given directory to the next valid parser - can be used to redirect the browser or to modify the results of lower priority parsers |
 
 #### Using `defer`
 
