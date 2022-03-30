@@ -168,6 +168,7 @@ local state = {
     directory = nil,
     directory_label = nil,
     prev_directory = "",
+    co = nil,
 
     multiselect_start = nil,
     initial_selection = {},
@@ -225,7 +226,7 @@ local subtitle_extensions = {
 local __cache = {}
 
 __cache.cached_values = {
-    "directory", "directory_label", "list", "selected", "selection", "parser", "empty_text"
+    "directory", "directory_label", "list", "selected", "selection", "parser", "empty_text", "co"
 }
 
 --inserts latest state values onto the cache stack
