@@ -13,13 +13,20 @@ local ls = {
     keybind_name = "file"
 }
 
-local function command(args)
-    local cmd = mp.command_native({
+local function command(args, parse_state)
+    local co = coroutine.running()
+    local cmd = nil
+    mp.command_native_async({
         name = "subprocess",
         playback_only = false,
         capture_stdout = true,
+        capture_stderr = true,
         args = args
-    })
+    }, function(_, res)
+        coroutine.resume_err(co, res)
+    end)
+    if parse_state then cmd = parse_state:yield()
+    else cmd = coroutine.yield() end
 
     return cmd.status == 0 and cmd.stdout or nil
 end
@@ -28,9 +35,9 @@ function ls:can_parse(directory)
     return not self.get_protocol(directory)
 end
 
-function ls:parse(directory)
+function ls:parse(directory, parse_state)
     local list = {}
-    local files = command({"ls", "-1", "-p", "-A", "-N", directory})
+    local files = command({"ls", "-1", "-p", "-A", "-N", directory}, parse_state)
 
     if not files then return nil end
 
