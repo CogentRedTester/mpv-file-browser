@@ -745,7 +745,7 @@ local function choose_and_parse(directory, index)
     local parse_state = parse_states[coroutine.running()]
     while list == nil and not parse_state.already_deferred and index <= #parsers do
         parser = parsers[index]
-        if parser:can_parse(directory) then
+        if parser:can_parse(directory, parse_state) then
             msg.debug("attempting parser:", parser:get_id())
             list, opts = parser:parse(directory, parse_state)
         end

@@ -37,8 +37,8 @@ Each addon must return either a single parser table, or an array of parser table
 |-----------|--------|-----------|----------------------------|------------------------------------------------------------------------------------------------------------|
 | priority  | number | -         | -                        | a number to determine what order parsers are tested - see [here](#priority-suggestions) for suggested values |
 | version   | string | -         | -                        | the API version the parser is using - see [API Version](#api-version)                                        |
-| can_parse | method | string    | boolean                    | returns whether or not the given path is compatible with the parser                                        |
-| parse     | method | string, parser_state_table | list_table, opts_table | returns an array of item_tables, and a table of options to control how file_browser handles the list |
+| can_parse | method | string, parse_state_table | boolean                    | returns whether or not the given path is compatible with the parser                                        |
+| parse     | method | string, parse_state_table | list_table, opts_table | returns an array of item_tables, and a table of options to control how file_browser handles the list |
 
 Additionally, each parser can optionally contain:
 
@@ -90,7 +90,7 @@ Please read [coroutines](#coroutines) for all the details.
 
 ### Parse State Table
 
-The `parse` function is passed a state table as its second argument, this contains the following fields.
+The `parse` and `can_parse` functions are passed a state table as its second argument, this contains the following fields.
 
 | key    | type   | description                                   |
 |--------|--------|-----------------------------------------------|
