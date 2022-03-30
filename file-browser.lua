@@ -263,6 +263,12 @@ local cache = setmetatable({}, { __index = __cache })
 ---------------------------------------Part of the addon API--------------------------------------------
 --------------------------------------------------------------------------------------------------------
 
+--resumes a coroutine and prints an error if it was not sucessful
+function coroutine.resume_err(...)
+    local success, err = coroutine.resume(...)
+    if not success then msg.error(err) end
+end
+
 --implements table.pack if on lua 5.1
 if not table.pack then
     function table.pack(...)
@@ -792,7 +798,7 @@ local function parse_directory(directory, parse_state)
     --if this coroutine is already is use by another parse operation then we create a new
     --one and hand execution over to that
     local new_co = coroutine.create(function()
-        coroutine.resume(co, run_parse(directory, parse_state))
+        coroutine.resume_err(co, run_parse(directory, parse_state))
     end)
 
     --queue the new coroutine on the mpv event queue
@@ -800,7 +806,7 @@ local function parse_directory(directory, parse_state)
         local success, err = coroutine.resume(new_co)
         if not success then
             msg.error(err)
-            coroutine.resume(co)
+            coroutine.resume_err(co)
         end
     end)
     return parse_states[co]:yield()
@@ -890,8 +896,7 @@ local function update(moving_adjacent)
     --the directory is always handled within a coroutine to allow addons to
     --pause execution for asynchronous operations
     state.co = coroutine.create(function() update_list(); update_ass() end)
-    local success, err = coroutine.resume(state.co)
-    if not success then msg.error(err) end
+    coroutine.resume_err(state.co)
 end
 
 --the base function for moving to a directory
@@ -1137,10 +1142,7 @@ end
 local function open_file(flag, autoload_dir)
     local co = coroutine.create(open_file_coroutine)
 
-    local success, err = coroutine.resume(co, flag, autoload_dir)
-    if not success then
-        msg.error(err)
-    end
+    coroutine.resume_err(co, flag, autoload_dir)
 end
 
 
@@ -1254,7 +1256,7 @@ local function custom_command(cmd, state, co)
             run_custom_command(cmd, {selection[i]}, state)
 
             if cmd.delay then
-                mp.add_timeout(cmd.delay, function() coroutine.resume(co) end)
+                mp.add_timeout(cmd.delay, function() coroutine.resume_err(co) end)
                 coroutine.yield()
             end
         end
@@ -1750,7 +1752,6 @@ mp.register_script_message('browse-directory', browse_directory)
 --allows other scripts to request directory contents from file-browser
 mp.register_script_message("get-directory-contents", function(directory, response_str)
     local co = coroutine.create(scan_directory_json)
-    local success, err = coroutine.resume(co, directory, response_str)
-    if not success then msg.error(err) end
+    coroutine.resume_err(co, directory, response_str)
 end)
 
