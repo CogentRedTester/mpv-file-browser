@@ -759,21 +759,18 @@ local function choose_and_parse(directory, index)
     return list, opts
 end
 
---moves through valid parsers until a one returns a list
-local function parse_directory(directory, parse_state)
+--sets up the parse_state table and runs the parse operation
+local function run_parse(directory, parse_state)
     msg.verbose("scanning files in", directory)
     parse_state.directory = directory
-
-    --in lua 5.1 there is only one return value which will be nil if run from the main thread
-    --in lua 5.2 main will be true if running from the main thread
-    local co, main = coroutine.running()
-    if main or not co then return msg.error("scan_directory should be executed from within a coroutine - aborting scan") end
+    local co = coroutine.running()
 
     setmetatable(parse_state, { __index = parse_state_API })
-    parse_states[co] = parse_state
-
     if directory == "" then return root_parser:parse() end
+
+    parse_states[co] = parse_state
     local list, opts = choose_and_parse(directory, 1)
+    parse_states[co] = nil
 
     if list == nil then return msg.debug("no successful parsers found") end
     opts.parser = parsers[opts.id]
@@ -781,6 +778,33 @@ local function parse_directory(directory, parse_state)
     if not opts.filtered then API.filter(list) end
     if not opts.sorted then API.sort(list) end
     return list, opts
+end
+
+--returns the contents of the given directory using the given parse state
+--if a parse is being done recusively then create a new coroutine for it so that
+--the states in the parse_states table do not conflict
+local function parse_directory(directory, parse_state)
+    --in lua 5.1 there is only one return value which will be nil if run from the main thread
+    --in lua 5.2 main will be true if running from the main thread
+    local co, main = coroutine.running()
+    if main or not co then return msg.error("scan_directory must be executed from within a coroutine - aborting scan", utils.to_string(parse_state)) end
+    if not parse_states[co] then return run_parse(directory, parse_state) end
+
+    --if this coroutine is already is use by another parse operation then we create a new
+    --one and hand execution over to that
+    local new_co = coroutine.create(function()
+        coroutine.resume(co, run_parse(directory, parse_state))
+    end)
+
+    --queue the new coroutine on the mpv event queue
+    mp.add_timeout(0, function()
+        local success, err = coroutine.resume(new_co)
+        if not success then
+            msg.error(err)
+            coroutine.resume(co)
+        end
+    end)
+    return parse_states[co]:yield()
 end
 
 --sends update requests to the different parsers
