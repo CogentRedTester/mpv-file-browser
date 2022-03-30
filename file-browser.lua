@@ -770,7 +770,6 @@ local function run_parse(directory, parse_state)
 
     parse_states[co] = parse_state
     local list, opts = choose_and_parse(directory, 1)
-    parse_states[co] = nil
 
     if list == nil then return msg.debug("no successful parsers found") end
     opts.parser = parsers[opts.id]
@@ -781,8 +780,8 @@ local function run_parse(directory, parse_state)
 end
 
 --returns the contents of the given directory using the given parse state
---if a parse is being done recusively then create a new coroutine for it so that
---the states in the parse_states table do not conflict
+--if a coroutine has already been used for a parse then create a new coroutine so that
+--the every parse operation has a unique thread ID
 local function parse_directory(directory, parse_state)
     --in lua 5.1 there is only one return value which will be nil if run from the main thread
     --in lua 5.2 main will be true if running from the main thread

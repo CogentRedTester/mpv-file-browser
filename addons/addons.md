@@ -444,11 +444,10 @@ return parser
 
 Note that the `parse_directory()` function must be called from inside a [coroutine](#coroutines).
 
-Also note that a limitation of the file-browser internals is that a single coroutine
-cannot be used for multiple parses simultaneously (because
-the coroutine thread object is used to index the parse_state index).
-The `parse_directory()` function handles this by creating a new coroutine for the scan, which
-hands execution back to the original coroutine on completion.
+Also note that every parse operation is expected to have its own unique coroutine. This acts as a unique
+ID that can be used internally or by other addons. This means that if multiple `parse_directory` operations
+are run within a single coroutine then file-browser will automatically create a new coroutine for the scan,
+which hands execution back to the original coroutine upon completion.
 
 ### Advanced Functions
 
