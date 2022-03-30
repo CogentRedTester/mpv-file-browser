@@ -60,7 +60,7 @@ function favs:can_parse(directory)
     return directory:find("Favourites/") == 1
 end
 
-function favs:parse(directory, ...)
+function favs:parse(directory)
     if not favourites then update_favourites() end
     if directory == "Favourites/" then
         local opts = {
@@ -77,7 +77,7 @@ function favs:parse(directory, ...)
 
         local _, finish = directory:find("Favourites/([^/]+/?)")
         local full_path = (full_paths[name] or "")..directory:sub(finish+1)
-        local list, opts = self:defer(full_path or "", ...)
+        local list, opts = self:defer(full_path or "")
 
         if not list then return nil end
         opts.id = self:get_id()
@@ -95,7 +95,7 @@ function favs:parse(directory, ...)
 
     local path = full_paths[ directory:match("([^/]+/?)$") or "" ]
 
-    local list, opts = self:defer(path, ...)
+    local list, opts = self:defer(path)
     if not list then return nil end
     opts.directory = opts.directory or path
     return list, opts
