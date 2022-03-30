@@ -743,7 +743,7 @@ local function choose_and_parse(directory, index)
     msg.debug("finding parser for", directory)
     local parser, list, opts
     local parse_state = parse_states[coroutine.running()]
-    while list == nil and not ( opts and opts.already_deferred ) and index <= #parsers do
+    while list == nil and not parse_state.already_deferred and index <= #parsers do
         parser = parsers[index]
         if parser:can_parse(directory) then
             msg.debug("attempting parser:", parser:get_id())
@@ -1379,10 +1379,10 @@ function API.clear_cache()
 end
 
 --a wrapper around scan_directory for addon API
-function API.scan_directory(directory, state)
-    if not state then state = { source = "addon" }
-    elseif not state.source then state.source = "addon" end
-    return scan_directory(directory, state)
+function API.scan_directory(directory, parser_state)
+    if not parser_state then parser_state = { source = "addon" }
+    elseif not parser_state.source then parser_state.source = "addon" end
+    return scan_directory(directory, parser_state)
 end
 
 --register file extensions which can be opened by the browser
@@ -1445,6 +1445,7 @@ function parser_API:get_id() return parsers[self].id end
 function parser_API:defer(directory)
     msg.trace("deferring to other parsers...")
     local list, opts = choose_and_parse(directory, self:get_index() + 1)
+    parse_states[coroutine.running()].already_deferred = true
     return list, opts
 end
 

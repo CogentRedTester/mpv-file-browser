@@ -96,8 +96,13 @@ The `parse` function is passed a state table as its second argument, this contai
 |--------|--------|-----------------------------------------------|
 | source | string | the source of the parse request               |
 | directory | string | the directory of the parse request - for debugging purposes |
+| already_deferred| boolean | whether or not [defer](#advanced-functions) was called during this parse, if so then file-browser will not try to query any more parsers after receiving the result - set automatically, but can be manually disabled |
 | yield  | method | a wrapper around `coroutine.yield()` - see [coroutines](#coroutines) |
 | is_coroutine_current | method | returns if the browser is waiting on the current coroutine to populate the list |
+
+`already_deferred` is an optimisation. If a script uses defer and still returns nil, then that means that none of the remaining parsers will be able to parse the path.
+Therefore, it is more efficient to just immediately jump to the root.
+It is up to the addon author to manually disable this if their use of `defer` conflicts with this assumption.
 
 Source can have the following values:
 
@@ -185,7 +190,6 @@ None of these values are required, and the opts table can even left as nil when 
 | directory_label | string  | display this label in the header instead of the actual directory - useful to display encoded paths                                        |
 | empty_text      | string  | display this text when the list is empty - can be used for error messages                                                                 |
 | selected_index  | number  | the index of the item on the list to select by default - a.k.a. the cursor position                                                       |
-| already_deferred| boolean | whether or not [defer](#Advanced-Functions) was used to create the list, if so then give up if list is nil - set automatically, but can be manually disabled |
 | id              | number  | id of the parser that successfully returns a list - set automatically, but can be set manually to take ownership (see defer)              |
 
 The previous static example, but modified so that file browser does not try to filter or re-order the list:
@@ -203,10 +207,6 @@ function parser:parse(directory, state)
     return list, { sorted = true, filtered = true }
 end
 ```
-
-`already_deferred` is an optimisation. If a script uses defer and still returns nil, then that means that none of the remaining parsers will be able to parse the path.
-Therefore, it is more efficient to just immediately jump to the root.
-It is up to the addon author to manually disable this if their use of `defer` conflicts with this assumption.
 
 `id` is used to declare ownership of a page. The name of the parser that has ownership is used for custom-keybinds parser filtering.
 When using `defer` id will be the id of whichever parser first returned a list.
@@ -456,7 +456,6 @@ The `defer` function is very powerful, and can be used by scripts to create virt
 However, due to how much freedom Lua gives coders, it is impossible for file-browser to ensure that parsers are using defer correctly, which can cause unexpected results.
 The following are a list of recommendations that will increase the compatability with other parsers:
 
-* Always pass all arguments from `parse` into `defer`, using Lua's variable arguments `...` can be a good way to future proof this against any future API changes.
 * Always return the opts table that is returned by defer, this can contain important values for file-browser, as described [above](#The-Opts-Table).
   * If required modify values in the existing opts table, don't create a new one.
 * Respect the `sorted` and `filtered` values in the opts table. This may mean calling `sort` or `filter` manually.
