@@ -111,7 +111,7 @@ Source can have the following values:
 | browser        | triggered by the main browser window                            |
 | loadlist       | the browser is scanning the directory to append to the playlist |
 | script-message | triggered by the `get-directory-contents` script-message        |
-| addon          | caused by an addon calling the `scan_directory` API function - note that addons can set a custom state |
+| addon          | caused by an addon calling the `parse_directory` API function - note that addons can set a custom state |
 
 Note that all calls to any `parse` function during a specific parse request will be given the same parse_state table.
 This theoretically allows parsers to communicate with parsers of a lower priority (or modify how they see source information),
@@ -440,9 +440,9 @@ return parser
 | browse_directory             | function | string                       | -       | clears the cache and opens the given directory in the browser - if the browser is closed then open it                    |
 | update_directory             | function |                              | -       | rescans the current directory - equivalent to Ctrl+r without the cache refresh for higher level directories              |
 | clear_cache                  | function |                              | -       | clears the cache - use if modifying the contents of higher level directories                                             |
-| scan_directory               | function | string, parser_state_table | list_table, opts_table       | starts a new scan for the given directory - note that all parsers are called as normal, so beware infinite recursion     |
+| parse_directory              | function | string, parser_state_table | list_table, opts_table       | starts a new scan for the given directory - note that all parsers are called as normal, so beware infinite recursion     |
 
-Note that the `scan_directory()` function must be called from inside a [coroutine](#coroutines).
+Note that the `parse_directory()` function must be called from inside a [coroutine](#coroutines).
 
 ### Advanced Functions
 

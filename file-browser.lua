@@ -760,7 +760,7 @@ local function choose_and_parse(directory, index)
 end
 
 --moves through valid parsers until a one returns a list
-local function scan_directory(directory, parse_state)
+local function parse_directory(directory, parse_state)
     msg.verbose("scanning files in", directory)
     parse_state.directory = directory
 
@@ -800,7 +800,7 @@ local function update_list()
         return
     end
     local directory = state.directory
-    local list, opts = scan_directory(state.directory, { source = "browser" })
+    local list, opts = parse_directory(state.directory, { source = "browser" })
 
     --if the running coroutine isn't the one stored in the state variable, then the user
     --changed directories while the coroutine was paused, and this operation should be aborted
@@ -1002,7 +1002,7 @@ end
 
 --recursive function to load directories using the script custom parsers
 local function custom_loadlist_recursive(directory, flag)
-    local list, opts = scan_directory(directory, { source = "loadlist" })
+    local list, opts = parse_directory(directory, { source = "loadlist" })
     if list == root then return end
 
     --if we can't parse the directory then append it and hope mpv fares better
@@ -1379,10 +1379,10 @@ function API.clear_cache()
 end
 
 --a wrapper around scan_directory for addon API
-function API.scan_directory(directory, parser_state)
-    if not parser_state then parser_state = { source = "addon" }
-    elseif not parser_state.source then parser_state.source = "addon" end
-    return scan_directory(directory, parser_state)
+function API.parse_directory(directory, parse_state)
+    if not parse_state then parse_state = { source = "addon" }
+    elseif not parse_state.source then parse_state.source = "addon" end
+    return parse_directory(directory, parse_state)
 end
 
 --register file extensions which can be opened by the browser
@@ -1664,7 +1664,7 @@ local function scan_directory_json(directory, response_str)
     if directory ~= "" then directory = API.fix_path(directory, true) end
     msg.verbose(("recieved %q from 'get-directory-contents' script message - returning result to %q"):format(directory, response_str))
 
-    local list, opts = scan_directory(directory, { source = "script-message" } )
+    local list, opts = parse_directory(directory, { source = "script-message" } )
     list.API_VERSION, opts.API_VERSION = API_VERSION, API_VERSION
 
     --removes invalid json types from the parser object
