@@ -734,14 +734,14 @@ local function select_prev_directory()
 end
 
 --parses the given directory or defers to the next parser if nil is returned
-local function choose_and_parse(directory, index, state)
+local function choose_and_parse(directory, index, parse_state)
     msg.debug("finding parser for", directory)
     local parser, list, opts
     while list == nil and not ( opts and opts.already_deferred ) and index <= #parsers do
         parser = parsers[index]
         if parser:can_parse(directory) then
             msg.debug("attempting parser:", parser:get_id())
-            list, opts = parser:parse(directory, state)
+            list, opts = parser:parse(directory, parse_state)
         end
         index = index + 1
     end
@@ -754,17 +754,21 @@ local function choose_and_parse(directory, index, state)
 end
 
 --moves through valid parsers until a one returns a list
-local function scan_directory(directory, state)
+local function scan_directory(directory, parse_state)
     if directory == "" then return root_parser:parse() end
 
     msg.verbose("scanning files in", directory)
-    state.co = coroutine.running()
-    if not state.co then msg.error("scan_directory should be executed from within a coroutine - aborting scan") ; return end
 
-    setmetatable(state, { __index = parse_state_API })
-    local list, opts = choose_and_parse(directory, 1, state)
+    --in lua 5.1 there is only one return value which will be nil if run from the main thread
+    --in lua 5.2 main will be true if running from the main thread
+    local co, main = coroutine.running()
+    parse_state.co = not main and co
+    if not parse_state.co then return msg.error("scan_directory should be executed from within a coroutine - aborting scan") end
 
-    if list == nil then msg.debug("no successful parsers found"); return nil end
+    setmetatable(parse_state, { __index = parse_state_API })
+    local list, opts = choose_and_parse(directory, 1, parse_state)
+
+    if list == nil then return msg.debug("no successful parsers found") end
     opts.parser = parsers[opts.id]
 
     if not opts.filtered then API.filter(list) end
