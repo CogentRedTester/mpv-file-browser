@@ -1121,14 +1121,14 @@ local function open_file_coroutine(flag, autoload)
         --reset the selection after
         state.selection = {}
 
+        disable_select_mode()
+        update_ass()
+
         --the currently selected file will be loaded according to the flag
         --the flag variable will be switched to append once a file is loaded
         for i=1, #selection do
             if loadfile(selection[i], flag, autoload, directory) then flag = "append" end
         end
-
-        disable_select_mode()
-        update_ass()
 
     elseif flag == 'replace' then
         local item = state.list[state.selected]
