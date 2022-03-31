@@ -1131,9 +1131,9 @@ local function open_file_coroutine(flag, autoload)
         update_ass()
 
     elseif flag == 'replace' then
-        loadfile(state.list[state.selected], flag, autoload ~= o.autoload, directory)
+        local item = state.list[state.selected]
         down_dir()
-        close()
+        loadfile(item, flag, autoload ~= o.autoload, directory)
     else
         loadfile(state.list[state.selected], flag, false, directory)
     end
