@@ -264,19 +264,28 @@ local cache = setmetatable({}, { __index = __cache })
 ---------------------------------------Part of the addon API--------------------------------------------
 --------------------------------------------------------------------------------------------------------
 
---resumes a coroutine and prints an error if it was not sucessful
-function coroutine.resume_err(...)
-    local success, err = coroutine.resume(...)
-    if not success then msg.error(err) end
-end
-
 --implements table.pack if on lua 5.1
 if not table.pack then
+    table.unpack = unpack
     function table.pack(...)
         local t = {...}
         t.n = select("#", ...)
         return t
     end
+end
+
+--prints an error if a coroutine returns an error
+--unlike the next function this one still returns the results of coroutine.resume()
+function coroutine.resume_catch(...)
+    local returns = table.pack(coroutine.resume(...))
+    if not returns[1] then msg.error(returns[2]) end
+    return table.unpack(returns, 1, returns.n)
+end
+
+--resumes a coroutine and prints an error if it was not sucessful
+function coroutine.resume_err(...)
+    local success, err = coroutine.resume(...)
+    if not success then msg.error(err) end
 end
 
 --get the full path for the current file
