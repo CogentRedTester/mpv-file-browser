@@ -1543,6 +1543,7 @@ end
 --loads an addon in a separate environment
 local function load_addon(path)
     local addon_environment = setmetatable({}, { __index = _G })
+    addon_environment._G = addon_environment
     local chunk, err
     if setfenv then
         --since I stupidly named a function loadfile I need to specify the global one
