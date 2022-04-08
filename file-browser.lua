@@ -1040,7 +1040,12 @@ end
 ------------------------------------------------------------------------------------------
 
 --recursive function to load directories using the script custom parsers
-local function custom_loadlist_recursive(directory, flag)
+--returns true if any items were appended to the playlist
+local function custom_loadlist_recursive(directory, flag, prev_dirs)
+    --prevents infinite recursion from the item.path or opts.directory fields
+    if prev_dirs[directory] then return end
+    prev_dirs[directory] = true
+
     local list, opts = parse_directory(directory, { source = "loadlist" })
     if list == root then return end
 
@@ -1058,7 +1063,9 @@ local function custom_loadlist_recursive(directory, flag)
     for _, item in ipairs(list) do
         if not sub_extensions[ API.get_extension(item.name, "") ] then
             if item.type == "dir" or parseable_extensions[API.get_extension(item.name, "")] then
-                if custom_loadlist_recursive( API.get_new_directory(item, directory) , flag) then flag = "append" end
+                if custom_loadlist_recursive( API.get_new_directory(item, directory) , flag, prev_dirs) then
+                    flag = "append"
+                end
             else
                 local path = API.get_full_path(item, directory)
 
@@ -1074,7 +1081,7 @@ end
 
 --a wrapper for the custom_loadlist_recursive function to handle the flags
 local function loadlist(directory, flag)
-    flag = custom_loadlist_recursive(directory, flag)
+    flag = custom_loadlist_recursive(directory, flag, {})
     if not flag then msg.warn(directory, "contained no valid files") end
     return flag
 end
