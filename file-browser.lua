@@ -896,7 +896,10 @@ end
 --rescans the folder and updates the list
 local function update(moving_adjacent)
     --we can only make assumptions about the directory label when moving from adjacent directories
-    if not moving_adjacent then state.directory_label = nil end
+    if not moving_adjacent then
+        state.directory_label = nil
+        cache:clear()
+    end
 
     state.empty_text = "~"
     state.list = {}
@@ -913,7 +916,6 @@ end
 --the base function for moving to a directory
 local function goto_directory(directory)
     state.directory = directory
-    cache:clear()
     update()
 end
 
