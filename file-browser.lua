@@ -294,7 +294,8 @@ function API.get_full_path(item, dir)
     return (dir or state.directory)..item.name
 end
 
-function API.concatenate_path(item, directory)
+function API.get_new_directory(item, directory)
+    if item.path and item.redirect ~= false then return item.path end
     if directory == "" then return item.name end
     if directory:sub(-1) == "/" then return directory..item.name end
     return directory.."/"..item.name
@@ -954,7 +955,7 @@ local function down_dir()
     if not current or current.type ~= 'dir' and not parseable_extensions[API.get_extension(current.name, "")] then return end
 
     cache:push()
-    state.directory = API.concatenate_path(current, state.directory)
+    state.directory = API.get_new_directory(current, state.directory)
 
     --we can make some assumptions about the next directory label when moving up or down
     if state.directory_label then state.directory_label = state.directory_label..(current.label or current.name) end
@@ -1057,7 +1058,7 @@ local function custom_loadlist_recursive(directory, flag)
     for _, item in ipairs(list) do
         if not sub_extensions[ API.get_extension(item.name, "") ] then
             if item.type == "dir" or parseable_extensions[API.get_extension(item.name, "")] then
-                if custom_loadlist_recursive( API.concatenate_path(item, directory) , flag) then flag = "append" end
+                if custom_loadlist_recursive( API.get_new_directory(item, directory) , flag) then flag = "append" end
             else
                 local path = API.get_full_path(item, directory)
 

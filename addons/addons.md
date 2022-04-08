@@ -155,6 +155,7 @@ Each item has the following members:
 | label | string | no       | an alternative string to print to the screen instead of name                              |
 | ass   | string | no       | a string to print to the screen without escaping ass styling - overrides label and name   |
 | path  | string | no       | opening the item uses this full path instead of appending directory and name              |
+| redirect| bool | no       | whether path should redirect the browser when opening a directory - default yes (nil counts as true)|
 
 File-browser expects that `type` and `name` will be set for each item, so leaving these out will probably crash the script.
 File-browser also assumes that all directories end in a `/` when appending name, and that there will be no backslashes.

@@ -29,6 +29,7 @@ local function create_favourite_object(str)
     local item = {
         type = str:sub(-1) == "/" and "dir" or "file",
         path = str,
+        redirect = not use_virtual_directory,
         name = str:match("([^/]+/?)$")
     }
     full_paths[str:match("([^/]+)/?$")] = str
