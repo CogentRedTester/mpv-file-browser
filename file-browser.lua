@@ -294,8 +294,10 @@ function API.get_full_path(item, dir)
     return (dir or state.directory)..item.name
 end
 
+--gets the path for a new subdirectory, redirects if the path field is set
+--returns the new directory path and a boolean specifying if a redirect happened
 function API.get_new_directory(item, directory)
-    if item.path and item.redirect ~= false then return item.path end
+    if item.path and item.redirect ~= false then return item.path, true end
     if directory == "" then return item.name end
     if directory:sub(-1) == "/" then return directory..item.name end
     return directory.."/"..item.name
@@ -957,11 +959,12 @@ local function down_dir()
     if not current or current.type ~= 'dir' and not parseable_extensions[API.get_extension(current.name, "")] then return end
 
     cache:push()
-    state.directory = API.get_new_directory(current, state.directory)
+    local directory, redirected = API.get_new_directory(current, state.directory)
+    state.directory = directory
 
     --we can make some assumptions about the next directory label when moving up or down
     if state.directory_label then state.directory_label = state.directory_label..(current.label or current.name) end
-    update(true)
+    update(not redirected)
 end
 
 
