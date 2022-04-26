@@ -15,6 +15,7 @@ local msg = require "mp.msg"
 
 local wn = {
     priority = 109,
+    version = "1.0.0",
     name = "powershell",
     keybind_name = "file"
 }
@@ -24,14 +25,20 @@ for _, letter in ipairs(drive_letters) do
     drives[letter] = true
 end
 
-local function command(args)
-    local cmd = mp.command_native({
+local function command(args, parse_state)
+    local co = coroutine.running()
+    local cmd = nil
+    mp.command_native_async({
         name = "subprocess",
         playback_only = false,
         capture_stdout = true,
         capture_stderr = true,
         args = args
-    })
+    }, function(_, res)
+        coroutine.resume_err(co, res)
+    end)
+    if parse_state then cmd = parse_state:yield()
+    else cmd = coroutine.yield() end
 
     return cmd.status == 0 and cmd.stdout or nil, cmd.stderr
 end
@@ -40,7 +47,7 @@ function wn:can_parse(directory)
     return not self.get_protocol(directory) and drives[ directory:sub(1,1) ]
 end
 
-function wn:parse(directory)
+function wn:parse(directory, parse_state)
     local list = {}
     local files, err = command({"powershell", "-noprofile", "-command", [[
         $dirs = Get-ChildItem -LiteralPath ]]..string.format("%q", directory)..[[ -Directory
@@ -58,7 +65,7 @@ function wn:parse(directory)
             [Console]::OpenStandardOutput().Write($u8clip, 0, $u8clip.Length)
             Write-Host ""
         }
-    ]]})
+    ]]}, parse_state)
 
     if not files then msg.debug(err) ; return nil end
 

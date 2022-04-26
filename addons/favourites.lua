@@ -17,6 +17,7 @@ end
 
 local favourites = nil
 local favs = {
+    version = "1.0.0",
     priority = 30,
     cursor = 1
 }
@@ -28,6 +29,7 @@ local function create_favourite_object(str)
     local item = {
         type = str:sub(-1) == "/" and "dir" or "file",
         path = str,
+        redirect = not use_virtual_directory,
         name = str:match("([^/]+/?)$")
     }
     full_paths[str:match("([^/]+)/?$")] = str
@@ -59,7 +61,7 @@ function favs:can_parse(directory)
     return directory:find("Favourites/") == 1
 end
 
-function favs:parse(directory, ...)
+function favs:parse(directory)
     if not favourites then update_favourites() end
     if directory == "Favourites/" then
         local opts = {
@@ -76,10 +78,10 @@ function favs:parse(directory, ...)
 
         local _, finish = directory:find("Favourites/([^/]+/?)")
         local full_path = (full_paths[name] or "")..directory:sub(finish+1)
-        local list, opts = self:defer(full_path or "", ...)
+        local list, opts = self:defer(full_path or "")
 
         if not list then return nil end
-        opts.index = self:get_index()
+        opts.id = self:get_id()
         if opts.directory_label then
             opts.directory_label = opts.directory_label:gsub(full_paths[name], "Favourites/"..name..'/')
             if opts.directory_label:find("Favourites/") ~= 1 then opts.directory_label = nil end
@@ -94,7 +96,7 @@ function favs:parse(directory, ...)
 
     local path = full_paths[ directory:match("([^/]+/?)$") or "" ]
 
-    local list, opts = self:defer(path, ...)
+    local list, opts = self:defer(path)
     if not list then return nil end
     opts.directory = opts.directory or path
     return list, opts

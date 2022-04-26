@@ -1,4 +1,4 @@
-# How to Write an Addon
+# How to Write an Addon - API v1.0.0
 
 Addons provide ways for file-browser to parse non-native directory structures. This document describes how one can create their own custom addon.
 
@@ -10,6 +10,24 @@ For the purpose of this document addons refer to the scripts being loaded while 
 An addon can return multiple parsers, but when they only returns one the terms are almost synonymous.
 Additionally, `method` refers to functions called using the `object:funct()` syntax, and hence have access to the self object, whereas `function` is the standard `object.funct()` syntax.
 
+## API Version
+
+The API version, shown in the title of this document, allows file-browser to ensure that addons are using the correct
+version of the API. It follows [semantic versioning](https://semver.org/) conventions of `MAJOR.MINOR.PATCH`.
+A parser sets its version string with the `version` field, as seen [below](#overview).
+
+Any change that breaks backwards compatability will cause the major version number to increase.
+A parser MUST have the same version number as the API, otherwise an error message will be printed and the parser will
+not be loaded.
+
+A minor version number denotes a change to the API that is backwards compatible. This includes additional API functions,
+or extra fields in tables that were previously unused. It may also include additional arguments to existing functions that
+add additional behaviour without changing the old behaviour.
+If the parser's minor version number is greater than the API_VERSION, then a warning is printed to the console.
+
+Patch numbers denote bug fixes, and are ignored when loading an addon.
+For this reason addon authors are allowed to leave the patch number out of their version tag and just use `MAJOR.MINOR`.
+
 ## Overview
 
 File-browser automatically loads any lua files from the `~~/script-modules/file-browser-addons` directory as modules.
@@ -18,8 +36,9 @@ Each addon must return either a single parser table, or an array of parser table
 | key       | type   | arguments | returns                    | description                                                                                                |
 |-----------|--------|-----------|----------------------------|------------------------------------------------------------------------------------------------------------|
 | priority  | number | -         | -                        | a number to determine what order parsers are tested - see [here](#priority-suggestions) for suggested values |
-| can_parse | method | string    | boolean                    | returns whether or not the given path is compatible with the parser                                        |
-| parse     | method | string, parser_state_table | list_table, opts_table | returns an array of item_tables, and a table of options to control how file_browser handles the list |
+| version   | string | -         | -                        | the API version the parser is using - see [API Version](#api-version)                                        |
+| can_parse | method | string, parse_state_table | boolean                    | returns whether or not the given path is compatible with the parser                                        |
+| parse     | method | string, parse_state_table | list_table, opts_table | returns an array of item_tables, and a table of options to control how file_browser handles the list |
 
 Additionally, each parser can optionally contain:
 
@@ -67,17 +86,23 @@ If an empty table is returned then file-browser will treat the directory as empt
 This continues until a parser returns a list_table, or until there are no more parsers, after which the root is loaded instead.
 
 The entire parse operation is run inside of a coroutine, this allows parsers to pause execution to handle asynchronous operations.
-However, if the user attempts to change directories while the coroutine is paused then file-browser will forcibly resume the coroutine until it dies.
-It is up to the addon writer to ensure that they can handle this situation.
+Please read [coroutines](#coroutines) for all the details.
 
-### Parser State Table
+### Parse State Table
 
-The `parse` function is passed a state table as its second argument, this contains the following fields.
+The `parse` and `can_parse` functions are passed a state table as its second argument, this contains the following fields.
 
 | key    | type   | description                                   |
 |--------|--------|-----------------------------------------------|
 | source | string | the source of the parse request               |
-| co     | thread | the coroutine that parse is running inside of |
+| directory | string | the directory of the parse request - for debugging purposes |
+| already_deferred| boolean | whether or not [defer](#advanced-functions) was called during this parse, if so then file-browser will not try to query any more parsers after receiving the result - set automatically, but can be manually disabled |
+| yield  | method | a wrapper around `coroutine.yield()` - see [coroutines](#coroutines) |
+| is_coroutine_current | method | returns if the browser is waiting on the current coroutine to populate the list |
+
+`already_deferred` is an optimisation. If a script uses defer and still returns nil, then that means that none of the remaining parsers will be able to parse the path.
+Therefore, it is more efficient to just immediately jump to the root.
+It is up to the addon author to manually disable this if their use of `defer` conflicts with this assumption.
 
 Source can have the following values:
 
@@ -86,7 +111,37 @@ Source can have the following values:
 | browser        | triggered by the main browser window                            |
 | loadlist       | the browser is scanning the directory to append to the playlist |
 | script-message | triggered by the `get-directory-contents` script-message        |
-| addon          | caused by an addon calling the `scan_directory` API function - note that addons can set a custom state |
+| addon          | caused by an addon calling the `parse_directory` API function - note that addons can set a custom state |
+
+Note that all calls to any `parse` function during a specific parse request will be given the same parse_state table.
+This theoretically allows parsers to communicate with parsers of a lower priority (or modify how they see source information),
+but no guarantees are made that specific keys will remain unused by the API.
+
+#### Coroutines
+
+Any calls to `parse()` (or `can_parse()`, but you should never be yielding inside there) are done in a [Lua coroutine](https://www.lua.org/manual/5.1/manual.html#2.11).
+This means that you can arbitrarily pause the parse operation if you need to wait for some asynchronous operation to complete,
+such as waiting for user input, or for a network request to complete.
+
+Making these operations asynchronous has performance
+advantages as well, for example recursively opening a network directory tree could cause the browser to freeze
+for a long period of time. If the network query were asynchronous then the browser would only freeze during actual operations,
+during network operations it would be free for the user interract with. The browser has even been designed so that
+a loadfile/loadlist operation saves it's own copy of the current directory, so even if the user hops around like crazy the original
+open operation will still occur in the correct order (though there's nothing stopping them starting a new operation which will cause
+random ordering.)
+
+However, there is one downside to this behaviour. If the parse operation is requested by the browser, then it is
+possible for the user to change directories while the coroutine is yielded. If you were to resume the coroutine
+in that situation, then any operations you do are wasted, and unexpected bahaviour could happen.
+file-browser will automatically detect when it receives a list from an aborted coroutine, so there is no risk
+of the current list being replaced, but any other logic in your script will continue until `parse` returns.
+
+To fix this there are two methods available in the state table, the `yield()` method is a wrapper around `coroutine.yield()` that
+detects when the browser has abandoned the parse, and automatically kills the coroutine by throwing an error.
+The `is_coroutine_current()` method simply compares if the current coroutine (as returned by `coroutine.current()`) matches the
+coroutine that the browser is waiting for. Remember this is only a problem when the browser is the source of the request,
+if the request came from a script-message, or from a loadlist command there are no issues.
 
 ### The List Array
 
@@ -100,6 +155,7 @@ Each item has the following members:
 | label | string | no       | an alternative string to print to the screen instead of name                              |
 | ass   | string | no       | a string to print to the screen without escaping ass styling - overrides label and name   |
 | path  | string | no       | opening the item uses this full path instead of appending directory and name              |
+| redirect| bool | no       | whether path should redirect the browser when opening a directory - default yes (nil counts as true)|
 
 File-browser expects that `type` and `name` will be set for each item, so leaving these out will probably crash the script.
 File-browser also assumes that all directories end in a `/` when appending name, and that there will be no backslashes.
@@ -131,12 +187,11 @@ None of these values are required, and the opts table can even left as nil when 
 |-----------------|---------|-------------------------------------------------------------------------------------------------------------------------------------------|
 | filtered        | boolean | if true file-browser will not run the standard filter() function on the list                                                              |
 | sorted          | boolean | if true file-browser will not sort the list                                                                                               |
-| directory       | string  | **[deprecated]** - ges the browser directory to this - used for redirecting to other locations                                            |
+| directory       | string  | changes the browser directory to this - used for redirecting to other locations                                            |
 | directory_label | string  | display this label in the header instead of the actual directory - useful to display encoded paths                                        |
 | empty_text      | string  | display this text when the list is empty - can be used for error messages                                                                 |
 | selected_index  | number  | the index of the item on the list to select by default - a.k.a. the cursor position                                                       |
-| already_deferred| boolean | whether or not [defer](#Advanced-Functions) was used to create the list, if so then give up if list is nil - set automatically, but can be manually disabled |
-| index           | number  | index of the parser that successfully returns a list - set automatically, but can be set manually to take ownership (see defer)                       |
+| id              | number  | id of the parser that successfully returns a list - set automatically, but can be set manually to take ownership (see defer)              |
 
 The previous static example, but modified so that file browser does not try to filter or re-order the list:
 
@@ -154,13 +209,9 @@ function parser:parse(directory, state)
 end
 ```
 
-`already_deferred` is an optimisation. If a script uses defer and still returns nil, then that means that none of the remaining parsers will be able to parse the path.
-Therefore, it is more efficient to just immediately jump to the root.
-It is up to the addon author to manually disable this if their use of `defer` conflicts with this assumption.
-
-`index` is used to declare ownership of a page. The name of the parser that has ownership is used for custom-keybinds parser filtering.
-When using `defer` index will be the index of whichever parser first returned a list.
-This is the only situation when a parser may want to set index manually.
+`id` is used to declare ownership of a page. The name of the parser that has ownership is used for custom-keybinds parser filtering.
+When using `defer` id will be the id of whichever parser first returned a list.
+This is the only situation when a parser may want to set id manually.
 
 ## Priority Suggestions
 
@@ -332,11 +383,34 @@ parser.keybinds = {
 }
 ```
 
-## API Functions
+## The API
 
-All parsers are provided with a range of API functions to make addons more powerful.
-These functions are added to the parser after being loaded via a metatable, so can be called through the self argument or the parser object.
-These functions are only made available once file-browser has fully imported the parsers, so if a script wants to call them immediately on load they must do so in the `setup` method.
+The API is available through a module, which can be loaded with `require "file-browser"`.
+The API provides a variety of different values and functions for an addon to use
+in order to make them more powerful.
+
+```lua
+local fb = require "file-browser"
+
+local parser = {
+    priority = 100,
+}
+
+function parser:setup()
+    fb.insert_root_item({ name = "Example/", type = "dir" })
+end
+
+return parser
+```
+
+### Parser API
+
+In addition to the standard API there is also an extra parser API that provides
+several parser specific methods,
+labeled `method` below instead of `function`. This API is added to the parser
+object after it is loaded by file-browser,
+so if a script wants to call them immediately on load they must do so in the `setup` method.
+All the standard API functions are also available in the parser API.
 
 ```lua
 local parser = {
@@ -355,26 +429,11 @@ parser.insert_root_item({ name = "Example/", type = "dir" })
 return parser
 ```
 
-Additionally, the API is also available through a module, which can be loaded with `require "file-browser"`. The module contains all of the same functions, but does not
-include the methods, they are only available through the parser objects.
-This is the recommended way of calling [Utility Functions](#utility-functions).
-
-```lua
-local fb = require "file-browser"
-
-local parser = {
-    priority = 100,
-}
-
-function parser:setup()
-    fb.insert_root_item({ name = "Example/", type = "dir" })
-end
-
-return parser
-```
+### General Functions
 
 | key                          | type     | arguments                    | returns | description                                                                                                              |
 |------------------------------|----------|------------------------------|---------|--------------------------------------------------------------------------------------------------------------------------|
+| API_VERSION                  | string   | -                            | -       | the current API version in use                                                                                           |
 | register_parseable_extension | function | string                       | -       | register a file extension that the browser will attempt to open, like a directory - for addons which can parse files     |
 | remove_parseable_extension   | function | string                       | -       | remove a file extension that the browser will attempt to open like a directory                                           |
 | add_default_extension        | function | string                       | -       | adds the given extension to the default extension filter whitelist - can only be run inside setup()                      |
@@ -382,13 +441,20 @@ return parser
 | browse_directory             | function | string                       | -       | clears the cache and opens the given directory in the browser - if the browser is closed then open it                    |
 | update_directory             | function |                              | -       | rescans the current directory - equivalent to Ctrl+r without the cache refresh for higher level directories              |
 | clear_cache                  | function |                              | -       | clears the cache - use if modifying the contents of higher level directories                                             |
-| scan_directory               | function | string, parser_state_table | list_table, opts_table       | starts a new scan for the given directory - note that all parsers are called as normal, so beware infinite recursion     |
+| parse_directory              | function | string, parser_state_table | list_table, opts_table       | starts a new scan for the given directory - note that all parsers are called as normal, so beware infinite recursion     |
+
+Note that the `parse_directory()` function must be called from inside a [coroutine](#coroutines).
+
+Also note that every parse operation is expected to have its own unique coroutine. This acts as a unique
+ID that can be used internally or by other addons. This means that if multiple `parse_directory` operations
+are run within a single coroutine then file-browser will automatically create a new coroutine for the scan,
+which hands execution back to the original coroutine upon completion.
 
 ### Advanced Functions
 
 | key           | type     | arguments        | returns                 | description                     |
 |---------------|----------|------------------|-------------------------|---------------------------------|
-| defer         | method   | string, parser_state_table | list_table, opts_table  | forwards the given directory to the next valid parser - can be used to redirect the browser or to modify the results of lower priority parsers |
+| defer         | method   | string | list_table, opts_table  | forwards the given directory to the next valid parser - can be used to redirect the browser or to modify the results of lower priority parsers |
 
 #### Using `defer`
 
@@ -396,14 +462,13 @@ The `defer` function is very powerful, and can be used by scripts to create virt
 However, due to how much freedom Lua gives coders, it is impossible for file-browser to ensure that parsers are using defer correctly, which can cause unexpected results.
 The following are a list of recommendations that will increase the compatability with other parsers:
 
-* Always pass all arguments from `parse` into `defer`, using Lua's variable arguments `...` can be a good way to future proof this against any future API changes.
 * Always return the opts table that is returned by defer, this can contain important values for file-browser, as described [above](#The-Opts-Table).
   * If required modify values in the existing opts table, don't create a new one.
 * Respect the `sorted` and `filtered` values in the opts table. This may mean calling `sort` or `filter` manually.
 * Think about how to handle the `directory_label` field, especially how it might interract with any virtual paths the parser may be maintaining.
-* Think about what to do if the `directory` field is set. This field is deprecated, so you could probably get away with not handling this.
-* Think if you want your parser to take full ownership of the results of `defer`, if so consider setting `opts.index = self:get_index()`.
-  * Currently this affects custom keybind filtering, though it may be changed in the future.
+* Think about what to do if the `directory` field is set.
+* Think if you want your parser to take full ownership of the results of `defer`, if so consider setting `opts.id = self:get_id()`.
+  * Currently this only affects custom keybind filtering, though it may be changed in the future.
 
 The [home-label](https://github.com/CogentRedTester/mpv-file-browser/blob/master/addons/home-label.lua)
 addon provides a good simple example of the safe use of defer. It lets the normal file
@@ -460,8 +525,8 @@ All tables returned by these functions are copies to ensure addons can't break t
 
 | key                        | type     | arguments | returns | description                                                                                                           |
 |----------------------------|----------|-----------|---------|-----------------------------------------------------------------------------------------------------------------------|
-| get_id                     | method   | -         | number  | the unique id of the parser                                                                                           |
-| get_index                  | method   | -         | number  | the index of the parser in order of preference                                                                        |
+| get_id                     | method   | -         | number  | the unique id of the parser - used internally to set ownership of list results for cutom-keybind filtering            |
+| get_index                  | method   | -         | number  | the index of the parser in order of preference - `defer` uses this internally                                         |
 | get_script_opts            | function | -         | table   | the table of script opts set by the user - this never gets changed during runtime                                     |
 | get_root                   | function | -         | table   | the root table - an array of item_tables                                                                              |
 | get_extensions             | function | -         | table   | a set of valid extensions after applying the user's whitelist/blacklist - in the form {ext1 = true, ext2 = true, ...} |
