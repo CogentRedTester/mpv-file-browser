@@ -310,7 +310,7 @@ end
 
 --returns the protocol scheme of the given url, or nil if there is none
 function API.get_protocol(filename, def)
-    return filename:lower():match("^(%a%w*)://") or def
+    return filename:lower():match("^(%a[%w+-.]*)://") or def
 end
 
 --formats strings for ass handling
