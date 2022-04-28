@@ -12,6 +12,7 @@ local drive_letters = {
 
 local mp = require "mp"
 local msg = require "mp.msg"
+local fb = require "file-browser"
 
 local wn = {
     priority = 109,
@@ -35,7 +36,7 @@ local function command(args, parse_state)
         capture_stderr = true,
         args = args
     }, function(_, res)
-        coroutine.resume_err(co, res)
+        fb.coroutine.resume_err(co, res)
     end)
     if parse_state then cmd = parse_state:yield()
     else cmd = coroutine.yield() end
