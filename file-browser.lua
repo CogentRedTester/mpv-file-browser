@@ -290,6 +290,16 @@ function API.coroutine.resume_err(...)
     if not success then msg.error(err) end
 end
 
+--creates a callback fuction to resume the current coroutine
+function API.coroutine.callback()
+    local co, main = coroutine.running()
+    assert(not main and co, "cannot create a coroutine callback for the main thread")
+
+    return function(...)
+        return API.coroutine.resume_err(co, ...)
+    end
+end
+
 --get the full path for the current file
 function API.get_full_path(item, dir)
     if item.path then return item.path end
