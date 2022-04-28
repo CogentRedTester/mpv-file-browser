@@ -435,16 +435,15 @@ end
 --copies a table without leaving any references to the original
 --uses a structured clone algorithm to maintain cyclic references
 local function copy_table_recursive(t, references)
-    if not t then return nil end
+    if type(t) ~= "table" then return t end
+    if references[t] then return references[t] end
+
     local copy = {}
     references[t] = copy
 
     for key, value in pairs(t) do
-        if type(value) == "table" then
-            if references[value] then copy[key] = references[value]
-            else copy[key] = copy_table_recursive(value, references) end
-        else
-            copy[key] = value end
+        key = copy_table_recursive(key, references)
+        copy[key] = copy_table_recursive(value, references)
     end
     return copy
 end

@@ -1,4 +1,4 @@
-# How to Write an Addon - API v1.0.0
+# How to Write an Addon - API v1.0.1
 
 Addons provide ways for file-browser to parse non-native directory structures. This document describes how one can create their own custom addon.
 
