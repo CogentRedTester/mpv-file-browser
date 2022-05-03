@@ -23,6 +23,9 @@ local o = {
     --number of entries to show on the screen at once
     num_entries = 20,
 
+    --wrap the cursor around the top and bottom of the list
+    wrap = false,
+
     --only show files compatible with mpv
     filter_files = true,
 
@@ -692,7 +695,7 @@ local function scroll_down()
     if state.selected < #state.list then
         state.selected = state.selected + 1
         update_ass()
-    elseif state.wrap then
+    elseif o.wrap then
         state.selected = 1
         update_ass()
     end
@@ -704,7 +707,7 @@ local function scroll_up()
     if state.selected > 1 then
         state.selected = state.selected - 1
         update_ass()
-    elseif state.wrap then
+    elseif o.wrap then
         state.selected = #state.list
         update_ass()
     end
