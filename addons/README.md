@@ -22,7 +22,11 @@ The following is a list of addons I have written.
 
 **ls**  
 Implements standard directory parsing using the linux `ls` utility.
-This is an example addon, I don't know of any actual uses.
+This behaves near identically to the native parser, but IO is done asynchronously.
+
+**windir**  
+Implements standard directory parsing using the windows `cmd dir` command.
+This behaves near identically to the native parser, but IO is done asynchronously.
 
 **apache-browser**  
 Implements support for http/https directory indexes that apache servers dynamically generate.

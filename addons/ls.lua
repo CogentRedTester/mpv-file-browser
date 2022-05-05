@@ -1,7 +1,8 @@
 --[[
-    An addon for mpv-file-browser which uses the linux ls command to parse native directories
+    An addon for mpv-file-browser which uses the Linux ls command to parse native directories
+    This behaves near identically to the native parser, but IO is done asynchronously.
 
-    This is mostly a proof of concept, I don't know of any cases when this would be needed.
+    Available at: https://github.com/CogentRedTester/mpv-file-browser/tree/master/addons
 ]]--
 
 local mp = require "mp"
