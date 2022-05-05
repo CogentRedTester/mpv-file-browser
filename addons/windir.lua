@@ -52,6 +52,9 @@ local function command(args, parse_state)
     cmd.stdout = utf8(cmd.stdout)
     cmd.stderr = utf8(cmd.stderr)
 
+    --dir returns this exact error message if the directory is empty
+    if cmd.status == 1 and cmd.stderr == "File Not Found\r\n" then cmd.status = 0 end
+
     return cmd.status == 0 and cmd.stdout or nil, cmd.stderr
 end
 
