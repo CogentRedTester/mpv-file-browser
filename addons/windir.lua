@@ -12,10 +12,10 @@ local fb = require "file-browser"
 --this is a LuaJit module this addon will not load if not using LuaJit
 local ffi = require 'ffi'
 ffi.cdef([[
-    int WideCharToMultiByte(unsigned int CodePage, unsigned int dwFlags, const wchar_t *lpWideCharStr, int cchWideChar, char *lpMultiByteStr, int cbMultiByte, const char *lpDefaultChar, bool *lpUsedDefaultChar);
+    int __stdcall WideCharToMultiByte(unsigned int CodePage, unsigned int dwFlags, const wchar_t *lpWideCharStr, int cchWideChar, char *lpMultiByteStr, int cbMultiByte, const char *lpDefaultChar, bool *lpUsedDefaultChar);
 ]])
 
---converts a UTF16 string to a UTF8 string and removes the trailing `\0` character
+--converts a UTF16 string to a UTF8 string
 --this function was adapted from https://github.com/mpv-player/mpv/issues/10139#issuecomment-1117954648
 local function utf8(WideCharStr)
     WideCharStr = ffi.cast("wchar_t*", WideCharStr)
@@ -26,6 +26,7 @@ local function utf8(WideCharStr)
         local utf8_path = ffi.new("char[?]", utf8_size)
         local utf8_size = ffi.C.WideCharToMultiByte(65001, 0, WideCharStr, -1, utf8_path, utf8_size, nil, nil)
         if utf8_size > 0 then
+            --removes the trailing `\0` character which can break things
             return ffi.string(utf8_path, utf8_size):sub(1, -2)
         end
     end
