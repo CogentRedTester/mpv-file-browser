@@ -41,6 +41,11 @@ local o = {
 
     audio_extension_whitelist = "",
 
+    --files with these extensions will be added as additional subtitle tracks instead of appended to the playlist
+    sub_extension_blacklist = "",
+
+    sub_extension_whitelist = "",
+
     --filter dot directories like .config
     --most useful on linux systems
     filter_dot_dirs = false,
@@ -218,7 +223,7 @@ local compatible_file_extensions = {
 }
 
 --creating a set of subtitle extensions for custom subtitle loading behaviour
-local subtitle_extensions = {
+local subtitle_extension_list = {
     "etf","etf8","utf-8","idx","sub","srt","rt","ssa","ass","mks","vtt","sup","scc","smi","lrc","pgs"
 }
 
@@ -1675,10 +1680,16 @@ local function setup_extensions_list()
     end
 
     --setting up subtitle extensions
-    for i = 1, #subtitle_extensions do
-        extensions[subtitle_extensions[i]] = true
-        sub_extensions[subtitle_extensions[i]] = true
-    end
+    for i = 1, #subtitle_extension_list do
+        sub_extensions[subtitle_extension_list[i]] = true end
+    for str in string.gmatch(o.sub_extension_whitelist:lower(), "([^"..API.pattern_escape(o.root_seperators).."]+)") do
+        sub_extensions[str] = true end
+    for str in string.gmatch(o.sub_extension_blacklist:lower(), "([^"..API.pattern_escape(o.root_seperators).."]+)") do
+        sub_extensions[str] = nil end
+
+    --adding subtitle extensions to the main extension list
+    for ext in pairs(sub_extensions) do
+        extensions[ext] = true end
 
     --setting up audio extensions
     for i = 1, #audio_extension_list do
