@@ -803,7 +803,7 @@ end
 local function choose_and_parse(directory, index)
     msg.debug("finding parser for", directory)
     local parser, list, opts
-    local parse_state = parse_states[coroutine.running()]
+    local parse_state = API.get_parse_state()
     while list == nil and not parse_state.already_deferred and index <= #parsers do
         parser = parsers[index]
         if parser:can_parse(directory, parse_state) then
@@ -844,7 +844,7 @@ end
 --if a coroutine has already been used for a parse then create a new coroutine so that
 --the every parse operation has a unique thread ID
 local function parse_directory(directory, parse_state)
-    local co = API.coroutine.assert("scan_directory must be executed from within a coroutine - aborting scan", utils.to_string(parse_state))
+    local co = API.coroutine.assert("scan_directory must be executed from within a coroutine - aborting scan "..utils.to_string(parse_state))
     if not parse_states[co] then return run_parse(directory, parse_state) end
 
     --if this coroutine is already is use by another parse operation then we create a new
@@ -1539,7 +1539,7 @@ function parser_API:get_id() return parsers[self].id end
 function parser_API:defer(directory)
     msg.trace("deferring to other parsers...")
     local list, opts = choose_and_parse(directory, self:get_index() + 1)
-    parse_states[coroutine.running()].already_deferred = true
+    API.get_parse_state().already_deferred = true
     return list, opts
 end
 
