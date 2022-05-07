@@ -28,6 +28,41 @@ If the parser's minor version number is greater than the API_VERSION, then a war
 Patch numbers denote bug fixes, and are ignored when loading an addon.
 For this reason addon authors are allowed to leave the patch number out of their version tag and just use `MAJOR.MINOR`.
 
+## Contents
+
+### **[Overview](#overview)**
+How parsers are loaded by file-browser and what fields they can set.
+
+* [Priority Suggestions](#priority-suggestions)
+
+### **[Parsing](#parsing)**
+How to setup custom parsing behaviour.
+
+* [Parse State Table](#parse-state-table)
+  * [Coroutines](#coroutines)
+* [The List Array](#the-list-array)
+* [The Opts Table](#the-opts-table)
+
+### **[Keybinds](#keybinds)**  
+How to setup custom dynamic keybinds.
+
+* [Keybind Names](#keybind-names)
+* [Native Functions vs Command Tables](#native-functions-vs-command-tables)
+* [Keybind Functions](#keybind-functions)
+  * [Function Call](#function-call)
+  * [State Table](#state-table)
+  * [Passthrough](#passthrough)
+
+### **[The API](#the-api)**  
+Describes what API functions are made available.
+
+* [Parser API](#parser-api)
+* [General Functions](#general-functions)
+* [Advanced Functions](#advanced-functions)
+* [Utility Functions](#utility-functions)
+* [Getters](#getters)
+* [Setters](#setters)
+
 ## Overview
 
 File-browser automatically loads any lua files from the `~~/script-modules/file-browser-addons` directory as modules.
@@ -75,6 +110,22 @@ end
 return parser
 
 ```
+
+### Priority Suggestions
+
+Below is a table of suggested priority ranges:
+
+| Range  | Suggested Use                                                                                                              | Example parsers                                |
+|--------|----------------------------------------------------------------------------------------------------------------------------|------------------------------------------------|
+| 0-20   | parsers that purely modify the results of other parsers                                                                    | [m3u-fixer](m3u-browser.lua)                   |
+| 21-40  | virtual filesystems which need to link to the results of other parsers                                                     | [favourites](favourites.lua)                   |
+| 41-50  | to support specific sites or systems which can be inferred from the path                                                   |                                                |
+| 51-80  | limitted support for specific protocols which requires complex parsing to verify compatability                             | [apache](apache-browser.lua)                       |
+| 81-90  | parsers that only need to modify the results of full parsers                                                               | [home-label](home-label.lua)                   |
+| 91-100 | use for parsers which fully support a non-native protocol with absolutely no overlap                                       | [ftp](ftp-browser.lua), [m3u](m3u-browser.lua) |
+| 101-109| replacements for the native file parser or fallbacks for the full parsers                                                  | [powershell](powershell.lua)                   |
+| 110    | priority of the native file parser - don't use                                                                             |                                                |
+| 111+   | fallbacks for native parser - potentially alternatives to the default root                                                 |                                                |
 
 ## Parsing
 
@@ -212,22 +263,6 @@ end
 `id` is used to declare ownership of a page. The name of the parser that has ownership is used for custom-keybinds parser filtering.
 When using `defer` id will be the id of whichever parser first returned a list.
 This is the only situation when a parser may want to set id manually.
-
-## Priority Suggestions
-
-Below is a table of suggested priority ranges:
-
-| Range  | Suggested Use                                                                                                              | Example parsers                                |
-|--------|----------------------------------------------------------------------------------------------------------------------------|------------------------------------------------|
-| 0-20   | parsers that purely modify the results of other parsers                                                                    | [m3u-fixer](m3u-browser.lua)                   |
-| 21-40  | virtual filesystems which need to link to the results of other parsers                                                     | [favourites](favourites.lua)                   |
-| 41-50  | to support specific sites or systems which can be inferred from the path                                                   |                                                |
-| 51-80  | limitted support for specific protocols which requires complex parsing to verify compatability                             | [apache](apache-browser.lua)                       |
-| 81-90  | parsers that only need to modify the results of full parsers                                                               | [home-label](home-label.lua)                   |
-| 91-100 | use for parsers which fully support a non-native protocol with absolutely no overlap                                       | [ftp](ftp-browser.lua), [m3u](m3u-browser.lua) |
-| 101-109| replacements for the native file parser or fallbacks for the full parsers                                                  | [powershell](powershell.lua)                   |
-| 110    | priority of the native file parser - don't use                                                                             |                                                |
-| 111+   | fallbacks for native parser - potentially alternatives to the default root                                                 |                                                |
 
 ## Keybinds
 
