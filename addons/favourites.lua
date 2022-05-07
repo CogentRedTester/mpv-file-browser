@@ -88,6 +88,7 @@ function favs:parse(directory)
         end
 
         for _, item in ipairs(list) do
+            if not item.path then item.redirect = false end
             item.path = item.path or full_path..item.name
         end
 
