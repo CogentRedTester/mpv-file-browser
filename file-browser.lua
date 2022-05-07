@@ -308,14 +308,27 @@ function API.coroutine.resume_err(...)
     if not success then msg.error(err) end
 end
 
+--in lua 5.1 there is only one return value which will be nil if run from the main thread
+--in lua 5.2 main will be true if running from the main thread
+function API.coroutine.assert(err)
+    local co, main = coroutine.running()
+    assert(not main and co, err or "error - function must be executed from within a coroutine")
+    return co
+end
+
 --creates a callback fuction to resume the current coroutine
 function API.coroutine.callback()
-    local co, main = coroutine.running()
-    assert(not main and co, "cannot create a coroutine callback for the main thread")
-
+    local co = API.coroutine.assert("cannot create a coroutine callback for the main thread")
     return function(...)
         return API.coroutine.resume_err(co, ...)
     end
+end
+
+--runs the given function in a coroutine, passing through any additional arguments
+--this is for triggering an event in a coroutine
+function API.coroutine.run(fn, ...)
+    local co = coroutine.create(fn)
+    API.coroutine.resume_err(co, ...)
 end
 
 --get the full path for the current file
@@ -831,10 +844,7 @@ end
 --if a coroutine has already been used for a parse then create a new coroutine so that
 --the every parse operation has a unique thread ID
 local function parse_directory(directory, parse_state)
-    --in lua 5.1 there is only one return value which will be nil if run from the main thread
-    --in lua 5.2 main will be true if running from the main thread
-    local co, main = coroutine.running()
-    if main or not co then return msg.error("scan_directory must be executed from within a coroutine - aborting scan", utils.to_string(parse_state)) end
+    local co = API.coroutine.assert("scan_directory must be executed from within a coroutine - aborting scan", utils.to_string(parse_state))
     if not parse_states[co] then return run_parse(directory, parse_state) end
 
     --if this coroutine is already is use by another parse operation then we create a new
@@ -1199,9 +1209,7 @@ end
 
 --opens the selelected file(s)
 local function open_file(flag, autoload_dir)
-    local co = coroutine.create(open_file_coroutine)
-
-    API.coroutine.resume_err(co, flag, autoload_dir)
+    API.coroutine.run(open_file_coroutine, flag, autoload_dir)
 end
 
 
@@ -1830,7 +1838,6 @@ mp.register_script_message('browse-directory', browse_directory)
 
 --allows other scripts to request directory contents from file-browser
 mp.register_script_message("get-directory-contents", function(directory, response_str)
-    local co = coroutine.create(scan_directory_json)
-    API.coroutine.resume_err(co, directory, response_str)
+    API.coroutine.run(scan_directory_json, directory, response_str)
 end)
 
