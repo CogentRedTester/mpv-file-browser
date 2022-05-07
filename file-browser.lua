@@ -36,6 +36,11 @@ local o = {
     --add extra file extensions
     extension_whitelist = "",
 
+    --files with these extensions will be added as additional audio tracks instead of appended to the playlist
+    audio_extension_blacklist = "",
+
+    audio_extension_whitelist = "",
+
     --filter dot directories like .config
     --most useful on linux systems
     filter_dot_dirs = false,
@@ -188,6 +193,7 @@ local parse_states = setmetatable({}, { __mode = "k"})
 
 local extensions = {}
 local sub_extensions = {}
+local audio_extensions = {}
 local parseable_extensions = {}
 
 local dvd_device = nil
@@ -213,9 +219,13 @@ local compatible_file_extensions = {
 
 --creating a set of subtitle extensions for custom subtitle loading behaviour
 local subtitle_extensions = {
-    "etf","etf8","utf-8","idx","sub","srt","rt","ssa","ass","mks","vtt","sup","scc","smi","lrc",'pgs'
+    "etf","etf8","utf-8","idx","sub","srt","rt","ssa","ass","mks","vtt","sup","scc","smi","lrc","pgs"
 }
 
+--creating a set of audio extensions for custom audio loading behaviour
+local audio_extension_list = {
+    "mka","dts","dtshd","dts-hd","truehd","true-hd"
+}
 
 --------------------------------------------------------------------------------------------------------
 --------------------------------------Cache Implementation----------------------------------------------
@@ -1066,7 +1076,9 @@ local function custom_loadlist_recursive(directory, flag, prev_dirs)
     if directory == "" then return end
 
     for _, item in ipairs(list) do
-        if not sub_extensions[ API.get_extension(item.name, "") ] then
+        if not sub_extensions[ API.get_extension(item.name, "") ]
+        and not audio_extensions[ API.get_extension(item.name, "") ]
+        then
             if item.type == "dir" or parseable_extensions[API.get_extension(item.name, "")] then
                 if custom_loadlist_recursive( API.get_new_directory(item, directory) , flag, prev_dirs) then
                     flag = "append"
@@ -1102,7 +1114,10 @@ local function autoload_dir(path)
     local pos = 1
     local file_count = 0
     for _,item in ipairs(state.list) do
-        if item.type == "file" and not sub_extensions[ API.get_extension(item.name, "") ] then
+        if item.type == "file" 
+        and not sub_extensions[ API.get_extension(item.name, "") ]
+        and not audio_extensions[ API.get_extension(item.name, "") ]
+        then
             local p = API.get_full_path(item)
 
             if p == path then pos = file_count
@@ -1122,6 +1137,8 @@ local function loadfile(item, flag, autoload, directory)
 
     if sub_extensions[ API.get_extension(item.name, "") ] then
         mp.commandv("sub-add", path, flag == "replace" and "select" or "auto")
+    elseif audio_extensions[ API.get_extension(item.name, "") ] then
+        mp.commandv("audio-add", path, flag == "replace" and "select" or "auto")
     else
         if autoload then autoload_dir(path)
         else mp.commandv('loadfile', path, flag) end
@@ -1458,6 +1475,7 @@ end
 function API.get_script_opts() return API.copy_table(o) end
 function API.get_extensions() return API.copy_table(extensions) end
 function API.get_sub_extensions() return API.copy_table(sub_extensions) end
+function API.get_audio_extensions() return API.copy_table(audio_extensions) end
 function API.get_parseable_extensions() return API.copy_table(parseable_extensions) end
 function API.get_state() return API.copy_table(state) end
 function API.get_dvd_device() return dvd_device end
@@ -1661,6 +1679,18 @@ local function setup_extensions_list()
         extensions[subtitle_extensions[i]] = true
         sub_extensions[subtitle_extensions[i]] = true
     end
+
+    --setting up audio extensions
+    for i = 1, #audio_extension_list do
+        audio_extensions[audio_extension_list[i]] = true end
+    for str in string.gmatch(o.audio_extension_whitelist:lower(), "([^"..API.pattern_escape(o.root_seperators).."]+)") do
+        audio_extensions[str] = true end
+    for str in string.gmatch(o.audio_extension_blacklist:lower(), "([^"..API.pattern_escape(o.root_seperators).."]+)") do
+        audio_extensions[str] = nil end
+
+    --adding audio extensions to the main extension list
+    for ext in pairs(audio_extensions) do
+        extensions[ext] = true end
 
     --adding extra extensions on the whitelist
     for str in string.gmatch(o.extension_whitelist:lower(), "([^"..API.pattern_escape(o.root_seperators).."]+)") do
