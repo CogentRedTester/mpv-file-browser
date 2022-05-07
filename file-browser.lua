@@ -1516,6 +1516,7 @@ function API.get_current_parser_keyname() return state.parser.keybind_name or st
 function API.get_selected_index() return state.selected end
 function API.get_selected_item() return API.copy_table(state.list[state.selected]) end
 function API.get_open_status() return not state.hidden end
+function API.get_parse_state(co) return parse_states[co or coroutine.running() or ""] end
 
 function API.set_empty_text(str)
     state.empty_text = str
