@@ -126,6 +126,7 @@ end
 --write the contents of favourites to the file
 local function write_to_file()
     local file = io.open(save_path, "w+")
+    if not file then return msg.error(file, "could not open favourites file") end
     for _, item in ipairs(favourites) do
         file:write(string.format("%s\n", item.path))
     end
