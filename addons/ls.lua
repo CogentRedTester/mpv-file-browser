@@ -30,7 +30,7 @@ local function command(args, parse_state)
 end
 
 function ls:can_parse(directory)
-    return not self.get_protocol(directory)
+    return not fb.get_protocol(directory)
 end
 
 function ls:parse(directory, parse_state)
@@ -42,9 +42,9 @@ function ls:parse(directory, parse_state)
     for str in files:gmatch("[^\n\r]+") do
         local is_dir = str:sub(-1) == "/"
 
-        if is_dir and self.valid_dir(str) then
+        if is_dir and fb.valid_dir(str) then
             table.insert(list, {name = str, type = "dir"})
-        elseif self.valid_file(str) then
+        elseif fb.valid_file(str) then
             table.insert(list, {name = str, type = "file"})
         end
     end
