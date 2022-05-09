@@ -100,14 +100,14 @@ There are two different multiselect modes, controlled by the `multi-type` option
 
 ### `repeat`
 
-The default mode that sends the commands once for each item that is selected
+The default mode that sends the commands once for each item that is selected.
 If time is needed between running commands of multiple selected items (for example, due to file handlers) then the `delay` option can be used to set a duration (in seconds) between commands.
 
-### `append`
+### `concat`
 
-Run a single command, but replace item specific codes with the corresponding string from each selected item.
+Run a single command, but replace item specific codes with a concatenated string made from each selected item.
 For example `["print-text", "%n" ]` would print the name of each item selected separated by `" "`.
-The string appended between each character is determined by the `append-string` option, but `" "` is the default.
+The string inserted between each item is determined by the `concat-string` option, but `" "` is the default.
 
 ## Passthrough Keybinds
 
