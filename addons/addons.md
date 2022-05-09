@@ -1,4 +1,4 @@
-# How to Write an Addon - API v1.0.1
+# How to Write an Addon - API v1.1.0
 
 Addons provide ways for file-browser to parse non-native directory structures. This document describes how one can create their own custom addon.
 
@@ -139,7 +139,7 @@ of the current list being replaced, but any other logic in your script will cont
 
 To fix this there are two methods available in the state table, the `yield()` method is a wrapper around `coroutine.yield()` that
 detects when the browser has abandoned the parse, and automatically kills the coroutine by throwing an error.
-The `is_coroutine_current()` method simply compares if the current coroutine (as returned by `coroutine.current()`) matches the
+The `is_coroutine_current()` method simply compares if the current coroutine (as returned by `coroutine.running()`) matches the
 coroutine that the browser is waiting for. Remember this is only a problem when the browser is the source of the request,
 if the request came from a script-message, or from a loadlist command there are no issues.
 
@@ -454,7 +454,50 @@ which hands execution back to the original coroutine upon completion.
 
 | key           | type     | arguments        | returns                 | description                     |
 |---------------|----------|------------------|-------------------------|---------------------------------|
-| defer         | method   | string | list_table, opts_table  | forwards the given directory to the next valid parser - can be used to redirect the browser or to modify the results of lower priority parsers |
+| defer         | method   | string | list_table, opts_table  | forwards the given directory to the next valid parser - can be used to redirect the browser or to modify the results of lower priority parsers - see [Using `defer`](#using-defer) |
+| coroutine.run        | function | function, ...    | -                 | runs the given function in a new coroutine - passes any additional arguments to the function |
+| coroutine.resume_err | function | coroutine, ...   | -                 | resumes the given coroutine with the given arguments, if an error is returned then log an error message with `mp.msg.error()` |
+| coroutine.resume_catch | function | coroutine, ...   | ...             | same as `coroutine.resume_err` but actually captures and returns the results of `coroutine.resume()`|
+| coroutine.assert     | function   | string     | coroutine       | throws an error if the function is not called from within a coroutine and returns the running coroutine on success - the string argument can be used to set a custom error message |
+| coroutine.callback   | function   | -          | function        | creates and returns a callback function that resumes the current coroutine - see [using `coroutine.callback`](#using-coroutinecallback) for more details |
+
+#### Using `coroutine.callback`
+
+This function is designed to help streamline asynchronous operations. The best way to explain is with an example:
+
+```lua
+local function execute(args)
+    local _, cmd = coroutine.yield(
+        mp.command_native_async({
+            name = "subprocess",
+            playback_only = false,
+            capture_stdout = true,
+            capture_stderr = true,
+            args = args
+        }, fb.coroutine.callback())
+    )
+
+    return cmd.status == 0 and cmd.stdout or nil
+end
+```
+
+This function uses the mpv [subprocess](https://mpv.io/manual/master/#command-interface-subprocess)
+command to execute some system operation. To prevent the whole script (including file-browser and all addons) from freezing
+it uses the [command_native_async](https://mpv.io/manual/master/#lua-scripting-mp-command-native-async(table-[,fn])) command
+to execute the operation asynchronously and takes a callback function as its second argument.
+
+`coroutine.callback())` will automatically create a callback function to resume whatever coroutine ran the `execute` function.
+Any arguments passed into the callback function (by the async function, not by you) will be passed on to the resume;
+in this case `command_native_async` passes three values into the callback, of which only the second is of interest to me.
+
+The unsaid expectation is that the programmer will yield execution before that callback returns. In this example I
+have placed the `command_native_async` command inside the yield call; this is not necessary, I just did this because I think it
+makes the code look more synchronous.
+
+If you are doing this during a parse operation you could also substitute `coroutine.yield()` with `parse_state:yield()` to abort the parse if the user changed
+browser directories during the asynchronous operation.
+
+If you have no idea what I've been talking about read the [Lua manual on coroutines](https://www.lua.org/manual/5.1/manual.html#2.11).
 
 #### Using `defer`
 
@@ -528,6 +571,7 @@ All tables returned by these functions are copies to ensure addons can't break t
 | get_id                     | method   | -         | number  | the unique id of the parser - used internally to set ownership of list results for cutom-keybind filtering            |
 | get_index                  | method   | -         | number  | the index of the parser in order of preference - `defer` uses this internally                                         |
 | get_script_opts            | function | -         | table   | the table of script opts set by the user - this never gets changed during runtime                                     |
+| get_parse_state            | function | coroutine | table   | returns the [parse_state table](#parse-state-table) for the given coroutine - if no coroutine is given then it uses `coroutine.running()` |
 | get_root                   | function | -         | table   | the root table - an array of item_tables                                                                              |
 | get_extensions             | function | -         | table   | a set of valid extensions after applying the user's whitelist/blacklist - in the form {ext1 = true, ext2 = true, ...} |
 | get_sub_extensions         | function | -         | table   | like above but with subtitle extensions - note that subtitles show up in the above list as well                       |
