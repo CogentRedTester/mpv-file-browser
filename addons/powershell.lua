@@ -16,7 +16,7 @@ local fb = require "file-browser"
 
 local wn = {
     priority = 109,
-    version = "1.0.0",
+    version = "1.1.0",
     name = "powershell",
     keybind_name = "file"
 }

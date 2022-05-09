@@ -22,7 +22,7 @@ end
 
 local apache = {
     priority = 80,
-    version = "1.0.0"
+    version = "1.1.0"
 }
 
 function apache:can_parse(name)

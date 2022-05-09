@@ -10,7 +10,7 @@ local fb = require "file-browser"
 
 local ls = {
     priority = 109,
-    version = "1.0.0",
+    version = "1.1.0",
     name = "ls",
     keybind_name = "file"
 }
