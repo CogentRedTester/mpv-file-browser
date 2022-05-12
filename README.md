@@ -26,10 +26,14 @@ The following dynamic keybinds are only set while the browser is open:
 | ENTER       | play          | plays the currently selected file or folder                                   |
 | Shift+ENTER | play_append   | appends the current file or folder to the playlist                            |
 | Alt+ENTER   | play_autoload | loads playlist entries before and after the selected file (like autoload.lua) |
-| DOWN        | scroll_down   | move selector down the list                                                   |
-| UP          | scroll_up     | move selector up the list                                                     |
 | RIGHT       | down_dir      | enter the currently selected directory                                        |
 | LEFT        | up_dir        | move to the parent directory                                                  |
+| DOWN        | scroll_down   | move selector down the list                                                   |
+| UP          | scroll_up     | move selector up the list                                                     |
+| PGDWN       | page_down     | move selector down the list by a page (the num_entries option)                |
+| PGUP        | page_up       | move selector up the list by a page (the num_entries option)                  |
+| Shift+PGDWN | list_bottom   | move selector to the bottom of the list                                       |
+| Shift+PGUP  | list_top      | move selector to the top of the list                                          |
 | HOME        | goto_current  | move to the directory of the currently playing file                           |
 | Shift+HOME  | goto_root     | move to the root directory                                                    |
 | Ctrl+r      | reload        | reload directory and reset cache                                              |

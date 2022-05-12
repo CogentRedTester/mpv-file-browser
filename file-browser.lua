@@ -714,41 +714,49 @@ local function enable_select_mode()
 end
 
 --calculates what drag behaviour is required for that specific movement
-local function drag_select(direction)
-    local setting = state.selection[state.multiselect_start]
-    local offset = state.multiselect_start - state.selected
-    local below = offset < 0
+local function drag_select(direction, original_pos, new_pos)
+    if original_pos - new_pos == 0 then return end
 
-    if below == (direction == 1) and offset ~= 0 then
-        state.selection[state.selected] = setting
-    else
-        state.selection[state.selected - direction] = state.initial_selection[state.selected-direction]
+    local setting = state.selection[state.multiselect_start]
+    for i = original_pos, new_pos, direction > 0 and 1 or -1 do
+        if i == state.multiselect_start then
+            --do nothing
+
+        --if we're moving the cursor away from the starting point then set the selection
+        --otherwise restore the original selection
+        elseif i > state.multiselect_start then
+            if new_pos > original_pos then
+                state.selection[i] = setting
+            else
+                state.selection[i] = state.initial_selection[i]
+            end
+        elseif i < state.multiselect_start then
+            if new_pos < original_pos then
+                state.selection[i] = setting
+            else
+                state.selection[i] = state.initial_selection[i]
+            end
+        end
     end
+
     update_ass()
 end
 
---moves the selector down the list
-local function scroll_down()
-    if state.selected < #state.list then
-        state.selected = state.selected + 1
-        update_ass()
-    elseif o.wrap then
-        state.selected = 1
-        update_ass()
-    end
-    if state.multiselect_start then drag_select(1) end
-end
+--moves the selector up and down the list by the entered amount
+local function scroll(n, wrap)
+    local num_items = #state.list
+    local original_pos = state.selected
 
---moves the selector up the list
-local function scroll_up()
-    if state.selected > 1 then
-        state.selected = state.selected - 1
-        update_ass()
-    elseif o.wrap then
-        state.selected = #state.list
-        update_ass()
+    if original_pos + n > num_items then
+        state.selected = wrap and 1 or num_items
+    elseif original_pos + n < 1 then
+        state.selected = wrap and num_items or 1
+    else
+        state.selected = original_pos + n
     end
-    if state.multiselect_start then drag_select(-1) end
+
+    if state.multiselect_start then drag_select(n, original_pos, state.selected) end
+    update_ass()
 end
 
 --toggles the selection
@@ -1235,8 +1243,12 @@ state.keybinds = {
     {'ESC', 'close', escape, {}},
     {'RIGHT', 'down_dir', down_dir, {}},
     {'LEFT', 'up_dir', up_dir, {}},
-    {'DOWN', 'scroll_down', scroll_down, {repeatable = true}},
-    {'UP', 'scroll_up', scroll_up, {repeatable = true}},
+    {'DOWN', 'scroll_down', function() scroll(1, o.wrap) end, {repeatable = true}},
+    {'UP', 'scroll_up', function() scroll(-1, o.wrap) end, {repeatable = true}},
+    {'PGDWN', 'page_down', function() scroll(o.num_entries) end, {repeatable = true}},
+    {'PGUP', 'page_up', function() scroll(-o.num_entries) end, {repeatable = true}},
+    {'Shift+PGDWN', 'list_bottom', function() scroll(#state.list) end, {}},
+    {'Shift+PGUP', 'list_top', function() scroll(-#state.list) end, {}},
     {'HOME', 'goto_current', goto_current_dir, {}},
     {'Shift+HOME', 'goto_root', goto_root, {}},
     {'Ctrl+r', 'reload', function() cache:clear(); update() end, {}},
