@@ -454,7 +454,7 @@ which hands execution back to the original coroutine upon completion.
 |---------------|----------|------------------|-------------------------|---------------------------------|
 | defer         | method   | string | list_table, opts_table  | forwards the given directory to the next valid parser - can be used to redirect the browser or to modify the results of lower priority parsers - see [Using `defer`](#using-defer) |
 | rescan             | function |                              | -      | rescans the current directory - equivalent to Ctrl+r without the cache refresh for higher level directories              |
-| redraw             | function |                              | -      | redraws the browser - needed for things like updating the cursor position after `set_selected_index` |
+| redraw             | function |                              | -      | forces a redraw of the browser                                                                                           |
 | clear_cache                  | function |                             | -       | clears the cache - use if modifying the contents of higher level directories                                             |
 | coroutine.run        | function | function, ...    | -                | runs the given function in a new coroutine - passes any additional arguments to the function |
 | coroutine.resume_err | function | coroutine, ...   | -                | resumes the given coroutine with the given arguments, if an error is returned then log an error message with `mp.msg.error()` |

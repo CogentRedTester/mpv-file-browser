@@ -1524,7 +1524,7 @@ function API.get_parse_state(co) return parse_states[co or coroutine.running() o
 
 function API.set_empty_text(str)
     state.empty_text = str
-    API.update_ass()
+    API.redraw()
 end
 
 function API.set_selected_index(index)
@@ -1532,7 +1532,7 @@ function API.set_selected_index(index)
     if index < 1 then index = 1 end
     if index > #state.list then index = #state.list end
     state.selected = index
-    API.update_ass()
+    API.redraw()
     return index
 end
 
