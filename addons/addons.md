@@ -1,4 +1,4 @@
-# How to Write an Addon - API v1.2.0
+# How to Write an Addon - API v1.3.0
 
 Addons provide ways for file-browser to parse non-native directory structures. This document describes how one can create their own custom addon.
 
@@ -560,18 +560,21 @@ return home_label
 | valid_dir     | function | string           | boolean    | tests if the given directory name passes the user set filters (dot directories)                                                                        |
 | filter        | function | list_table       | list_table | iterates through the given list and removes items that don't pass the filters - acts directly on the given list, it does not create a copy             |
 | sort          | function | list_table       | list_table | iterates through the given list and sorts the items using file-browsers sorting algorithm - acts directly on the given list, it does not create a copy |
-| copy_table    | function | table            | table      | recursively makes a deep copy of the given table and returns it, maintaining any cyclical references                                                   |
+| iterate_opt   | function | string           | iterator function | returns an iterator that returns substrings of the given string split by the root separators                                                    |
+| copy_table    | function |table|table| recursively makes a deep copy of the given table and returns it, maintaining any cyclical references - the original table is stored in the `__original` field of the metatable|
 
 ### Getters
 
 These functions allow addons to safely get information from file-browser.
-All tables returned by these functions are copies to ensure addons can't break things.
+All tables returned by these functions are copies to ensure addons can't break things, but a reference to the original table
+is stored in the `__original` field of the metatable.
 
 | key                        | type     | arguments | returns | description                                                                                                           |
 |----------------------------|----------|-----------|---------|-----------------------------------------------------------------------------------------------------------------------|
 | get_id                     | method   | -         | number  | the unique id of the parser - used internally to set ownership of list results for cutom-keybind filtering            |
 | get_index                  | method   | -         | number  | the index of the parser in order of preference - `defer` uses this internally                                         |
 | get_script_opts            | function | -         | table   | the table of script opts set by the user - this never gets changed during runtime                                     |
+| get_opt                    | function | string    | string or number or boolean | returns the script-opt with the given key                                                         |
 | get_parse_state            | function | coroutine | table   | returns the [parse_state table](#parse-state-table) for the given coroutine - if no coroutine is given then it uses `coroutine.running()` |
 | get_root                   | function | -         | table   | the root table - an array of item_tables                                                                              |
 | get_extensions             | function | -         | table   | a set of valid extensions after applying the user's whitelist/blacklist - in the form {ext1 = true, ext2 = true, ...} |

@@ -122,7 +122,7 @@ opt.read_options(o, 'file_browser')
 --------------------------------------------------------------------------------------------------------
 
 --sets the version for the file-browser API
-API_VERSION = "1.2.0"
+API_VERSION = "1.3.0"
 
 --switch the main script to a different environment so that the
 --executed lua code cannot access our global variales
