@@ -122,7 +122,7 @@ opt.read_options(o, 'file_browser')
 --------------------------------------------------------------------------------------------------------
 
 --sets the version for the file-browser API
-API_VERSION = "1.1.0"
+API_VERSION = "1.2.0"
 
 --switch the main script to a different environment so that the
 --executed lua code cannot access our global variales
@@ -1462,8 +1462,8 @@ end
 --------------------------------------------------------------------------------------------------------
 
 --these functions we'll provide as-is
-API.update_ass = update_ass
-API.rescan_directory = update
+API.redraw = update_ass
+API.rescan = update
 API.browse_directory = browse_directory
 
 function API.clear_cache()
@@ -1488,7 +1488,7 @@ end
 --add a compatible extension to show through the filter, only applies if run during the setup() method
 function API.add_default_extension(ext)
     table.insert(compatible_file_extensions, ext)
- end
+end
 
 --add item to root at position pos
 function API.insert_root_item(item, pos)

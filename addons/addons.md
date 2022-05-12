@@ -1,4 +1,4 @@
-# How to Write an Addon - API v1.1.0
+# How to Write an Addon - API v1.2.0
 
 Addons provide ways for file-browser to parse non-native directory structures. This document describes how one can create their own custom addon.
 
@@ -439,8 +439,6 @@ return parser
 | add_default_extension        | function | string                       | -       | adds the given extension to the default extension filter whitelist - can only be run inside setup()                      |
 | insert_root_item             | function | item_table, number(optional) | -       | add an item_table (must be a directory) to the root list at the specified position - if number is nil then append to end |
 | browse_directory             | function | string                       | -       | clears the cache and opens the given directory in the browser - if the browser is closed then open it                    |
-| update_directory             | function |                              | -       | rescans the current directory - equivalent to Ctrl+r without the cache refresh for higher level directories              |
-| clear_cache                  | function |                              | -       | clears the cache - use if modifying the contents of higher level directories                                             |
 | parse_directory              | function | string, parser_state_table | list_table, opts_table       | starts a new scan for the given directory - note that all parsers are called as normal, so beware infinite recursion     |
 
 Note that the `parse_directory()` function must be called from inside a [coroutine](#coroutines).
@@ -455,9 +453,12 @@ which hands execution back to the original coroutine upon completion.
 | key           | type     | arguments        | returns                 | description                     |
 |---------------|----------|------------------|-------------------------|---------------------------------|
 | defer         | method   | string | list_table, opts_table  | forwards the given directory to the next valid parser - can be used to redirect the browser or to modify the results of lower priority parsers - see [Using `defer`](#using-defer) |
-| coroutine.run        | function | function, ...    | -                 | runs the given function in a new coroutine - passes any additional arguments to the function |
-| coroutine.resume_err | function | coroutine, ...   | -                 | resumes the given coroutine with the given arguments, if an error is returned then log an error message with `mp.msg.error()` |
-| coroutine.resume_catch | function | coroutine, ...   | ...             | same as `coroutine.resume_err` but actually captures and returns the results of `coroutine.resume()`|
+| rescan             | function |                              | -      | rescans the current directory - equivalent to Ctrl+r without the cache refresh for higher level directories              |
+| redraw             | function |                              | -      | redraws the browser - needed for things like updating the cursor position after `set_selected_index` |
+| clear_cache                  | function |                             | -       | clears the cache - use if modifying the contents of higher level directories                                             |
+| coroutine.run        | function | function, ...    | -                | runs the given function in a new coroutine - passes any additional arguments to the function |
+| coroutine.resume_err | function | coroutine, ...   | -                | resumes the given coroutine with the given arguments, if an error is returned then log an error message with `mp.msg.error()` |
+| coroutine.resume_catch | function | coroutine, ...   | ...            | same as `coroutine.resume_err` but actually captures and returns the results of `coroutine.resume()`|
 | coroutine.assert     | function   | string     | coroutine       | throws an error if the function is not called from within a coroutine and returns the running coroutine on success - the string argument can be used to set a custom error message |
 | coroutine.callback   | function   | -          | function        | creates and returns a callback function that resumes the current coroutine - see [using `coroutine.callback`](#using-coroutinecallback) for more details |
 
@@ -575,6 +576,7 @@ All tables returned by these functions are copies to ensure addons can't break t
 | get_root                   | function | -         | table   | the root table - an array of item_tables                                                                              |
 | get_extensions             | function | -         | table   | a set of valid extensions after applying the user's whitelist/blacklist - in the form {ext1 = true, ext2 = true, ...} |
 | get_sub_extensions         | function | -         | table   | like above but with subtitle extensions - note that subtitles show up in the above list as well                       |
+| get_audio_extensions       | function | -         | table   | like above but with audio extensions (ones added as additional tracks) - these all show up in the `get_extensions` list as well |
 | get_parseable_extensions   | function | -         | table   | shows parseable file extensions in the same format as the above functions                                             |
 | get_parsers                | function | -         | table   | an array of the loaded parsers                                                                                        |
 | get_dvd_device             | function | -         | string  | the current dvd-device - formatted to work with file-browser                                                          |
@@ -592,7 +594,7 @@ All tables returned by these functions are copies to ensure addons can't break t
 
 | key                        | type     | arguments | returns | description                                                                                                           |
 |----------------------------|----------|-----------|---------|-----------------------------------------------------------------------------------------------------------------------|
-| set_selected_index         | function | -         | number or bool  | sets the cursor position - if the position is not a number return false, if the position is out of bounds move it in bounds, returns the new index |
+| set_selected_index         | function | number    | number or bool  | sets the cursor position - returns the new index, if the input is not a number return false, if the input is out of bounds move it in bounds |
 
 ## Examples
 

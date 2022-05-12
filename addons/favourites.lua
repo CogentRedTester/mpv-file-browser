@@ -17,7 +17,7 @@ end
 
 local favourites = nil
 local favs = {
-    version = "1.0.0",
+    version = "1.2.0",
     priority = 30,
     cursor = 1
 }
@@ -114,9 +114,9 @@ local function update_browser()
     if favs.get_directory():find("[fF]avourites/") then
         if favs.get_directory():find("[fF]avourites/$") then
             local cursor = favs.get_selected_index()
-            favs.rescan_directory()
+            favs.rescan()
             favs.set_selected_index(cursor)
-            favs.update_ass()
+            favs.redraw()
         else
             favs.clear_cache()
         end
