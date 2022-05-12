@@ -17,8 +17,8 @@ local o = {
     --root directories
     root = "~/",
 
-    --characters to use as seperators
-    root_seperators = ",;",
+    --characters to use as separators
+    root_separators = ",;",
 
     --number of entries to show on the screen at once
     num_entries = 20,
@@ -448,6 +448,11 @@ function API.filter(t)
         end
     end
     return t
+end
+
+--returns a string iterator that uses the root separators
+function API.iterate_opt(str)
+    return string.gmatch(str, "([^"..API.pattern_escape(o.root_separators).."]+)")
 end
 
 --sorts a table into an array of selected items in the correct order
@@ -1504,6 +1509,7 @@ end
 
 --providing getter and setter functions so that addons can't modify things directly
 function API.get_script_opts() return API.copy_table(o) end
+function API.get_opt(key) return o[key] end
 function API.get_extensions() return API.copy_table(extensions) end
 function API.get_sub_extensions() return API.copy_table(sub_extensions) end
 function API.get_audio_extensions() return API.copy_table(audio_extensions) end
@@ -1709,9 +1715,9 @@ local function setup_extensions_list()
     --setting up subtitle extensions
     for i = 1, #subtitle_extension_list do
         sub_extensions[subtitle_extension_list[i]] = true end
-    for str in string.gmatch(o.sub_extension_whitelist:lower(), "([^"..API.pattern_escape(o.root_seperators).."]+)") do
+    for str in API.iterate_opt(o.sub_extension_whitelist:lower()) do
         sub_extensions[str] = true end
-    for str in string.gmatch(o.sub_extension_blacklist:lower(), "([^"..API.pattern_escape(o.root_seperators).."]+)") do
+    for str in API.iterate_opt(o.sub_extension_blacklist:lower()) do
         sub_extensions[str] = nil end
 
     --adding subtitle extensions to the main extension list
@@ -1721,9 +1727,9 @@ local function setup_extensions_list()
     --setting up audio extensions
     for i = 1, #audio_extension_list do
         audio_extensions[audio_extension_list[i]] = true end
-    for str in string.gmatch(o.audio_extension_whitelist:lower(), "([^"..API.pattern_escape(o.root_seperators).."]+)") do
+    for str in API.iterate_opt(o.audio_extension_whitelist:lower()) do
         audio_extensions[str] = true end
-    for str in string.gmatch(o.audio_extension_blacklist:lower(), "([^"..API.pattern_escape(o.root_seperators).."]+)") do
+    for str in API.iterate_opt(o.audio_extension_blacklist:lower()) do
         audio_extensions[str] = nil end
 
     --adding audio extensions to the main extension list
@@ -1731,12 +1737,12 @@ local function setup_extensions_list()
         extensions[ext] = true end
 
     --adding extra extensions on the whitelist
-    for str in string.gmatch(o.extension_whitelist:lower(), "([^"..API.pattern_escape(o.root_seperators).."]+)") do
+    for str in API.iterate_opt(o.extension_whitelist:lower()) do
         extensions[str] = true
     end
 
     --removing extensions that are in the blacklist
-    for str in string.gmatch(o.extension_blacklist:lower(), "([^"..API.pattern_escape(o.root_seperators).."]+)") do
+    for str in API.iterate_opt(o.extension_blacklist:lower()) do
         extensions[str] = nil
     end
 end
@@ -1744,7 +1750,7 @@ end
 --splits the string into a table on the semicolons
 local function setup_root()
     root = {}
-    for str in string.gmatch(o.root, "([^"..API.pattern_escape(o.root_seperators).."]+)") do
+    for str in API.iterate_opt(o.root) do
         local path = mp.command_native({'expand-path', str})
         path = API.fix_path(path, true)
 
