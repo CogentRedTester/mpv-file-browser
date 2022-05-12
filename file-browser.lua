@@ -283,6 +283,9 @@ local cache = setmetatable({}, { __index = __cache })
 --------------------------------------------------------------------------------------------------------
 
 API.coroutine = {}
+local ABORT_ERROR = {
+    msg = "browser is no longer waiting for list - aborting parse"
+}
 
 --implements table.pack if on lua 5.1
 if not table.pack then
@@ -298,14 +301,15 @@ end
 --unlike the next function this one still returns the results of coroutine.resume()
 function API.coroutine.resume_catch(...)
     local returns = table.pack(coroutine.resume(...))
-    if not returns[1] then msg.error(returns[2]) end
+    if not returns[1] and returns[2] ~= ABORT_ERROR then msg.error(returns[2]) end
     return table.unpack(returns, 1, returns.n)
 end
 
 --resumes a coroutine and prints an error if it was not sucessful
 function API.coroutine.resume_err(...)
     local success, err = coroutine.resume(...)
-    if not success then msg.error(err) end
+    if not success and err ~= ABORT_ERROR then msg.error(err) end
+    return success
 end
 
 --in lua 5.1 there is only one return value which will be nil if run from the main thread
@@ -469,7 +473,7 @@ local function copy_table_recursive(t, references)
     if type(t) ~= "table" then return t end
     if references[t] then return references[t] end
 
-    local copy = {}
+    local copy = setmetatable( {}, { __original = t } )
     references[t] = copy
 
     for key, value in pairs(t) do
@@ -886,7 +890,7 @@ local function update_list()
     --if the running coroutine isn't the one stored in the state variable, then the user
     --changed directories while the coroutine was paused, and this operation should be aborted
     if coroutine.running() ~= state.co then
-        msg.verbose("current coroutine does not match browser's expected coroutine - aborting the parse")
+        msg.verbose(ABORT_ERROR.msg)
         msg.debug("expected:", state.directory, "received:", directory)
         return
     end
@@ -1556,8 +1560,8 @@ function parse_state_API:yield(...)
 
     local result = table.pack(coroutine.yield(...))
     if is_browser and co ~= state.co then
-        msg.verbose("browser no longer waiting for list - aborting parse")
-        error("browser is no longer waiting for list - aborting parse")
+        msg.verbose("browser no longer waiting for list - aborting parse for", self.directory)
+        error(ABORT_ERROR)
     end
     return unpack(result, 1, result.n)
 end
