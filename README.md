@@ -108,13 +108,28 @@ The `response-string` refers to an arbitrary script-message that the tables shou
 
 This script-message allows other scripts to utilise file-browser's directory parsing capabilities, as well as those of the file-browser addons.
 
+## Configuration
+
+See [file_browser.conf](file_browser.conf) for the full list of options and their default values.
+The file is placed in the `~~/script-opts/` folder.
+
+## Conditional Auto-Profiles
+
+file-browser provides a property that can be used with [conditional auto-profiles](https://mpv.io/manual/master/#conditional-auto-profiles)
+to detect when the browser is open. It can be accessed with the `shared_script_properties["file_browser-open"]` key, and it will always
+evaluate to either `yes` or `no`.
+
+Here is an example of an auto-profile that hides the OSC logo when using file-browser in an idle window:
+
+```properties
+[hide-logo]
+profile-cond=shared_script_properties["file_browser-open"] == "yes" and playlist_pos == -1
+profile-restore=copy-equal
+script-opts-append=osc-visibility=never
+```
+
 ## [mpv-user-input](https://github.com/CogentRedTester/mpv-user-input)
 
 mpv-user-input is a script that provides an API to request text input from the user over the OSD.
 It was built using `console.lua` as a base, so supports almost all the same text input commands.
 If `user-input.lua` is loaded by mpv, and `user-input-module` is in the `~~/script-modules/` directory, then using `Alt+o` will open an input box that can be used to directly enter directories for file-browser to open.
-
-## Configuration
-
-See [file_browser.conf](file_browser.conf) for the full list of options and their default values.
-The file is placed in the `~~/script-opts/` folder.

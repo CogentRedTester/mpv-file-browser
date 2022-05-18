@@ -113,6 +113,7 @@ local o = {
 }
 
 opt.read_options(o, 'file_browser')
+utils.shared_script_property_set("file_browser-open", "no")
 
 
 
@@ -1036,6 +1037,7 @@ local function open()
         mp.add_forced_key_binding(v[1], 'dynamic/'..v[2], v[3], v[4])
     end
 
+    utils.shared_script_property_set("file_browser-open", "yes")
     state.hidden = false
     if state.directory == nil then
         local path = mp.get_property('path')
@@ -1045,7 +1047,6 @@ local function open()
     end
 
     if state.flag_update then update_current_directory(nil, mp.get_property('path')) end
-    state.hidden = false
     if not state.flag_update then ass:update()
     else state.flag_update = false ; update_ass() end
 end
@@ -1056,6 +1057,7 @@ local function close()
         mp.remove_key_binding('dynamic/'..v[2])
     end
 
+    utils.shared_script_property_set("file_browser-open", "no")
     state.hidden = true
     ass:remove()
 end
