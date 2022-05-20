@@ -720,12 +720,9 @@ local function drag_select(direction, original_pos, new_pos)
 
     local setting = state.selection[state.multiselect_start]
     for i = original_pos, new_pos, direction > 0 and 1 or -1 do
-        if i == state.multiselect_start then
-            --do nothing
-
         --if we're moving the cursor away from the starting point then set the selection
         --otherwise restore the original selection
-        elseif i > state.multiselect_start then
+        if i > state.multiselect_start then
             if new_pos > original_pos then
                 state.selection[i] = setting
             else
@@ -739,8 +736,6 @@ local function drag_select(direction, original_pos, new_pos)
             end
         end
     end
-
-    update_ass()
 end
 
 --moves the selector up and down the list by the entered amount
