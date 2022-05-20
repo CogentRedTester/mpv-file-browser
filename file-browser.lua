@@ -746,6 +746,8 @@ end
 --moves the selector up and down the list by the entered amount
 local function scroll(n, wrap)
     local num_items = #state.list
+    if num_items == 0 then return end
+
     local original_pos = state.selected
 
     if original_pos + n > num_items then
