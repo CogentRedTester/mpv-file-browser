@@ -39,7 +39,10 @@ local function main(key, state, co)
     )
 
     if not query then return msg.debug(error) end
-    if fb.get_directory() ~= state.directory then return msg.warn("directory changed - find aborted") end
+
+    -- allow the directory to be changed before this point
+    local directory = fb.get_directory()
+    local list = fb.get_list()
 
     if key.name == "find/find" then
         query = fb.pattern_escape(query)
@@ -47,7 +50,7 @@ local function main(key, state, co)
 
     local results = {}
 
-    for index, item in ipairs(state.list) do
+    for index, item in ipairs(list) do
         if compare(item.label or item.name, query) then
             table.insert(results, index)
         end
@@ -63,11 +66,11 @@ local function main(key, state, co)
         for _, index in ipairs(results) do
             fb.set_selected_index(index)
             latest_coroutine = co
-            coroutine.yield()
+            coroutine.yield(true)
 
-            if fb.get_directory() ~= state.directory then
+            if fb.get_directory() ~= directory then
                 latest_coroutine = nil
-                return
+                return false
             end
         end
     end
@@ -75,7 +78,7 @@ end
 
 local function step_find()
     if not latest_coroutine then return false end
-    fb.coroutine.resume_err(latest_coroutine)
+    return fb.coroutine.resume_err(latest_coroutine)
 end
 
 find.keybinds = {
