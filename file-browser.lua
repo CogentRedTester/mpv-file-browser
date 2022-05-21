@@ -1147,15 +1147,8 @@ end
 
 --a wrapper for the custom_loadlist_recursive function to handle the flags
 local function loadlist(directory, flag)
-    --we want to set the idle option to yes to ensure that if the first item
-    --fails to load then the player has a chance to attempt to load further items (for async append operations)
-    local idle = mp.get_property("idle", "once")
-    mp.set_property("idle", "yes")
-
     local item_appended = custom_loadlist_recursive(directory, flag, {})
     if not item_appended then msg.warn(directory, "contained no valid files") end
-
-    if mp.get_property("idle") == "yes" then mp.set_property("idle", idle) end
     return item_appended
 end
 
@@ -1210,6 +1203,11 @@ local function open_file_coroutine(flag, autoload)
     if flag == 'replace' then close() end
     local directory = state.directory
 
+    --we want to set the idle option to yes to ensure that if the first item
+    --fails to load then the player has a chance to attempt to load further items (for async append operations)
+    local idle = mp.get_property("idle", "once")
+    mp.set_property("idle", "yes")
+
     --handles multi-selection behaviour
     if next(state.selection) then
         local selection = API.sort_keys(state.selection)
@@ -1232,6 +1230,8 @@ local function open_file_coroutine(flag, autoload)
     else
         loadfile(state.list[state.selected], flag, false, directory)
     end
+
+    if mp.get_property("idle") == "yes" then mp.set_property("idle", idle) end
 end
 
 --opens the selelected file(s)
