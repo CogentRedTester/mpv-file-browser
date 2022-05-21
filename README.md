@@ -124,9 +124,10 @@ Here is an example of an auto-profile that hides the OSC logo when using file-br
 ```properties
 [hide-logo]
 profile-cond=shared_script_properties["file_browser-open"] == "yes" and idle_active
-profile-restore=copy-equal
-script-opts-append=osc-visibility=never
+profile-restore=copy
+osc=no
 ```
+See https://github.com/CogentRedTester/mpv-file-browser/issues/55 for more details on this.
 
 ## [mpv-user-input](https://github.com/CogentRedTester/mpv-user-input)
 
