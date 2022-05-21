@@ -39,15 +39,11 @@ local o = {
     --add extra file extensions
     extension_whitelist = "",
 
-    --files with these extensions will be added as additional audio tracks instead of appended to the playlist
-    audio_extension_blacklist = "",
-
-    audio_extension_whitelist = "",
+    --files with these extensions will be added as additional audio tracks for the current file instead of appended to the playlist
+    audio_extensions = "mka,dts,dtshd,dts-hd,truehd,true-hd",
 
     --files with these extensions will be added as additional subtitle tracks instead of appended to the playlist
-    sub_extension_blacklist = "",
-
-    sub_extension_whitelist = "",
+    subtitle_extensions = "etf,etf8,utf-8,idx,sub,srt,rt,ssa,ass,mks,vtt,sup,scc,smi,lrc,pgs",
 
     --filter dot directories like .config
     --most useful on linux systems
@@ -224,16 +220,6 @@ local compatible_file_extensions = {
     "nsfe","nsv","nut","oga","ogg","ogm","ogv","ogx","opus","pcm","pls","png","qt","ra","ram","rm","rmvb","sap","snd","spc","spx","svg","thd","thd+ac3",
     "tif","tiff","tod","trp","truehd","true-hd","ts","tsa","tsv","tta","tts","vfw","vgm","vgz","vob","vro","wav","weba","webm","webp","wm","wma","wmv","wtv",
     "wv","x264","x265","xvid","y4m","yuv"
-}
-
---creating a set of subtitle extensions for custom subtitle loading behaviour
-local subtitle_extension_list = {
-    "etf","etf8","utf-8","idx","sub","srt","rt","ssa","ass","mks","vtt","sup","scc","smi","lrc","pgs"
-}
-
---creating a set of audio extensions for custom audio loading behaviour
-local audio_extension_list = {
-    "mka","dts","dtshd","dts-hd","truehd","true-hd"
 }
 
 --------------------------------------------------------------------------------------------------------
@@ -1716,36 +1702,22 @@ end
 
 --sets up the compatible extensions list
 local function setup_extensions_list()
-    if not o.filter_files then return end
-
-    --adding file extensions to the set
-    for i=1, #compatible_file_extensions do
-        extensions[compatible_file_extensions[i]] = true
+    --setting up subtitle extensions
+    for ext in API.iterate_opt(o.subtitle_extensions:lower()) do
+        sub_extensions[ext] = true
+        extensions[ext] = true
     end
 
-    --setting up subtitle extensions
-    for i = 1, #subtitle_extension_list do
-        sub_extensions[subtitle_extension_list[i]] = true end
-    for str in API.iterate_opt(o.sub_extension_whitelist:lower()) do
-        sub_extensions[str] = true end
-    for str in API.iterate_opt(o.sub_extension_blacklist:lower()) do
-        sub_extensions[str] = nil end
-
-    --adding subtitle extensions to the main extension list
-    for ext in pairs(sub_extensions) do
-        extensions[ext] = true end
-
     --setting up audio extensions
-    for i = 1, #audio_extension_list do
-        audio_extensions[audio_extension_list[i]] = true end
-    for str in API.iterate_opt(o.audio_extension_whitelist:lower()) do
-        audio_extensions[str] = true end
-    for str in API.iterate_opt(o.audio_extension_blacklist:lower()) do
-        audio_extensions[str] = nil end
+    for ext in API.iterate_opt(o.audio_extensions:lower()) do
+        audio_extensions[ext] = true
+        extensions[ext] = true
+    end
 
-    --adding audio extensions to the main extension list
-    for ext in pairs(audio_extensions) do
-        extensions[ext] = true end
+    --adding file extensions to the set
+    for _, ext in ipairs(compatible_file_extensions) do
+        extensions[ext] = true
+    end
 
     --adding extra extensions on the whitelist
     for str in API.iterate_opt(o.extension_whitelist:lower()) do
