@@ -15,9 +15,10 @@ local fb = require "file-browser"
 local input = require "user-input-module"
 
 local find = {
-    version = "1.1.0"
+    version = "1.3.0"
 }
 local latest_coroutine = nil
+local global_fb_state = getmetatable(fb.get_state()).__original
 
 local function compare(name, query)
     if name:find(query) then return true end
@@ -28,7 +29,7 @@ local function compare(name, query)
 end
 
 local function main(key, state, co)
-    if not state.list then return end
+    if not state.list then return false end
 
     local text
     if key.name == "find/find" then text = "Find: enter search string"
@@ -41,8 +42,8 @@ local function main(key, state, co)
     if not query then return msg.debug(error) end
 
     -- allow the directory to be changed before this point
-    local directory = fb.get_directory()
     local list = fb.get_list()
+    local parse_id = global_fb_state.co
 
     if key.name == "find/find" then
         query = fb.pattern_escape(query)
@@ -62,18 +63,22 @@ local function main(key, state, co)
     end
 
     --keep cycling through the search results if any are found
-    while (true) do
-        for _, index in ipairs(results) do
-            fb.set_selected_index(index)
-            latest_coroutine = co
-            coroutine.yield(true)
+    --putting this into a separate coroutine removes any passthrough ambiguity
+    --the final return statement should return to `step_find` not any other function
+    fb.coroutine.run(function()
+        latest_coroutine = coroutine.running()
+        while (true) do
+            for _, index in ipairs(results) do
+                fb.set_selected_index(index)
+                coroutine.yield(true)
 
-            if fb.get_directory() ~= directory then
-                latest_coroutine = nil
-                return false
+                if parse_id ~= global_fb_state.co then
+                    latest_coroutine = nil
+                    return false
+                end
             end
         end
-    end
+    end)
 end
 
 local function step_find()
