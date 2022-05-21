@@ -1113,39 +1113,50 @@ local function custom_loadlist_recursive(directory, flag, prev_dirs)
     if list == nil then
         msg.warn("Could not parse", directory, "appending to playlist anyway")
         mp.commandv("loadfile", directory, flag)
-        flag = "append"
+        flag = "append-play"
         return true
     end
 
     directory = opts.directory or directory
     if directory == "" then return end
 
+    --this item appending logic is very sensitive as it impacts how multiselected items are added to the playlist
+    local item_appended = false
     for _, item in ipairs(list) do
         if not sub_extensions[ API.get_extension(item.name, "") ]
         and not audio_extensions[ API.get_extension(item.name, "") ]
         then
             if item.type == "dir" or parseable_extensions[API.get_extension(item.name, "")] then
                 if custom_loadlist_recursive( API.get_new_directory(item, directory) , flag, prev_dirs) then
-                    flag = "append"
+                    flag = "append-play"
+                    item_appended = true
                 end
             else
                 local path = API.get_full_path(item, directory)
 
                 msg.verbose("Appending", path, "to the playlist")
                 mp.commandv("loadfile", path, flag)
-                flag = "append"
+                flag = "append-play"
+                item_appended = true
             end
         end
     end
-    return flag == "append"
+    return item_appended
 end
 
 
 --a wrapper for the custom_loadlist_recursive function to handle the flags
 local function loadlist(directory, flag)
-    flag = custom_loadlist_recursive(directory, flag, {})
-    if not flag then msg.warn(directory, "contained no valid files") end
-    return flag
+    --we want to set the idle option to yes to ensure that if the first item
+    --fails to load then the player has a chance to attempt to load further items (for async append operations)
+    local idle = mp.get_property("idle", "once")
+    mp.set_property("idle", "yes")
+
+    local item_appended = custom_loadlist_recursive(directory, flag, {})
+    if not item_appended then msg.warn(directory, "contained no valid files") end
+
+    if mp.get_property("idle") == "yes" then mp.set_property("idle", idle) end
+    return item_appended
 end
 
 --load playlist entries before and after the currently playing file
@@ -1211,7 +1222,7 @@ local function open_file_coroutine(flag, autoload)
         --the currently selected file will be loaded according to the flag
         --the flag variable will be switched to append once a file is loaded
         for i=1, #selection do
-            if loadfile(selection[i], flag, autoload, directory) then flag = "append" end
+            if loadfile(selection[i], flag, autoload, directory) then flag = "append-play" end
         end
 
     elseif flag == 'replace' then
