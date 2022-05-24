@@ -103,7 +103,7 @@ The [list](https://github.com/CogentRedTester/mpv-file-browser/blob/master/addon
 and [opts](https://github.com/CogentRedTester/mpv-file-browser/blob/master/addons/addons.md#the-opts-table)
 tables are formatted as json strings through the `mp.utils.format_json` function.
 See [addons.md](addons/addons.md) for how the tables are structured, and what each field means.
-The API_VERSION field of both tables refers to what version of the addon API file browser is using.
+The API_VERSION field of the `opts` table refers to what version of the addon API file browser is using.
 The `response-string` refers to an arbitrary script-message that the tables should be sent to.
 
 This script-message allows other scripts to utilise file-browser's directory parsing capabilities, as well as those of the file-browser addons.
@@ -127,6 +127,7 @@ profile-cond=shared_script_properties["file_browser-open"] == "yes" and idle_act
 profile-restore=copy
 osc=no
 ```
+
 See https://github.com/CogentRedTester/mpv-file-browser/issues/55 for more details on this.
 
 ## [mpv-user-input](https://github.com/CogentRedTester/mpv-user-input)

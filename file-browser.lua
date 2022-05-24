@@ -475,6 +475,41 @@ function API.sort_keys(t, include_item)
     return keys
 end
 
+local invalid_types = {
+    userdata = true,
+    thread = true,
+    boolean = true,
+    ["function"] = true
+}
+
+--recursively removes elements of the table which would cause
+--utils.format_json to throw an error
+local function json_safe_recursive(t)
+    if type(t) ~= "table" then return t end
+
+    local invalid_types = setmetatable({}, { __index = invalid_types })
+    if t[1] then invalid_types.string = true
+    else invalid_types.number = true end
+
+    for key, value in pairs(t) do
+        local ktype = type(key)
+        local vtype = type(value)
+
+        if invalid_types[ktype] or invalid_types[vtype] or ktype == "table" then
+            t[key] = nil
+        else
+            t[key] = json_safe_recursive(t[key])
+        end
+    end
+    return t
+end
+
+--formats a table into a json string but ensures there are no invalid datatypes inside the table first
+function API.format_json_safe(t)
+    json_safe_recursive(t)
+    return utils.format_json(t)
+end
+
 --copies a table without leaving any references to the original
 --uses a structured clone algorithm to maintain cyclic references
 local function copy_table_recursive(t, references)
@@ -1796,24 +1831,14 @@ local function scan_directory_json(directory, response_str)
     msg.verbose(("recieved %q from 'get-directory-contents' script message - returning result to %q"):format(directory, response_str))
 
     local list, opts = parse_directory(directory, { source = "script-message" } )
-    list.API_VERSION, opts.API_VERSION = API_VERSION, API_VERSION
+    opts.API_VERSION = API_VERSION
 
-    --removes invalid json types from the parser object
-    if opts.parser then
-        opts.parser = API.copy_table(opts.parser)
-        for key, value in pairs(opts.parser) do
-            if type(value) == "function" then
-                opts.parser[key] = nil
-            end
-        end
-    end
-
-    local err, err2
-    list, err = utils.format_json(list)
+    local err
+    list, err = API.format_json_safe(list)
     if not list then msg.error(err) end
 
-    opts, err2 = utils.format_json(opts)
-    if not opts then msg.error(err2) end
+    opts, err = API.format_json_safe(opts)
+    if not opts then msg.error(err) end
 
     mp.commandv("script-message", response_str, list or "", opts or "")
 end
