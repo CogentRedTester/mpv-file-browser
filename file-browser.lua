@@ -507,7 +507,9 @@ end
 --formats a table into a json string but ensures there are no invalid datatypes inside the table first
 function API.format_json_safe(t)
     json_safe_recursive(t)
-    return utils.format_json(t)
+    local success, result, err = pcall(utils.format_json, t)
+    if success then return result, err
+    else return nil, result end
 end
 
 --copies a table without leaving any references to the original
