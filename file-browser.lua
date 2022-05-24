@@ -284,18 +284,34 @@ if not table.pack then
     end
 end
 
+--prints an error message and a stack trace
+--accepts an error object and optionally a coroutine
+--can be passed directly to xpcall
+function API.traceback(errmsg, co)
+    if co then
+        msg.error(errmsg)
+        msg.error(debug.traceback(co))
+    else
+        msg.error(debug.traceback(errmsg, 2))
+    end
+end
+
 --prints an error if a coroutine returns an error
 --unlike the next function this one still returns the results of coroutine.resume()
 function API.coroutine.resume_catch(...)
     local returns = table.pack(coroutine.resume(...))
-    if not returns[1] and returns[2] ~= ABORT_ERROR then msg.error(returns[2]) end
+    if not returns[1] and returns[2] ~= ABORT_ERROR then
+        API.traceback(returns[2], select(1, ...))
+    end
     return table.unpack(returns, 1, returns.n)
 end
 
 --resumes a coroutine and prints an error if it was not sucessful
 function API.coroutine.resume_err(...)
     local success, err = coroutine.resume(...)
-    if not success and err ~= ABORT_ERROR then msg.error(err) end
+    if not success and err ~= ABORT_ERROR then
+        API.traceback(err, select(1, ...))
+    end
     return success
 end
 
@@ -858,7 +874,7 @@ local function parse_directory(directory, parse_state)
     mp.add_timeout(0, function()
         local success, err = coroutine.resume(new_co)
         if not success then
-            msg.error(err)
+            API.traceback(err, new_co)
             API.coroutine.resume_err(co)
         end
     end)
@@ -1391,7 +1407,7 @@ local function run_keybind_coroutine(key)
     local success, err = coroutine.resume(co, key, state_copy, co)
     if not success then
         msg.error("error running keybind:", utils.to_string(key))
-        msg.error(err)
+        API.traceback(err, co)
     end
 end
 
@@ -1642,9 +1658,8 @@ local function load_addon(path)
         if not chunk then return msg.error(err) end
     end
 
-    local success, result = pcall(chunk)
-    if not success then return msg.error(result) end
-    return result
+    local success, result = xpcall(chunk, API.traceback)
+    return success and result or nil
 end
 
 --setup an internal or external parser
@@ -1701,9 +1716,8 @@ local function setup_addons()
     --we want to run the setup functions for each addon
     for index, parser in ipairs(parsers) do
         if parser.setup then
-            local success, err = pcall(function() parser:setup() end)
+            local success = xpcall(function() parser:setup() end, API.traceback)
             if not success then
-                msg.error(err)
                 msg.error("parser", parser:get_id(), "threw an error in the setup method - removing from list of parsers")
                 table.remove(parsers, index)
             end
