@@ -1689,7 +1689,7 @@ local function setup_addon(file, path)
     if file:sub(-4) ~= ".lua" then return msg.verbose(path, "is not a lua file - aborting addon setup") end
 
     local addon_parsers = load_addon(path)
-    if not addon_parsers then return msg.error("addon", path, "did not return a table") end
+    if not addon_parsers or type(addon_parsers) ~= "table" then return msg.error("addon", path, "did not return a table") end
 
     --if the table contains a priority key then we assume it isn't an array of parsers
     if not addon_parsers[1] then addon_parsers = {addon_parsers} end
