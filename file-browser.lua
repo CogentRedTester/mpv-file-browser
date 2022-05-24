@@ -1818,14 +1818,12 @@ local function scan_directory_json(directory, response_str)
     mp.commandv("script-message", response_str, list or "", opts or "")
 end
 
-local input = nil
-
-if pcall(function() input = require "user-input-module" end) then
+pcall(function()
+    local input = require "user-input-module"
     mp.add_key_binding("Alt+o", "browse-directory/get-user-input", function()
         input.get_user_input(browse_directory, {request_text = "open directory:"})
     end)
-end
-
+end)
 
 
 
