@@ -289,11 +289,11 @@ end
 --can be passed directly to xpcall
 function API.traceback(errmsg, co)
     if co then
-        msg.error(errmsg)
-        msg.error(debug.traceback(co))
+        msg.warn(debug.traceback(co))
     else
-        msg.error(debug.traceback(errmsg, 2))
+        msg.warn(debug.traceback("", 2))
     end
+    msg.error(errmsg)
 end
 
 --prints an error if a coroutine returns an error
