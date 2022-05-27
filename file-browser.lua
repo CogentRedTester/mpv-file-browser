@@ -1153,9 +1153,20 @@ end
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
+--adds a file to the playlist and changes the flag to `append-play` in preparation
+--for future items
+local function loadfile(file, opts)
+    if opts.flag == "replace" then msg.verbose("Playling file", file)
+    else msg.verbose("Appending", file, "to the playlist") end
+
+    mp.commandv("loadfile", file, opts.flag)
+    opts.flag = "append-play"
+    opts.items_appended = opts.items_appended + 1
+end
+
 --recursive function to load directories using the script custom parsers
 --returns true if any items were appended to the playlist
-local function custom_loadlist_recursive(directory, flag, prev_dirs)
+local function custom_loadlist_recursive(directory, load_opts, prev_dirs)
     --prevents infinite recursion from the item.path or opts.directory fields
     if prev_dirs[directory] then return end
     prev_dirs[directory] = true
@@ -1166,53 +1177,42 @@ local function custom_loadlist_recursive(directory, flag, prev_dirs)
     --if we can't parse the directory then append it and hope mpv fares better
     if list == nil then
         msg.warn("Could not parse", directory, "appending to playlist anyway")
-        mp.commandv("loadfile", directory, flag)
-        flag = "append-play"
+        loadfile(directory, load_opts.flag)
         return true
     end
 
     directory = opts.directory or directory
     if directory == "" then return end
 
-    --this item appending logic is very sensitive as it impacts how multiselected items are added to the playlist
-    local item_appended = false
     for _, item in ipairs(list) do
         if not sub_extensions[ API.get_extension(item.name, "") ]
         and not audio_extensions[ API.get_extension(item.name, "") ]
         then
             if item.type == "dir" or parseable_extensions[API.get_extension(item.name, "")] then
-                if custom_loadlist_recursive( API.get_new_directory(item, directory) , flag, prev_dirs) then
-                    flag = "append-play"
-                    item_appended = true
-                end
+                custom_loadlist_recursive( API.get_new_directory(item, directory) , load_opts, prev_dirs)
             else
                 local path = API.get_full_path(item, directory)
-
-                msg.verbose("Appending", path, "to the playlist")
-                mp.commandv("loadfile", path, flag)
-                flag = "append-play"
-                item_appended = true
+                loadfile(path, load_opts)
             end
         end
     end
-    return item_appended
 end
 
 
 --a wrapper for the custom_loadlist_recursive function to handle the flags
-local function loadlist(directory, flag)
-    local item_appended = custom_loadlist_recursive(directory, flag, {})
-    if not item_appended then msg.warn(directory, "contained no valid files") end
-    return item_appended
+local function loadlist(directory, opts)
+    local num_items = opts.items_appended
+    custom_loadlist_recursive(directory, opts, {})
+    if opts.items_appended == num_items then msg.warn(directory, "contained no valid files") end
 end
 
 --load playlist entries before and after the currently playing file
-local function autoload_dir(path)
+local function autoload_dir(path, opts)
     if o.autoload_save_current and path == current_file.path then
         mp.commandv("write-watch-later-config") end
 
     --loads the currently selected file, clearing the playlist in the process
-    mp.commandv("loadfile", path)
+    loadfile(path, opts)
 
     local pos = 1
     local file_count = 0
@@ -1224,7 +1224,7 @@ local function autoload_dir(path)
             local p = API.get_full_path(item)
 
             if p == path then pos = file_count
-            else mp.commandv("loadfile", p, "append") end
+            else loadfile( p, opts) end
 
             file_count = file_count + 1
         end
@@ -1233,29 +1233,27 @@ local function autoload_dir(path)
 end
 
 --runs the loadfile or loadlist command
-local function loadfile(item, flag, autoload, directory)
-    local path = API.get_full_path(item, directory)
+local function open_item(item, opts)
+    print(item, opts)
+    local path = API.get_full_path(item, opts.directory)
     if item.type == "dir" or parseable_extensions[ API.get_extension(item.name, "") ] then
-        return loadlist(path, flag) end
+        return loadlist(path, opts) end
 
     if sub_extensions[ API.get_extension(item.name, "") ] then
-        mp.commandv("sub-add", path, flag == "replace" and "select" or "auto")
+        mp.commandv("sub-add", path, opts.flag == "replace" and "select" or "auto")
     elseif audio_extensions[ API.get_extension(item.name, "") ] then
-        mp.commandv("audio-add", path, flag == "replace" and "select" or "auto")
+        mp.commandv("audio-add", path, opts.flag == "replace" and "select" or "auto")
     else
-        if autoload then autoload_dir(path)
-        else mp.commandv('loadfile', path, flag) end
-        return true
+        if opts.autoload then autoload_dir(path, opts)
+        else loadfile(path, opts.flag) end
     end
 end
 
 --handles the open options as a coroutine
 --once loadfile has been run we can no-longer guarantee synchronous execution - the state values may change
 --therefore, we must ensure that any state values that could be used after a loadfile call are saved beforehand
-local function open_file_coroutine(flag, autoload)
+local function open_file_coroutine(opts)
     if not state.list[state.selected] then return end
-    if flag == 'replace' then close() end
-    local directory = state.directory
 
     --we want to set the idle option to yes to ensure that if the first item
     --fails to load then the player has a chance to attempt to load further items (for async append operations)
@@ -1274,23 +1272,25 @@ local function open_file_coroutine(flag, autoload)
         --the currently selected file will be loaded according to the flag
         --the flag variable will be switched to append once a file is loaded
         for i=1, #selection do
-            if loadfile(selection[i], flag, autoload, directory) then flag = "append-play" end
+            open_item(selection[i], opts)
         end
 
-    elseif flag == 'replace' then
-        local item = state.list[state.selected]
-        down_dir()
-        loadfile(item, flag, autoload ~= o.autoload, directory)
     else
-        loadfile(state.list[state.selected], flag, false, directory)
+        open_item(state.list[state.selected], opts)
+        if opts.flag == "replace" then down_dir() end
     end
 
     if mp.get_property("idle") == "yes" then mp.set_property("idle", idle) end
 end
 
 --opens the selelected file(s)
-local function open_file(flag, autoload_dir)
-    API.coroutine.run(open_file_coroutine, flag, autoload_dir)
+local function open_file(flag, autoload)
+    API.coroutine.run(open_file_coroutine, {
+        flag = flag,
+        autoload = (autoload == o.autoload and flag == "replace"),
+        directory = state.directory,
+        items_appended = 0
+    })
 end
 
 
