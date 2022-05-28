@@ -1337,7 +1337,7 @@ local function open_item(item, opts)
         mp.commandv("audio-add", path, opts.flag == "replace" and "select" or "auto")
     else
         if opts.autoload then autoload_dir(path, opts)
-        else loadfile(path, opts.flag) end
+        else loadfile(path, opts) end
     end
 end
 
@@ -1381,7 +1381,7 @@ end
 local function open_file(flag, autoload)
     API.coroutine.run(open_file_coroutine, {
         flag = flag,
-        autoload = (autoload == o.autoload and flag == "replace"),
+        autoload = (autoload ~= o.autoload and flag == "replace"),
         directory = state.directory,
         items_appended = 0
     })
