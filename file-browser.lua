@@ -29,6 +29,10 @@ local o = {
     --only show files compatible with mpv
     filter_files = true,
 
+    --experimental feature that recurses directories concurrently when
+    --appending items to the playlist
+    concurrent_recursion = false,
+
     --enable custom keybinds
     custom_keybinds = false,
 
@@ -432,6 +436,11 @@ function API.valid_file(file)
     if o.filter_dot_files and (file:sub(1,1) == ".") then return false end
     if o.filter_files and not extensions[ API.get_extension(file, "") ] then return false end
     return true
+end
+
+--returns whether or not the item can be parsed
+function API.parseable_item(item)
+    return item.type == "dir" or parseable_extensions[API.get_extension(item.name, "")]
 end
 
 --removes items and folders from the list
@@ -1159,9 +1168,73 @@ local function loadfile(file, opts)
     if opts.flag == "replace" then msg.verbose("Playling file", file)
     else msg.verbose("Appending", file, "to the playlist") end
 
-    mp.commandv("loadfile", file, opts.flag)
+    if not mp.commandv("loadfile", file, opts.flag) then msg.warn(file) end
     opts.flag = "append-play"
     opts.items_appended = opts.items_appended + 1
+end
+
+--this function recursively loads directories concurrently in separate coroutines
+--results are saved in a tree of tables that allows asynchronous access
+local function concurrent_loadlist_parse(directory, load_opts, prev_dirs, item_t)
+    --prevents infinite recursion from the item.path or opts.directory fields
+    if prev_dirs[directory] then return end
+    prev_dirs[directory] = true
+
+    local list, opts = parse_directory(directory, { source = "loadlist" })
+    if list == root then return end
+
+    --if we can't parse the directory then append it and hope mpv fares better
+    if list == nil then
+        msg.warn("Could not parse", directory, "appending to playlist anyway")
+        item_t.type = "file"
+        return
+    end
+
+    directory = opts.directory or directory
+    if directory == "" then return end
+
+    --we must declare these before we start loading sublists otherwise the append thread will
+    --need to wait until the whole list is loaded (when synchronous IO is used)
+    item_t._sublist = list or {}
+    list._directory = directory
+
+    --launches new parse operations for directories, each in a different coroutine
+    for _, item in ipairs(list) do
+        if API.parseable_item(item) then
+            API.coroutine.run(function()
+                local success = concurrent_loadlist_parse(API.get_new_directory(item, directory) , load_opts, prev_dirs, item)
+                if not success then item._sublist = {} end
+                if coroutine.status(load_opts.co) == "suspended" then API.coroutine.resume_err(load_opts.co) end
+            end)
+        end
+    end
+    return true
+end
+
+--recursively appends items to the playlist, acts as a consumer to the previous functions producer;
+--if the next directory has not been parsed this function will yield until the parse has completed
+local function concurrent_loadlist_append(list, load_opts, prev_dirs)
+    local directory = list._directory
+
+    --prevents infinite recursion from the item.path or opts.directory fields
+    if prev_dirs[directory] then return end
+    prev_dirs[directory] = true
+
+    for _, item in ipairs(list) do
+        if not sub_extensions[ API.get_extension(item.name, "") ]
+        and not audio_extensions[ API.get_extension(item.name, "") ]
+        then
+            while (not item._sublist and API.parseable_item(item)) do
+                coroutine.yield()
+            end
+
+            if item.type == "dir" or parseable_extensions[API.get_extension(item.name, "")] then
+                concurrent_loadlist_append(item._sublist, load_opts, prev_dirs)
+            else
+                loadfile(API.get_full_path(item, directory), load_opts)
+            end
+        end
+    end
 end
 
 --recursive function to load directories using the script custom parsers
@@ -1188,7 +1261,7 @@ local function custom_loadlist_recursive(directory, load_opts, prev_dirs)
         if not sub_extensions[ API.get_extension(item.name, "") ]
         and not audio_extensions[ API.get_extension(item.name, "") ]
         then
-            if item.type == "dir" or parseable_extensions[API.get_extension(item.name, "")] then
+            if API.parseable_item(item) then
                 custom_loadlist_recursive( API.get_new_directory(item, directory) , load_opts, prev_dirs)
             else
                 local path = API.get_full_path(item, directory)
@@ -1199,11 +1272,30 @@ local function custom_loadlist_recursive(directory, load_opts, prev_dirs)
 end
 
 
---a wrapper for the custom_loadlist_recursive function to handle the flags
-local function loadlist(directory, opts)
+--a wrapper for the custom_loadlist_recursive function
+local function loadlist(item, opts)
+    local dir = API.get_full_path(item, opts.directory)
     local num_items = opts.items_appended
-    custom_loadlist_recursive(directory, opts, {})
-    if opts.items_appended == num_items then msg.warn(directory, "contained no valid files") end
+
+    if o.concurrent_recursion then
+        item = API.copy_table(item)
+        opts.co = API.coroutine.assert()
+
+        --we need the current coroutine to suspend before we run the first parse operation, so
+        --we schedule the coroutine to run on the mpv event queue
+        mp.add_timeout(0, function()
+            API.coroutine.run(function()
+                local success = concurrent_loadlist_parse(dir, opts, {}, item)
+                if not success then item._sublist = {} end
+                if coroutine.status(opts.co) == "suspended" then API.coroutine.resume_err(opts.co) end
+            end)
+        end)
+        concurrent_loadlist_append({item, _directory = opts.directory}, opts, {})
+    else
+        custom_loadlist_recursive(dir, opts, {})
+    end
+
+    if opts.items_appended == num_items then msg.warn(dir, "contained no valid files") end
 end
 
 --load playlist entries before and after the currently playing file
@@ -1234,11 +1326,11 @@ end
 
 --runs the loadfile or loadlist command
 local function open_item(item, opts)
-    print(item, opts)
-    local path = API.get_full_path(item, opts.directory)
-    if item.type == "dir" or parseable_extensions[ API.get_extension(item.name, "") ] then
-        return loadlist(path, opts) end
+    if API.parseable_item(item) then
+        return loadlist(item, opts)
+    end
 
+    local path = API.get_full_path(item, opts.directory)
     if sub_extensions[ API.get_extension(item.name, "") ] then
         mp.commandv("sub-add", path, opts.flag == "replace" and "select" or "auto")
     elseif audio_extensions[ API.get_extension(item.name, "") ] then
