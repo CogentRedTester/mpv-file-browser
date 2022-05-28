@@ -1346,6 +1346,7 @@ end
 --therefore, we must ensure that any state values that could be used after a loadfile call are saved beforehand
 local function open_file_coroutine(opts)
     if not state.list[state.selected] then return end
+    if opts.flag == 'replace' then close() end
 
     --we want to set the idle option to yes to ensure that if the first item
     --fails to load then the player has a chance to attempt to load further items (for async append operations)
@@ -1368,8 +1369,9 @@ local function open_file_coroutine(opts)
         end
 
     else
-        open_item(state.list[state.selected], opts)
+        local item = state.list[state.selected]
         if opts.flag == "replace" then down_dir() end
+        open_item(item, opts)
     end
 
     if mp.get_property("idle") == "yes" then mp.set_property("idle", idle) end
