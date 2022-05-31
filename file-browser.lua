@@ -33,6 +33,9 @@ local o = {
     --appending items to the playlist
     concurrent_recursion = false,
 
+    --maximum number of recursions that can run concurrently
+    max_concurrency = 100,
+
     --enable custom keybinds
     custom_keybinds = false,
 
@@ -1180,7 +1183,7 @@ local function concurrent_loadlist_parse(directory, load_opts, prev_dirs, item_t
     if prev_dirs[directory] then return end
     prev_dirs[directory] = true
 
-    local list, opts = parse_directory(directory, { source = "loadlist" })
+    local list, list_opts = parse_directory(directory, { source = "loadlist" })
     if list == root then return end
 
     --if we can't parse the directory then append it and hope mpv fares better
@@ -1190,7 +1193,7 @@ local function concurrent_loadlist_parse(directory, load_opts, prev_dirs, item_t
         return
     end
 
-    directory = opts.directory or directory
+    directory = list_opts.directory or directory
     if directory == "" then return end
 
     --we must declare these before we start loading sublists otherwise the append thread will
@@ -1201,14 +1204,28 @@ local function concurrent_loadlist_parse(directory, load_opts, prev_dirs, item_t
     --launches new parse operations for directories, each in a different coroutine
     for _, item in ipairs(list) do
         if API.parseable_item(item) then
-            API.coroutine.run(function()
-                local success = concurrent_loadlist_parse(API.get_new_directory(item, directory) , load_opts, prev_dirs, item)
-                if not success then item._sublist = {} end
-                if coroutine.status(load_opts.co) == "suspended" then API.coroutine.resume_err(load_opts.co) end
-            end)
+            API.coroutine.run(concurrent_loadlist_wrapper, API.get_new_directory(item, directory), load_opts, prev_dirs, item)
         end
     end
     return true
+end
+
+--a wrapper function that ensures the concurrent_loadlist_parse is run correctly
+function concurrent_loadlist_wrapper(directory, opts, prev_dirs, item)
+    --ensures that only a set number of concurrent parses are operating at any one time.
+    --if the directories are big enough we might still end up overflowing the
+    --mpv event queue, but it is significantly less likely
+    local co = coroutine.running()
+    while (opts.concurrency > o.max_concurrency) do
+        mp.add_timeout(0.25, function() API.coroutine.resume_err(co) end)
+        coroutine.yield()
+    end
+    opts.concurrency = opts.concurrency + 1
+
+    local success = concurrent_loadlist_parse(directory, opts, prev_dirs, item)
+    opts.concurrency = opts.concurrency - 1
+    if not success then item._sublist = {} end
+    if coroutine.status(opts.co) == "suspended" then API.coroutine.resume_err(opts.co) end
 end
 
 --recursively appends items to the playlist, acts as a consumer to the previous functions producer;
@@ -1280,15 +1297,12 @@ local function loadlist(item, opts)
     if o.concurrent_recursion then
         item = API.copy_table(item)
         opts.co = API.coroutine.assert()
+        opts.concurrency = 0
 
         --we need the current coroutine to suspend before we run the first parse operation, so
         --we schedule the coroutine to run on the mpv event queue
         mp.add_timeout(0, function()
-            API.coroutine.run(function()
-                local success = concurrent_loadlist_parse(dir, opts, {}, item)
-                if not success then item._sublist = {} end
-                if coroutine.status(opts.co) == "suspended" then API.coroutine.resume_err(opts.co) end
-            end)
+            API.coroutine.run(concurrent_loadlist_wrapper, dir, opts, {}, item)
         end)
         concurrent_loadlist_append({item, _directory = opts.directory}, opts, {})
     else
