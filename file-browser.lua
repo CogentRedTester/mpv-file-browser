@@ -1230,12 +1230,8 @@ end
 
 --recursively appends items to the playlist, acts as a consumer to the previous functions producer;
 --if the next directory has not been parsed this function will yield until the parse has completed
-local function concurrent_loadlist_append(list, load_opts, prev_dirs)
+local function concurrent_loadlist_append(list, load_opts)
     local directory = list._directory
-
-    --prevents infinite recursion from the item.path or opts.directory fields
-    if prev_dirs[directory] then return end
-    prev_dirs[directory] = true
 
     for _, item in ipairs(list) do
         if not sub_extensions[ API.get_extension(item.name, "") ]
@@ -1246,7 +1242,7 @@ local function concurrent_loadlist_append(list, load_opts, prev_dirs)
             end
 
             if item.type == "dir" or parseable_extensions[API.get_extension(item.name, "")] then
-                concurrent_loadlist_append(item._sublist, load_opts, prev_dirs)
+                concurrent_loadlist_append(item._sublist, load_opts)
             else
                 loadfile(API.get_full_path(item, directory), load_opts)
             end
