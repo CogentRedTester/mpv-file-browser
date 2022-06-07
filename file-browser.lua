@@ -1219,8 +1219,9 @@ end
 --a wrapper function that ensures the concurrent_loadlist_parse is run correctly
 function concurrent_loadlist_wrapper(directory, opts, prev_dirs, item)
     --ensures that only a set number of concurrent parses are operating at any one time.
-    --if the directories are big enough we might still end up overflowing the
-    --mpv event queue, but it is significantly less likely
+    --the mpv event queue is seemingly limited to 1000 items, but only async mpv actions like
+    --command_native_async should use that, events like mp.add_timeout (which coroutine.sleep() uses) should
+    --be handled enturely on the Lua side with a table, which has a significantly larger maximum size.
     while (opts.concurrency > o.max_concurrency) do
         API.coroutine.sleep(0.25)
     end
