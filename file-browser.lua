@@ -338,6 +338,12 @@ function API.coroutine.callback()
     end
 end
 
+--puts the current coroutine to sleep for the given number of seconds
+function API.coroutine.sleep(n)
+    mp.add_timeout(n, API.coroutine.callback())
+    coroutine.yield()
+end
+
 --runs the given function in a coroutine, passing through any additional arguments
 --this is for triggering an event in a coroutine
 function API.coroutine.run(fn, ...)
@@ -1215,10 +1221,8 @@ function concurrent_loadlist_wrapper(directory, opts, prev_dirs, item)
     --ensures that only a set number of concurrent parses are operating at any one time.
     --if the directories are big enough we might still end up overflowing the
     --mpv event queue, but it is significantly less likely
-    local co = coroutine.running()
     while (opts.concurrency > o.max_concurrency) do
-        mp.add_timeout(0.25, function() API.coroutine.resume_err(co) end)
-        coroutine.yield()
+        API.coroutine.sleep(0.25)
     end
     opts.concurrency = opts.concurrency + 1
 
@@ -1300,7 +1304,7 @@ local function loadlist(item, opts)
         mp.add_timeout(0, function()
             API.coroutine.run(concurrent_loadlist_wrapper, dir, opts, {}, item)
         end)
-        concurrent_loadlist_append({item, _directory = opts.directory}, opts, {})
+        concurrent_loadlist_append({item, _directory = opts.directory}, opts)
     else
         custom_loadlist_recursive(dir, opts, {})
     end
