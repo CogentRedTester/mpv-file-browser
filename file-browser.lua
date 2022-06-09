@@ -657,7 +657,7 @@ end
 --detects whether or not to highlight the given entry as being played
 local function highlight_entry(v)
     if current_file.name == nil then return false end
-    if v.type == "dir" or parseable_extensions[API.get_extension(v.name, "")] then
+    if API.parseable_item(v) then
         return current_file.directory:find(API.get_full_path(v), 1, true)
     else
         return current_file.path == API.get_full_path(v)
@@ -869,7 +869,7 @@ end
 local function select_prev_directory()
     if state.prev_directory:find(state.directory, 1, true) == 1 then
         local i = 1
-        while (state.list[i] and (state.list[i].type == "dir" or parseable_extensions[API.get_extension(state.list[i].name, "")])) do
+        while (state.list[i] and API.parseable_item(state.list[i])) do
             if state.prev_directory:find(API.get_full_path(state.list[i]), 1, true) then
                 state.selected = i
                 return
@@ -1082,7 +1082,7 @@ end
 --moves down a directory
 local function down_dir()
     local current = state.list[state.selected]
-    if not current or current.type ~= 'dir' and not parseable_extensions[API.get_extension(current.name, "")] then return end
+    if not current or not API.parseable_item(current) then return end
 
     cache:push()
     local directory, redirected = API.get_new_directory(current, state.directory)
@@ -1246,7 +1246,7 @@ local function concurrent_loadlist_append(list, load_opts)
                 coroutine.yield()
             end
 
-            if item.type == "dir" or parseable_extensions[API.get_extension(item.name, "")] then
+            if API.parseable_item(item) then
                 concurrent_loadlist_append(item._sublist, load_opts)
             else
                 loadfile(API.get_full_path(item, directory), load_opts)
