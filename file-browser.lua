@@ -551,7 +551,11 @@ local function copy_table_recursive(t, references)
     if type(t) ~= "table" then return t end
     if references[t] then return references[t] end
 
-    local copy = setmetatable( {}, { __original = t } )
+    local mt = {
+        __original = t,
+        __index = getmetatable(t)
+    }
+    local copy = setmetatable({}, mt)
     references[t] = copy
 
     for key, value in pairs(t) do
