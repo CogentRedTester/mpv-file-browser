@@ -1223,7 +1223,7 @@ function concurrent_loadlist_wrapper(directory, opts, prev_dirs, item)
     --command_native_async should use that, events like mp.add_timeout (which coroutine.sleep() uses) should
     --be handled enturely on the Lua side with a table, which has a significantly larger maximum size.
     while (opts.concurrency > o.max_concurrency) do
-        API.coroutine.sleep(0.25)
+        API.coroutine.sleep(0.1)
     end
     opts.concurrency = opts.concurrency + 1
 
