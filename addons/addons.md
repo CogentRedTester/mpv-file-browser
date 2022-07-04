@@ -552,21 +552,81 @@ return home_label
 
 ### Utility Functions
 
-| key           | type     | arguments        | returns    | description                                                                                                                                            |
-|---------------|----------|------------------|------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| fix_path      | function | string, boolean  | string     | takes a path and an is_directory boolean and returns a file-browser compatible path                                                                    |
-| join_path     | function | string, string   | string     | a wrapper for `mp.utils.join_path` which adds support for network protocols                                                                            |
-| get_full_path | function | item_table, string | string   | returns the full path of a given item for a given directory - takes into account item.name/item.path, etc                                              |
-| ass_escape    | function | string, string   | string     | returns the string with escaped ass styling codes - the 2nd argument allows optionally replacing newlines with the given string, or `\n` if set to `true`|
-| pattern_escape| function | string           | string     | returns the string with special lua pattern characters escaped                                                                                         |
-| get_extension | function | string, def      | string     | returns the file extension of the given file - returns def if file has no extension                                                                    |
-| get_protocol  | function | string, def      | string     | returns the protocol scheme of the given url (https, ftp, etc) - returns def if path has no url scheme                                                 |
-| valid_file    | function | string           | boolean    | tests if the given filename passes the user set filters (valid extensions and dot files)                                                               |
-| valid_dir     | function | string           | boolean    | tests if the given directory name passes the user set filters (dot directories)                                                                        |
-| filter        | function | list_table       | list_table | iterates through the given list and removes items that don't pass the filters - acts directly on the given list, it does not create a copy             |
-| sort          | function | list_table       | list_table | iterates through the given list and sorts the items using file-browsers sorting algorithm - acts directly on the given list, it does not create a copy |
-| iterate_opt   | function | string           | iterator function | returns an iterator that returns substrings of the given string split by the root separators                                                    |
-| copy_table    | function |table|table| recursively makes a deep copy of the given table and returns it, maintaining any cyclical references - the original table is stored in the `__original` field of the metatable - the original metatable is also copied, but not recursively. The copy behaviour of metatable is subject to change. |
+#### `fb.fix_path(path [, is_directory])`
+
+Takes a path and returns a file-browser compatible path string.
+The optional second argument is a boolean that tells the function to format the path to be a
+directory.
+
+#### `fb.join_path(p1, p2)`
+
+A wrapper around [`mp.utils.join_path`](https://mpv.io/manual/master/#lua-scripting-utils-join-path(p1,-p2))
+which treats paths with network protocols as absolute paths.
+
+#### `fb.get_full_path(item, directory)`
+
+Takes an item table and returns the item's full path assuming it is in the given directory.
+Takes into account `item.name`/`item.path` fields, etc.
+
+#### `fb.ass_escape(str [, newline_sub])`
+
+Returns the `str` string with escaped ass styling codes.
+The optional 2nd argument allows replacing newlines with the given string, or `\n` if set to `true`.
+
+#### `fb.pattern_escape(str)`
+
+Returns the `str` string with Lua special pattern characters escaped.
+
+#### `fb.get_extension(filename [, def])`
+
+Returns the file extension for the string `filename`, or `nil` if there is no extension.
+If `def` is defined then that is returned instead of `nil`.
+
+The full stop is not included in the extension, so `test.mkv` will return `mkv`.
+
+#### `fb.get_protocol(url [, def])`
+
+Returns the protocol scheme for the string `url`, or `nil` if there is no scheme.
+If `def` is defined then that is returned instead of `nil`.
+
+The `://` is not included, so `https://example.com/test.mkv` will return `https`.
+
+#### `fb.valid_file(name)`
+
+Tests if the string `name` passes the user set filters for valid files (extensions/dot files/etc).
+
+#### `fb.valid_dir(name)`
+
+Tests if the string `name` passes the user set filters for valid directories (dot folders/etc).
+
+#### `fb.filter(list)`
+
+Iterates through the given list and removes items that don't pass the user set filters.
+Returns the list but does not create a copy, the `list` table is filtered in-place.
+
+#### `fb.sort(list)`
+
+Iterates through the given list and sorts the items using file-browser's sorting algorithm.
+Returns the list but does not create a copy, the `list` table is sorted in-place.
+
+#### `fb.iterate_opt(opts)`
+
+Takes an options string consisting of a list of items separated by the `root_separators` defined in `file_browser.conf` and
+returns an iterator function that can be used to iterate over each item in the list.
+
+```lua
+local opt = "a,b,zz z"                -- root_separators=,
+for item in fb.iterate_opt(opt) do
+    print(item)                       -- prints: a   b   zz z
+end
+```
+
+#### `fb.copy_table(t)`
+
+Returns a copy of table `t`.
+The copy is done recursively, and any cyclical table references are maintained.
+Additionally, the original table is stored in the `__original` field of the copy's metatable.
+The copy behaviour of the metatable itself is currently subject to change.
 
 ### Getters
 
