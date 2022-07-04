@@ -557,20 +557,18 @@ end
 
 --copies a table without leaving any references to the original
 --uses a structured clone algorithm to maintain cyclic references
-local function copy_table_recursive(t, references)
-    if type(t) ~= "table" then return t end
+local function copy_table_recursive(t, references, depth)
+    if type(t) ~= "table" or depth == 0 then return t end
     if references[t] then return references[t] end
 
-    local mt = {
-        __original = t,
-        __index = getmetatable(t)
-    }
+    local mt = copy_table_recursive(getmetatable(t), {}, 1) or {}
+    mt.__original = t
     local copy = setmetatable({}, mt)
     references[t] = copy
 
     for key, value in pairs(t) do
-        key = copy_table_recursive(key, references)
-        copy[key] = copy_table_recursive(value, references)
+        key = copy_table_recursive(key, references, depth - 1)
+        copy[key] = copy_table_recursive(value, references, depth - 1)
     end
     return copy
 end
@@ -578,7 +576,7 @@ end
 --a wrapper around copy_table to provide the reference table
 function API.copy_table(t)
     --this is to handle cyclic table references
-    return copy_table_recursive(t, {})
+    return copy_table_recursive(t, {}, math.huge)
 end
 
 

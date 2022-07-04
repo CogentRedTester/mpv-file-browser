@@ -566,7 +566,7 @@ return home_label
 | filter        | function | list_table       | list_table | iterates through the given list and removes items that don't pass the filters - acts directly on the given list, it does not create a copy             |
 | sort          | function | list_table       | list_table | iterates through the given list and sorts the items using file-browsers sorting algorithm - acts directly on the given list, it does not create a copy |
 | iterate_opt   | function | string           | iterator function | returns an iterator that returns substrings of the given string split by the root separators                                                    |
-| copy_table    | function |table|table| recursively makes a deep copy of the given table and returns it, maintaining any cyclical references - the original table is stored in the `__original` field of the metatable|
+| copy_table    | function |table|table| recursively makes a deep copy of the given table and returns it, maintaining any cyclical references - the original table is stored in the `__original` field of the metatable - the original metatable is also copied, but not recursively. The copy behaviour of metatable is subject to change. |
 
 ### Getters
 
