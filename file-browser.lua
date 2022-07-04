@@ -1807,10 +1807,36 @@ local function set_parser_id(parser)
     parsers[parser] = { id = name }
 end
 
+local function redirect_table(t)
+    return setmetatable({}, { __index = t })
+end
+
 --loads an addon in a separate environment
 local function load_addon(path)
-    local addon_environment = setmetatable({}, { __index = _G })
+    local name_sqbr = string.format("[%s]", path:match("/([^/]*)%.lua$"))
+    local addon_environment = redirect_table(_G)
     addon_environment._G = addon_environment
+
+    --gives each addon custom debug messages
+    addon_environment.package = redirect_table(addon_environment.package)
+    addon_environment.package.loaded = redirect_table(addon_environment.package.loaded)
+    local msg_module = {
+        log = function(level, ...) msg.log(level, name_sqbr, ...) end,
+        fatal = function(...) return msg.fatal(name_sqbr, ...) end,
+        error = function(...) return msg.error(name_sqbr, ...) end,
+        warn = function(...) return msg.warn(name_sqbr, ...) end,
+        info = function(...) return msg.info(name_sqbr, ...) end,
+        verbose = function(...) return msg.verbose(name_sqbr, ...) end,
+        debug = function(...) return msg.debug(name_sqbr, ...) end,
+        trace = function(...) return msg.trace(name_sqbr, ...) end,
+    }
+    addon_environment.print = msg_module.info
+
+    addon_environment.require = function(module)
+        if module == "mp.msg" then return msg_module end
+        return require(module)
+    end
+
     local chunk, err
     if setfenv then
         --since I stupidly named a function loadfile I need to specify the global one
