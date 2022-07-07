@@ -1409,24 +1409,24 @@ end
 ------------------------------------------------------------------------------------------
 
 state.keybinds = {
-    {'ENTER', 'play', function() open_file('replace', false) end, {}},
-    {'Shift+ENTER', 'play_append', function() open_file('append-play', false) end, {}},
-    {'Alt+ENTER', 'play_autoload', function() open_file('replace', true) end, {}},
-    {'ESC', 'close', escape, {}},
-    {'RIGHT', 'down_dir', down_dir, {}},
-    {'LEFT', 'up_dir', up_dir, {}},
-    {'DOWN', 'scroll_down', function() scroll(1, o.wrap) end, {repeatable = true}},
-    {'UP', 'scroll_up', function() scroll(-1, o.wrap) end, {repeatable = true}},
-    {'PGDWN', 'page_down', function() scroll(o.num_entries) end, {repeatable = true}},
-    {'PGUP', 'page_up', function() scroll(-o.num_entries) end, {repeatable = true}},
-    {'Shift+PGDWN', 'list_bottom', function() scroll(#state.list) end, {}},
-    {'Shift+PGUP', 'list_top', function() scroll(-#state.list) end, {}},
-    {'HOME', 'goto_current', goto_current_dir, {}},
-    {'Shift+HOME', 'goto_root', goto_root, {}},
-    {'Ctrl+r', 'reload', function() cache:clear(); update() end, {}},
-    {'s', 'select_mode', toggle_select_mode, {}},
-    {'S', 'select_item', toggle_selection, {}},
-    {'Ctrl+a', 'select_all', select_all, {}}
+    {'ENTER',       'play',         function() open_file('replace', false) end},
+    {'Shift+ENTER', 'play_append',  function() open_file('append-play', false) end},
+    {'Alt+ENTER',   'play_autoload',function() open_file('replace', true) end},
+    {'ESC',         'close',        escape},
+    {'RIGHT',       'down_dir',     down_dir},
+    {'LEFT',        'up_dir',       up_dir},
+    {'DOWN',        'scroll_down',  function() scroll(1, o.wrap) end,           {repeatable = true}},
+    {'UP',          'scroll_up',    function() scroll(-1, o.wrap) end,          {repeatable = true}},
+    {'PGDWN',       'page_down',    function() scroll(o.num_entries) end,       {repeatable = true}},
+    {'PGUP',        'page_up',      function() scroll(-o.num_entries) end,      {repeatable = true}},
+    {'Shift+PGDWN', 'list_bottom',  function() scroll(math.huge) end},
+    {'Shift+PGUP',  'list_top',     function() scroll(-math.huge) end},
+    {'HOME',        'goto_current', goto_current_dir},
+    {'Shift+HOME',  'goto_root',    goto_root},
+    {'Ctrl+r',      'reload',       function() cache:clear(); update() end},
+    {'s',           'select_mode',  toggle_select_mode},
+    {'S',           'select_item',  toggle_selection},
+    {'Ctrl+a',      'select_all',   select_all}
 }
 
 --characters used for custom keybind codes
