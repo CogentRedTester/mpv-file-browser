@@ -188,7 +188,7 @@ local state = {
     co = nil,
 
     multiselect_start = nil,
-    initial_selection = {},
+    initial_selection = nil,
     selection = {}
 }
 
@@ -777,25 +777,21 @@ end
 --disables multiselect
 local function disable_select_mode()
     state.multiselect_start = nil
-    state.initial_selection = {}
+    state.initial_selection = nil
 end
 
 --enables multiselect
 local function enable_select_mode()
     state.multiselect_start = state.selected
-
-    --saving a copy of the original state
-    for key, value in pairs(state.selection) do
-        state.initial_selection[key] = value
-    end
+    state.initial_selection = API.copy_table(state.selection)
 end
 
 --calculates what drag behaviour is required for that specific movement
-local function drag_select(movement, original_pos, new_pos)
-    if original_pos - new_pos == 0 then return end
+local function drag_select(original_pos, new_pos)
+    if original_pos == new_pos then return end
 
     local setting = state.selection[state.multiselect_start]
-    for i = original_pos, new_pos, movement > 0 and 1 or -1 do
+    for i = original_pos, new_pos, (new_pos > original_pos and 1 or -1) do
         --if we're moving the cursor away from the starting point then set the selection
         --otherwise restore the original selection
         if i > state.multiselect_start then
@@ -829,15 +825,14 @@ local function scroll(n, wrap)
         state.selected = original_pos + n
     end
 
-    if state.multiselect_start then drag_select(n, original_pos, state.selected) end
+    if state.multiselect_start then drag_select(original_pos, state.selected) end
     update_ass()
 end
 
 --toggles the selection
 local function toggle_selection()
-    if state.list[state.selected] then
-        state.selection[state.selected] = not state.selection[state.selected] or nil
-    end
+    if not state.list[state.selected] then return end
+    state.selection[state.selected] = not state.selection[state.selected] or nil
     update_ass()
 end
 
