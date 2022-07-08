@@ -57,6 +57,10 @@ local o = {
     filter_dot_dirs = false,
     filter_dot_files = false,
 
+    --substitude forward slashes for backslashes when appending a local file to the playlist
+    --potentially useful on windows systems
+    substitute_backslash = false,
+
     --this option reverses the behaviour of the alt+ENTER keybind
     --when disabled the keybind is required to enable autoload for the file
     --when enabled the keybind disables autoload for the file
@@ -1173,6 +1177,10 @@ end
 --adds a file to the playlist and changes the flag to `append-play` in preparation
 --for future items
 local function loadfile(file, opts)
+    if o.substitute_backslash and not API.get_protocol(file) then
+        file = file:gsub("/", "\\")
+    end
+
     if opts.flag == "replace" then msg.verbose("Playling file", file)
     else msg.verbose("Appending", file, "to the playlist") end
 
