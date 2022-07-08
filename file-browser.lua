@@ -366,18 +366,18 @@ end
 function API.get_new_directory(item, directory)
     if item.path and item.redirect ~= false then return item.path, true end
     if directory == "" then return item.name end
-    if directory:sub(-1) == "/" then return directory..item.name end
+    if string.sub(directory, -1) == "/" then return directory..item.name end
     return directory.."/"..item.name
 end
 
 --returns the file extension of the given file
 function API.get_extension(filename, def)
-    return filename:lower():match("%.([^%./]+)$") or def
+    return string.lower(filename):match("%.([^%./]+)$") or def
 end
 
 --returns the protocol scheme of the given url, or nil if there is none
 function API.get_protocol(filename, def)
-    return filename:lower():match("^(%a[%w+-.]*)://") or def
+    return string.lower(filename):match("^(%a[%w+-.]*)://") or def
 end
 
 --formats strings for ass handling
@@ -386,7 +386,7 @@ function API.ass_escape(str, replace_newline)
     if replace_newline == true then replace_newline = "\\\239\187\191n" end
 
     --escape the invalid single characters
-    str = str:gsub('[\\{}\n]', {
+    str = string.gsub(str, '[\\{}\n]', {
         -- There is no escape for '\' in ASS (I think?) but '\' is used verbatim if
         -- it isn't followed by a recognised character, so add a zero-width
         -- non-breaking space
@@ -410,12 +410,12 @@ end
 
 --escape lua pattern characters
 function API.pattern_escape(str)
-    return str:gsub("([%^%$%(%)%%%.%[%]%*%+%-])", "%%%1")
+    return string.gsub(str, "([%^%$%(%)%%%.%[%]%*%+%-])", "%%%1")
 end
 
 --standardises filepaths across systems
 function API.fix_path(str, is_directory)
-    str = str:gsub([[\]],[[/]])
+    str = string.gsub(str, [[\]],[[/]])
     str = str:gsub([[/./]], [[/]])
     if is_directory and str:sub(-1) ~= '/' then str = str..'/' end
     return str
@@ -441,12 +441,12 @@ function API.sort(t)
 end
 
 function API.valid_dir(dir)
-    if o.filter_dot_dirs and dir:sub(1,1) == "." then return false end
+    if o.filter_dot_dirs and string.sub(dir, 1, 1) == "." then return false end
     return true
 end
 
 function API.valid_file(file)
-    if o.filter_dot_files and (file:sub(1,1) == ".") then return false end
+    if o.filter_dot_files and (string.sub(file, 1, 1) == ".") then return false end
     if o.filter_files and not extensions[ API.get_extension(file, "") ] then return false end
     return true
 end
@@ -1680,10 +1680,10 @@ end
 
 --register file extensions which can be opened by the browser
 function API.register_parseable_extension(ext)
-    parseable_extensions[ext:lower()] = true
+    parseable_extensions[string.lower(ext)] = true
 end
 function API.remove_parseable_extension(ext)
-    parseable_extensions[ext:lower()] = nil
+    parseable_extensions[string.lower(ext)] = nil
 end
 
 --add a compatible extension to show through the filter, only applies if run during the setup() method
