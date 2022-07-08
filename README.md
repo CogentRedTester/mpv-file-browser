@@ -8,6 +8,26 @@ By default only file types compatible with mpv will be shown, but this can be ch
 
 This script requires at least mpv v0.31.
 
+## Installation
+
+Place the `file-browser.lua` file into the mpv `~~/scripts/` directory. `~~/` is the mpv config directory
+which is typically `~/.config/mpv/` on linux and `%APPDATA%/mpv/` on windows.
+
+Copy `file_browser.conf` into `~~/script-opts/` and customise the [`root` option](#root-directory) for your
+system. The file contains all the default settings for the script, but I would recommend deleting any
+options from the file that you don't understand so as to not override any future changes I make to the defaults.
+
+To setup [custom keybinds](custom-keybinds.md) enable the `custom_keybinds` option in `file_browser.conf` and
+create a `~~/script-opts/file-browser-keybinds.json` file. Do **not** copy the `file-browser-keybinds.json` file
+stored in this repository, that file is a collection of random examples, many of which are for completely different
+operating systems. Use them and the [docs](custom-keybinds.md) to create your own collection of keybinds.
+
+To setup [addons](addons/README.md) enable the `addons` option in `file_browser.conf` and place the addon files
+in the `~~/script-modules/file-browser-addons/` directory.
+
+If you are not going to enable custom keybinds or addons then there is no reason to
+create `file-browser-keybinds.json` or `script-modules/file-browser-addons/`.
+
 ## Keybinds
 
 The following keybinds are set by default
@@ -48,7 +68,7 @@ By default the playlist will only be autoloaded if `Alt+ENTER` is used on a sing
 
 ## Root Directory
 
-To accomodate for both windows and linux this script has its own virtual root directory where drives and file folders can be manually added. This can also be used to save favourite directories. The root directory can only contain folders.
+To accomodate for both windows and linux this script has its own virtual root directory where drives and file folders can be manually added. The root directory can only contain folders.
 
 The root directory is set using the `root` option, which is a comma separated list of directories. Entries are sent through mpv's `expand-path` command. By default the only root value is the user's home folder:
 
