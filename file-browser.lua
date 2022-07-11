@@ -1437,9 +1437,6 @@ state.keybinds = {
     {'Ctrl+a',      'select_all',   select_all}
 }
 
---characters used for custom keybind codes
-local CUSTOM_KEYBIND_CODES = "%fFnNpPdDrR"
-
 --a map of key-keybinds - only saves the latest keybind if multiple have the same key code
 local top_level_keys = {}
 
@@ -1454,6 +1451,28 @@ local function create_item_string(cmd, items, funct)
     return str
 end
 
+--characters used for custom keybind codes
+local CUSTOM_KEYBIND_CODES = "%fFnNpPdDrR"
+local code_fns
+code_fns = {
+    ["%%"] = "%",
+    ["%f"] = function(cmd, items, s)
+        return create_item_string(cmd, items, function(item) return item and API.get_full_path(item, s.directory) or "" end)
+    end,
+    ["%n"] = function(cmd, items)
+        return create_item_string(cmd, items, function(item) return item and (item.label or item.name) or "" end)
+    end,
+    ["%p"] = function(_, _, s)
+        return s.directory or ""
+    end,
+    ["%d"] = function(_, _, s)
+        return (s.directory_label or s.directory):match("([^/]+)/?$") or ""
+    end,
+    ["%r"] = function(_, _, s)
+        return s.parser.keybind_name or s.parser.name or ""
+    end,
+}
+
 --iterates through the command table and substitutes special
 --character codes for the correct strings used for custom functions
 local function format_command_table(cmd, items, state)
@@ -1462,19 +1481,18 @@ local function format_command_table(cmd, items, state)
         copy[i] = {}
 
         for j = 1, #cmd.command[i] do
-            copy[i][j] = cmd.command[i][j]:gsub("%%["..CUSTOM_KEYBIND_CODES.."]", {
-                ["%%"] = "%",
-                ["%f"] = create_item_string(cmd, items, function(item) return item and API.get_full_path(item, state.directory) or "" end),
-                ["%F"] = create_item_string(cmd, items, function(item) return string.format("%q", item and API.get_full_path(item, state.directory) or "") end),
-                ["%n"] = create_item_string(cmd, items, function(item) return item and (item.label or item.name) or "" end),
-                ["%N"] = create_item_string(cmd, items, function(item) return string.format("%q", item and (item.label or item.name) or "") end),
-                ["%p"] = state.directory or "",
-                ["%P"] = string.format("%q", state.directory or ""),
-                ["%d"] = (state.directory_label or state.directory):match("([^/]+)/?$") or "",
-                ["%D"] = string.format("%q", (state.directory_label or state.directory):match("([^/]+)/$") or ""),
-                ["%r"] = state.parser.keybind_name or state.parser.name or "",
-                ["%R"] = string.format("%q", state.parser.keybind_name or state.parser.name or "")
-            })
+            copy[i][j] = cmd.command[i][j]:gsub("%%["..CUSTOM_KEYBIND_CODES.."]", function(code)
+                if type(code_fns[code]) == "string" then return code_fns[code] end
+
+                --encapsulates the string if using an uppercase code
+                if not code_fns[code] then
+                    local lower = code_fns[code:lower()]
+                    if not lower then return end
+                    return string.format("%q", lower(cmd, items, state))
+                end
+
+                return code_fns[code](cmd, items, state)
+            end)
         end
     end
     return copy
