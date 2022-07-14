@@ -96,6 +96,7 @@ local o = {
 
     --style settings
     font_bold_header = true,
+    font_opacity_selection_marker = "99",
 
     font_size_header = 35,
     font_size_body = 25,
@@ -175,7 +176,10 @@ local style = {
 
     --icon styles
     cursor = ([[{\fn%s\c&H%s&}]]):format(o.font_name_cursor, o.font_colour_cursor),
-    folder = ([[{\fn%s}]]):format(o.font_name_folder)
+    cursor_select = ([[{\fn%s\c&H%s&}]]):format(o.font_name_cursor, o.font_colour_multiselect),
+    cursor_deselect = ([[{\fn%s\c&H%s&}]]):format(o.font_name_cursor, o.font_colour_selected),
+    folder = ([[{\fn%s}]]):format(o.font_name_folder),
+    selection_marker = ([[{\alpha&H%s}]]):format(o.font_opacity_selection_marker),
 }
 
 local state = {
@@ -742,10 +746,15 @@ local function update_ass()
         append(style.body)
 
         --handles custom styles for different entries
-        if i == state.selected then
-            append(style.cursor)
-            append((state.multiselect_start and style.multiselect or "")..o.cursor_icon)
-            append("\\h"..style.body)
+        if i == state.selected or i == state.multiselect_start then
+            if not (i == state.selected) then append(style.selection_marker) end
+
+            if not state.multiselect_start then append(style.cursor)
+            else
+                if state.selection[state.multiselect_start] then append(style.cursor_select)
+                else append(style.cursor_deselect) end
+            end
+            append(o.cursor_icon.."\\h"..style.body)
         else
             append(o.indent_icon.."\\h"..style.body)
         end
