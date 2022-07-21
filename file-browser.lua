@@ -875,6 +875,16 @@ end
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
 
+--selects the first item in the list which is highlighted as playing
+local function select_playing_item()
+    for i,item in ipairs(state.list) do
+        if highlight_entry(item) then
+            state.selected = i
+            return
+        end
+    end
+end
+
 --scans the list for which item to select by default
 --chooses the folder that the script just moved out of
 --or, otherwise, the item highlighted as currently playing
@@ -890,12 +900,7 @@ local function select_prev_directory()
         end
     end
 
-    for i,item in ipairs(state.list) do
-        if highlight_entry(item) then
-            state.selected = i
-            return
-        end
-    end
+    select_playing_item()
 end
 
 --parses the given directory or defers to the next parser if nil is returned
@@ -1029,7 +1034,8 @@ local function update_list(moving_adjacent)
         elseif state.selected < 1 then state.selected = 1 end
     end
 
-    if moving_adjacent then select_prev_directory() end
+    if moving_adjacent then select_prev_directory()
+    else select_playing_item() end
     state.prev_directory = state.directory
 end
 
