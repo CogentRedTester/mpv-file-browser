@@ -964,7 +964,7 @@ local function parse_directory(directory, parse_state)
 end
 
 --sends update requests to the different parsers
-local function update_list()
+local function update_list(moving_adjacent)
     msg.verbose('opening directory: ' .. state.directory)
 
     state.selected = 1
@@ -1029,7 +1029,7 @@ local function update_list()
         elseif state.selected < 1 then state.selected = 1 end
     end
 
-    select_prev_directory()
+    if moving_adjacent then select_prev_directory() end
     state.prev_directory = state.directory
 end
 
@@ -1049,14 +1049,17 @@ local function update(moving_adjacent)
 
     --the directory is always handled within a coroutine to allow addons to
     --pause execution for asynchronous operations
-    state.co = coroutine.create(function() update_list(); update_ass() end)
-    API.coroutine.resume_err(state.co)
+    API.coroutine.run(function()
+        state.co = coroutine.running()
+        update_list(moving_adjacent)
+        update_ass()
+    end)
 end
 
 --the base function for moving to a directory
 local function goto_directory(directory)
     state.directory = directory
-    update()
+    update(false)
 end
 
 --loads the root list
