@@ -1114,6 +1114,8 @@ end
 
 --opens the browser
 local function open()
+    if not state.hidden then return end
+
     for _,v in ipairs(state.keybinds) do
         mp.add_forced_key_binding(v[1], 'dynamic/'..v[2], v[3], v[4])
     end
@@ -1134,6 +1136,8 @@ end
 
 --closes the list and sets the hidden flag
 local function close()
+    if state.hidden then return end
+
     for _,v in ipairs(state.keybinds) do
         mp.remove_key_binding('dynamic/'..v[2])
     end
