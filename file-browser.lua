@@ -928,12 +928,11 @@ end
 local function run_parse(directory, parse_state)
     msg.verbose("scanning files in", directory)
     parse_state.directory = directory
+
     local co = coroutine.running()
+    parse_states[co] = setmetatable(parse_state, { __index = parse_state_API })
 
-    setmetatable(parse_state, { __index = parse_state_API })
     if directory == "" then return root_parser:parse() end
-
-    parse_states[co] = parse_state
     local list, opts = choose_and_parse(directory, 1)
 
     if list == nil then return msg.debug("no successful parsers found") end
