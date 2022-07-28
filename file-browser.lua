@@ -1476,22 +1476,31 @@ end
 local CUSTOM_KEYBIND_CODES = "%fFnNpPdDrR"
 local code_fns
 code_fns = {
-    ["%%"] = "%",
     ["%f"] = function(cmd, items, s)
-        return create_item_string(cmd, items, function(item) return item and API.get_full_path(item, s.directory) or "" end)
+        return create_item_string(cmd, items, function(item)
+            return item and API.get_full_path(item, s.directory) or ""
+        end)
+    end,
+    ["%F"] = function(cmd, items, s)
+        return create_item_string(cmd, items, function(item)
+            return ("%q"):format(item and API.get_full_path(item, s.directory) or "")
+        end)
     end,
     ["%n"] = function(cmd, items)
-        return create_item_string(cmd, items, function(item) return item and (item.label or item.name) or "" end)
+        return create_item_string(cmd, items, function(item)
+            return item and (item.label or item.name) or ""
+        end)
     end,
-    ["%p"] = function(_, _, s)
-        return s.directory or ""
+    ["%N"] = function(cmd, items)
+        return create_item_string(cmd, items, function(item)
+            return ("%q"):format(item and (item.label or item.name) or "")
+        end)
     end,
-    ["%d"] = function(_, _, s)
-        return (s.directory_label or s.directory):match("([^/]+)/?$") or ""
-    end,
-    ["%r"] = function(_, _, s)
-        return s.parser.keybind_name or s.parser.name or ""
-    end,
+
+    ["%%"] = "%",
+    ["%p"] = function(_, _, s) return s.directory or "" end,
+    ["%d"] = function(_, _, s) return (s.directory_label or s.directory):match("([^/]+)/?$") or "" end,
+    ["%r"] = function(_, _, s) return s.parser.keybind_name or s.parser.name or "" end,
 }
 
 --iterates through the command table and substitutes special
