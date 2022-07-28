@@ -1473,7 +1473,7 @@ local function create_item_string(cmd, items, funct)
 end
 
 --characters used for custom keybind codes
-local CUSTOM_KEYBIND_CODES = "%fFnNpPdDrR"
+local CUSTOM_KEYBIND_CODES = "%%["..API.pattern_escape("%fFnNpPdDrR").."]"
 local code_fns
 code_fns = {
     ["%f"] = function(cmd, items, s)
@@ -1511,7 +1511,7 @@ local function format_command_table(cmd, items, state)
         copy[i] = {}
 
         for j = 1, #cmd.command[i] do
-            copy[i][j] = cmd.command[i][j]:gsub("%%["..CUSTOM_KEYBIND_CODES.."]", function(code)
+            copy[i][j] = cmd.command[i][j]:gsub(CUSTOM_KEYBIND_CODES, function(code)
                 if type(code_fns[code]) == "string" then return code_fns[code] end
 
                 --encapsulates the string if using an uppercase code
@@ -1635,7 +1635,7 @@ local function scan_for_codes(command_table, codes)
         if type == "table" then
             scan_for_codes(value, codes)
         elseif type == "string" then
-            value:gsub("%%["..CUSTOM_KEYBIND_CODES.."]", function(code) codes[code] = true end)
+            value:gsub(CUSTOM_KEYBIND_CODES, function(code) codes[code] = true end)
         end
     end
     return codes
