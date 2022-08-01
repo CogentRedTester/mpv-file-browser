@@ -501,44 +501,34 @@ function API.sort_keys(t, include_item)
     return keys
 end
 
-local invalid_types = {
-    userdata = true,
-    thread = true,
-    ["function"] = true
-}
-
-local invalid_key_types = {
-    boolean = true,
-    table = true,
-    ["nil"] = true
-}
-setmetatable(invalid_key_types, { __index = invalid_types })
+--Uses a loop to get the length of an array. The `#` operator is undefined if there
+--are gaps in the array, this ensures there are none as expected by the mpv node function.
+local function get_length(t)
+    local i = 1
+    while t[i] do i = i+1 end
+    return i - 1
+end
 
 --recursively removes elements of the table which would cause
 --utils.format_json to throw an error
 local function json_safe_recursive(t)
     if type(t) ~= "table" then return t end
 
-    local invalid_ktypes = setmetatable({}, { __index = invalid_key_types })
-    local arr_length = #t
-    if arr_length > 0 then
-        invalid_ktypes.string = true
-        setmetatable(t, { type = "ARRAY" })
-    else
-        invalid_ktypes.number = true
-        setmetatable(t, { type = "MAP" })
-    end
+    local array_length = get_length(t)
+    local isarray = array_length > 0
 
     for key, value in pairs(t) do
         local ktype = type(key)
         local vtype = type(value)
 
-        if invalid_ktypes[ktype] or invalid_types[vtype] then
-            t[key] = nil
-        elseif ktype == "number" and key > arr_length then
-            t[key] = nil
-        else
+        if  vtype ~= "userdata" and vtype ~= "function" and vtype ~= "thread"
+            and ((  isarray and ktype == "number" and key <= array_length)
+                    or (not isarray and ktype == "string"))
+        then
             t[key] = json_safe_recursive(t[key])
+        elseif key then
+            t[key] = nil
+            if isarray then array_length = get_length(t) end
         end
     end
     return t
