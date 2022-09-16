@@ -1492,6 +1492,7 @@ if o.mouse_mode then
     add_key{'WHEEL_UP',         'mouse/scroll_up',      function() wheel(-1) end}
     add_key{'MBTN_LEFT',        'mouse/down_dir',       down_dir}
     add_key{'MBTN_RIGHT',       'mouse/up_dir',         up_dir}
+    add_key{'MBTN_RIGHT_DBL',   'mouse/goto_root',      goto_root}
     add_key{'Shift+MBTN_LEFT',  'mouse/play_left',      function() open_file('replace', false) end}
 
     add_key{'MBTN_MID',         'mouse/play_mid',       function() open_file('replace', false) end}
