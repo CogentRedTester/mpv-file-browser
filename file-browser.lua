@@ -186,11 +186,12 @@ local style = {
 }
 
 local state = {
-    list = {},
-    selected = 1,
-    hidden = true,
-    flag_update = false,
-    keybinds = nil,
+    list = {},                      -- list of items
+    selected = 1,                   -- currently selected item
+    scroll_offset = 0,
+    hidden = true,                  -- whether the browser is hidden
+    flag_update = false,            -- should we redraw the browser when next opened
+    keybinds = nil,                 -- array of dynamic deybinds
 
     parser = nil,
     directory = nil,
@@ -710,18 +711,13 @@ local function update_ass()
     local start = 1
     local finish = start+o.num_entries-1
 
-    --handling cursor positioning
-    local mid = math.ceil(o.num_entries/2)+1
-    if state.selected+mid > finish then
-        local offset = state.selected - finish + mid
-
-        --if we've overshot the end of the list then undo some of the offset
-        if finish + offset > #state.list then
-            offset = offset - ((finish+offset) - #state.list)
+    --handling the offset caused by scrolling
+    if state.scroll_offset > 0 then
+        if finish + state.scroll_offset > #state.list then
+            state.scroll_offset = #state.list - finish
         end
-
-        start = start + offset
-        finish = finish + offset
+        start = start + state.scroll_offset
+        finish = finish + state.scroll_offset
     end
 
     --making sure that we don't overstep the boundaries
@@ -832,6 +828,12 @@ local function scroll(n, wrap)
     end
 
     if state.multiselect_start then drag_select(original_pos, state.selected) end
+
+    --moves the scroll window down so that the selected item is in the middle of the screen
+    state.scroll_offset = state.selected - (math.ceil(o.num_entries/2)-1)
+    if state.scroll_offset < 0 or (state.scroll_offset + o.num_entries) > #state.list then
+        state.scroll_offset = 0
+    end
     update_ass()
 end
 
@@ -863,11 +865,28 @@ end
 
 --update the selected item based on the mouse position
 local function update_mouse_pos(_, mouse_pos)
+    if not mouse_pos then mouse_pos = mp.get_property_native("mouse-pos") end
     if not mouse_pos.hover then return end
     local scale = mp.get_property_number("osd-height", 0) / 720
+
+    --this will currently not work with different sized headers
+    --for some reason the scaling calculation works differently for the header
     local header_offset = 65
-    state.selected = math.ceil((mouse_pos.y-header_offset) / (25* scale))
+    if state.scroll_offset > 0 then
+        header_offset = header_offset + o.font_size_wrappers*scale
+    end
+
+    state.selected = math.ceil((mouse_pos.y-header_offset) / (o.font_size_body* scale)) + state.scroll_offset
     update_ass()
+end
+
+-- scrolls the view window when using mouse mode
+local function wheel(direction)
+    state.scroll_offset = state.scroll_offset + direction
+    if state.scroll_offset < 0 or (state.scroll_offset + o.num_entries) > #state.list then
+        state.scroll_offset = 0
+    end
+    update_mouse_pos()
 end
 
 --------------------------------------------------------------------------------------------------------
