@@ -1480,6 +1480,23 @@ state.keybinds = {
     {'Ctrl+a',      'select_all',   select_all}
 }
 
+local function add_key(key)
+    table.insert(state.keybinds, key)
+end
+
+--default keybinds for the experimental mouse-mode
+if o.mouse_mode then
+    add_key{'WHEEL_DOWN',       'mouse/scroll_down',    function() wheel(1) end}
+    add_key{'WHEEL_UP',         'mouse/scroll_up',      function() wheel(-1) end}
+    add_key{'MBTN_LEFT',        'mouse/down_dir',       down_dir}
+    add_key{'MBTN_RIGHT',       'mouse/up_dir',         up_dir}
+    add_key{'Shift+MBTN_LEFT',  'mouse/play_left',      function() open_file('replace', false) end}
+
+    add_key{'MBTN_MID',         'mouse/play_mid',       function() open_file('replace', false) end}
+    add_key{'Shift+MBTN_MID',   'mouse/play_append',    function() open_file('append-play', false) end}
+    add_key{'Alt+MBTN_MID',     'mouse/play_autoload',  function() open_file('replace', true) end}
+end
+
 --a map of key-keybinds - only saves the latest keybind if multiple have the same key code
 local top_level_keys = {}
 
