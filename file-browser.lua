@@ -865,6 +865,8 @@ end
 
 --update the selected item based on the mouse position
 local function update_mouse_pos(_, mouse_pos)
+    if state.hidden or #state.list == 0 then return end
+
     if not mouse_pos then mouse_pos = mp.get_property_native("mouse-pos") end
     if not mouse_pos.hover then return end
     local scale = mp.get_property_number("osd-height", 0) / 720
