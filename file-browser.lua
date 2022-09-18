@@ -189,6 +189,7 @@ local state = {
     list = {},                      -- list of items
     selected = 1,                   -- currently selected item
     scroll_offset = 0,
+    osd_alignment = "",
     hidden = true,                  -- whether the browser is hidden
     flag_update = false,            -- should we redraw the browser when next opened
     keybinds = nil,                 -- array of dynamic deybinds
@@ -203,6 +204,12 @@ local state = {
     initial_selection = nil,
     selection = {}
 }
+
+--if the alignment isn't automated then we'll store a static value
+--numbers defined here: https://aegi.vmoe.info/docs/3.0/ASS_Tags/#index23h3
+if o.alignment >= 7 then state.osd_alignment = "top"
+elseif o.alignment >= 4 then state.osd_alignment = "center"
+elseif o.alignment >= 1 then state.osd_alignment = "bottom" end
 
 --the parser table actually contains 3 entries for each parser
 --a numeric entry which represents the priority of the parsers and has the parser object as the value
@@ -727,7 +734,11 @@ local function update_ass()
     if not overflow then finish = #state.list end
 
     --adding a header to show there are items above in the list
-    if start > 1 then append(style.footer_header..(start-1)..' item(s) above\\N\\N') end
+    append(style.footer_header)
+    if start > 1 then
+        append((start-1)..' item(s) above')
+    end
+    append('\\h\\N\\N')
 
     for i=start, finish do
         local v = state.list[i]
@@ -765,7 +776,11 @@ local function update_ass()
         newline()
     end
 
-    if overflow then append('\\N'..style.footer_header..#state.list-finish..' item(s) remaining') end
+    -- always draw a gap for the footer to reserve space if osd is aligned to the bottom
+    append(style.footer_header.."\\N\\h")
+    if overflow then
+        append(#state.list-finish..' item(s) remaining')
+    end
     ass:update()
 end
 
@@ -870,14 +885,27 @@ local function update_mouse_pos(_, mouse_pos)
     if not mouse_pos then mouse_pos = mp.get_property_native("mouse-pos") end
     if not mouse_pos.hover then return end
     local scale = mp.get_property_number("osd-height", 0) / 720
-    local osd_offset = 15
+    local osd_offset = 10
 
-    local header_offset = osd_offset + (2 * scale * o.font_size_header)
-    if state.scroll_offset > 0 then
-        header_offset = header_offset + (o.font_size_wrappers * scale)
+    --calculate position when browser is aligned to the top of the screen
+    if state.osd_alignment == "top" then
+        local header_offset = osd_offset + (2 * scale * o.font_size_header) + (o.font_size_wrappers * scale * 2)
+
+        state.selected = math.ceil((mouse_pos.y-header_offset) / (o.font_size_body* scale)) + state.scroll_offset
+
+    --calculate position when browser is aligned to the bottom of the screen
+    --this calculation is slightly off when a bottom wrapper exists, hence the `+5`.
+    --I do not know what causes this.
+    elseif state.osd_alignment == "bottom" then
+        mouse_pos.y = (mp.get_property_number("osd-height", 0) - osd_offset) - mouse_pos.y
+
+        local bottom = math.min(#state.list, state.scroll_offset + o.num_entries)
+        local footer_offset = (bottom < #state.list) and (o.font_size_wrappers * scale) + 5 or 0
+        footer_offset = footer_offset
+
+        state.selected = bottom - math.floor((mouse_pos.y - footer_offset) / (o.font_size_body* scale))
     end
 
-    state.selected = math.ceil((mouse_pos.y-header_offset) / (o.font_size_body* scale)) + state.scroll_offset
     update_ass()
 end
 
@@ -2120,6 +2148,16 @@ mp.observe_property('dvd-device', 'string', function(_, device)
     if not device or device == "" then device = "/dev/dvd/" end
     dvd_device = API.fix_path(device, true)
 end)
+
+--if the osd-alignment changes while the browser is open then update immediately
+if o.alignment == 0 then
+    mp.observe_property("osd-align-x", "string", function() update_ass() end)
+    mp.observe_property("osd-align-y", "string", function(_, alignment)
+        state.osd_alignment = alignment
+        update_mouse_pos()
+        update_ass()
+    end)
+end
 
 --declares the keybind to open the browser
 mp.add_key_binding('MENU','browse-files', toggle)
