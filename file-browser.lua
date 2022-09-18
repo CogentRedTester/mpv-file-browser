@@ -865,17 +865,16 @@ end
 
 --update the selected item based on the mouse position
 local function update_mouse_pos(_, mouse_pos)
-    if state.hidden or #state.list == 0 then return end
+    if not o.mouse_mode or state.hidden or #state.list == 0 then return end
 
     if not mouse_pos then mouse_pos = mp.get_property_native("mouse-pos") end
     if not mouse_pos.hover then return end
     local scale = mp.get_property_number("osd-height", 0) / 720
+    local osd_offset = 15
 
-    --this will currently not work with different sized headers
-    --for some reason the scaling calculation works differently for the header
-    local header_offset = 65
+    local header_offset = osd_offset + (2 * scale * o.font_size_header)
     if state.scroll_offset > 0 then
-        header_offset = header_offset + o.font_size_wrappers*scale
+        header_offset = header_offset + (o.font_size_wrappers * scale)
     end
 
     state.selected = math.ceil((mouse_pos.y-header_offset) / (o.font_size_body* scale)) + state.scroll_offset
