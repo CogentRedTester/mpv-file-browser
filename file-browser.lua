@@ -724,10 +724,6 @@ local function update_ass()
             state.scroll_offset = #state.list - finish
         end
     end
-    if state.selected < state.scroll_offset or state.selected > (state.scroll_offset + o.num_entries) then
-        state.scroll_offset = state.selected - (math.ceil(o.num_entries/2)-1)
-        if state.scroll_offset < 0 then state.scroll_offset = 0 end
-    end
 
     start = start + state.scroll_offset
     finish = finish + state.scroll_offset
@@ -1026,6 +1022,7 @@ local function update_list(moving_adjacent)
     msg.verbose('opening directory: ' .. state.directory)
 
     state.selected = 1
+    state.scroll_offset = 0
     state.selection = {}
 
     --loads the current directry from the cache to save loading time
