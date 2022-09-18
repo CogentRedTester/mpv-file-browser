@@ -735,11 +735,9 @@ local function update_ass()
     if not overflow then finish = #state.list end
 
     --adding a header to show there are items above in the list
-    append(style.footer_header)
     if start > 1 then
-        append((start-1)..' item(s) above')
+        append(style.footer_header..(start-1)..' item(s) above\\N\\N')
     end
-    append('\\h\\N\\N')
 
     for i=start, finish do
         local v = state.list[i]
