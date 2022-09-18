@@ -890,25 +890,24 @@ local function update_mouse_pos(_, mouse_pos)
     if not mouse_pos then mouse_pos = mp.get_property_native("mouse-pos") end
     if not mouse_pos.hover then return end
     local scale = mp.get_property_number("osd-height", 0) / 720
-    local osd_offset = 10
+    local osd_offset = scale * mp.get_property("osd-margin-y", 22)
 
     --calculate position when browser is aligned to the top of the screen
     if state.osd_alignment == "top" then
-        local header_offset = osd_offset + (2 * scale * o.font_size_header) + (o.font_size_wrappers * scale * 2)
+        local header_offset = osd_offset + (2 * scale * o.font_size_header) + (state.scroll_offset > 0 and (scale * o.font_size_wrappers) or 0)
 
-        state.selected = math.ceil((mouse_pos.y-header_offset) / (o.font_size_body* scale)) + state.scroll_offset
+        state.selected = math.ceil((mouse_pos.y-header_offset) / (scale * o.font_size_body)) + state.scroll_offset
 
     --calculate position when browser is aligned to the bottom of the screen
-    --this calculation is slightly off when a bottom wrapper exists, hence the `+5`.
+    --this calculation is slightly off when a bottom wrapper exists,
     --I do not know what causes this.
     elseif state.osd_alignment == "bottom" then
-        mouse_pos.y = (mp.get_property_number("osd-height", 0) - osd_offset) - mouse_pos.y
+        mouse_pos.y = (mp.get_property_number("osd-height", 0)) - mouse_pos.y
 
         local bottom = math.min(#state.list, state.scroll_offset + o.num_entries)
-        local footer_offset = (bottom < #state.list) and (o.font_size_wrappers * scale) + 5 or 0
-        footer_offset = footer_offset
+        local footer_offset = (2 * scale * o.font_size_wrappers) + osd_offset
 
-        state.selected = bottom - math.floor((mouse_pos.y - footer_offset) / (o.font_size_body* scale))
+        state.selected = bottom - math.floor((mouse_pos.y - footer_offset) / (scale * o.font_size_body))
     end
 
     update_ass()
