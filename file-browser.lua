@@ -831,7 +831,7 @@ local function scroll(n, wrap)
 
     --moves the scroll window down so that the selected item is in the middle of the screen
     state.scroll_offset = state.selected - (math.ceil(o.num_entries/2)-1)
-    if state.scroll_offset < 0 or (state.scroll_offset + o.num_entries) > #state.list then
+    if state.scroll_offset < 0 then
         state.scroll_offset = 0
     end
     update_ass()
@@ -884,8 +884,10 @@ end
 -- scrolls the view window when using mouse mode
 local function wheel(direction)
     state.scroll_offset = state.scroll_offset + direction
-    if state.scroll_offset < 0 or (state.scroll_offset + o.num_entries) > #state.list then
+    if state.scroll_offset < 0 then
         state.scroll_offset = 0
+    elseif (state.scroll_offset + o.num_entries) > #state.list then
+        state.scroll_offset = #state.list - o.num_entries
     end
     update_mouse_pos()
 end
