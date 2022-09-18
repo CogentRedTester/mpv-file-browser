@@ -257,7 +257,7 @@ local compatible_file_extensions = {
 local __cache = {}
 
 __cache.cached_values = {
-    "directory", "directory_label", "list", "selected", "selection", "parser", "empty_text", "co"
+    "directory", "directory_label", "list", "selected", "selection", "parser", "empty_text", "co", "scroll_offset"
 }
 
 --inserts latest state values onto the cache stack
@@ -723,9 +723,14 @@ local function update_ass()
         if finish + state.scroll_offset > #state.list then
             state.scroll_offset = #state.list - finish
         end
-        start = start + state.scroll_offset
-        finish = finish + state.scroll_offset
     end
+    if state.selected < state.scroll_offset or state.selected > (state.scroll_offset + o.num_entries) then
+        state.scroll_offset = state.selected - (math.ceil(o.num_entries/2)-1)
+        if state.scroll_offset < 0 then state.scroll_offset = 0 end
+    end
+
+    start = start + state.scroll_offset
+    finish = finish + state.scroll_offset
 
     --making sure that we don't overstep the boundaries
     if start < 1 then start = 1 end
