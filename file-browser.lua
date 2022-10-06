@@ -89,6 +89,9 @@ local o = {
     --directory to load external modules - currently just user-input-module
     module_directory = "~~/script-modules",
 
+    --enable experimental mouse mode
+    mouse_mode = false,
+
     --force file-browser to use a specific text alignment (default: top-left)
     --uses ass tag alignment numbers: https://aegi.vmoe.info/docs/3.0/ASS_Tags/#index23h3
     --set to 0 to use the default mpv osd-align options
@@ -183,11 +186,13 @@ local style = {
 }
 
 local state = {
-    list = {},
-    selected = 1,
-    hidden = true,
-    flag_update = false,
-    keybinds = nil,
+    list = {},                      -- list of items
+    selected = 1,                   -- currently selected item
+    scroll_offset = 0,
+    osd_alignment = "",
+    hidden = true,                  -- whether the browser is hidden
+    flag_update = false,            -- should we redraw the browser when next opened
+    keybinds = nil,                 -- array of dynamic deybinds
 
     parser = nil,
     directory = nil,
@@ -199,6 +204,12 @@ local state = {
     initial_selection = nil,
     selection = {}
 }
+
+--if the alignment isn't automated then we'll store a static value
+--numbers defined here: https://aegi.vmoe.info/docs/3.0/ASS_Tags/#index23h3
+if o.alignment >= 7 then state.osd_alignment = "top"
+elseif o.alignment >= 4 then state.osd_alignment = "center"
+elseif o.alignment >= 1 then state.osd_alignment = "bottom" end
 
 --the parser table actually contains 3 entries for each parser
 --a numeric entry which represents the priority of the parsers and has the parser object as the value
@@ -246,7 +257,7 @@ local compatible_file_extensions = {
 local __cache = {}
 
 __cache.cached_values = {
-    "directory", "directory_label", "list", "selected", "selection", "parser", "empty_text", "co"
+    "directory", "directory_label", "list", "selected", "selection", "parser", "empty_text", "co", "scroll_offset"
 }
 
 --inserts latest state values onto the cache stack
@@ -707,19 +718,15 @@ local function update_ass()
     local start = 1
     local finish = start+o.num_entries-1
 
-    --handling cursor positioning
-    local mid = math.ceil(o.num_entries/2)+1
-    if state.selected+mid > finish then
-        local offset = state.selected - finish + mid
-
-        --if we've overshot the end of the list then undo some of the offset
-        if finish + offset > #state.list then
-            offset = offset - ((finish+offset) - #state.list)
+    --handling the offset caused by scrolling
+    if state.scroll_offset > 0 then
+        if finish + state.scroll_offset > #state.list then
+            state.scroll_offset = #state.list - finish
         end
-
-        start = start + offset
-        finish = finish + offset
     end
+
+    start = start + state.scroll_offset
+    finish = finish + state.scroll_offset
 
     --making sure that we don't overstep the boundaries
     if start < 1 then start = 1 end
@@ -728,7 +735,9 @@ local function update_ass()
     if not overflow then finish = #state.list end
 
     --adding a header to show there are items above in the list
-    if start > 1 then append(style.footer_header..(start-1)..' item(s) above\\N\\N') end
+    if start > 1 then
+        append(style.footer_header..(start-1)..' item(s) above\\N\\N')
+    end
 
     for i=start, finish do
         local v = state.list[i]
@@ -768,7 +777,11 @@ local function update_ass()
         newline()
     end
 
-    if overflow then append('\\N'..style.footer_header..#state.list-finish..' item(s) remaining') end
+    -- always draw a gap for the footer to reserve space if osd is aligned to the bottom
+    append(style.footer_header.."\\N\\h")
+    if overflow then
+        append(#state.list-finish..' item(s) remaining')
+    end
     ass:update()
 end
 
@@ -831,6 +844,12 @@ local function scroll(n, wrap)
     end
 
     if state.multiselect_start then drag_select(original_pos, state.selected) end
+
+    --moves the scroll window down so that the selected item is in the middle of the screen
+    state.scroll_offset = state.selected - (math.ceil(o.num_entries/2)-1)
+    if state.scroll_offset < 0 then
+        state.scroll_offset = 0
+    end
     update_ass()
 end
 
@@ -860,7 +879,46 @@ local function toggle_select_mode()
     end
 end
 
+--update the selected item based on the mouse position
+local function update_mouse_pos(_, mouse_pos)
+    if not o.mouse_mode or state.hidden or #state.list == 0 then return end
 
+    if not mouse_pos then mouse_pos = mp.get_property_native("mouse-pos") end
+    if not mouse_pos.hover then return end
+    local scale = mp.get_property_number("osd-height", 0) / 720
+    local osd_offset = scale * mp.get_property("osd-margin-y", 22)
+
+    --calculate position when browser is aligned to the top of the screen
+    if state.osd_alignment == "top" then
+        local header_offset = osd_offset + (2 * scale * o.font_size_header) + (state.scroll_offset > 0 and (scale * o.font_size_wrappers) or 0)
+
+        state.selected = math.ceil((mouse_pos.y-header_offset) / (scale * o.font_size_body)) + state.scroll_offset
+
+    --calculate position when browser is aligned to the bottom of the screen
+    --this calculation is slightly off when a bottom wrapper exists,
+    --I do not know what causes this.
+    elseif state.osd_alignment == "bottom" then
+        mouse_pos.y = (mp.get_property_number("osd-height", 0)) - mouse_pos.y
+
+        local bottom = math.min(#state.list, state.scroll_offset + o.num_entries)
+        local footer_offset = (2 * scale * o.font_size_wrappers) + osd_offset
+
+        state.selected = bottom - math.floor((mouse_pos.y - footer_offset) / (scale * o.font_size_body))
+    end
+
+    update_ass()
+end
+
+-- scrolls the view window when using mouse mode
+local function wheel(direction)
+    state.scroll_offset = state.scroll_offset + direction
+    if state.scroll_offset < 0 then
+        state.scroll_offset = 0
+    elseif (state.scroll_offset + o.num_entries) > #state.list then
+        state.scroll_offset = #state.list - o.num_entries
+    end
+    update_mouse_pos()
+end
 
 --------------------------------------------------------------------------------------------------------
 -----------------------------------------Directory Movement---------------------------------------------
@@ -964,6 +1022,7 @@ local function update_list(moving_adjacent)
     msg.verbose('opening directory: ' .. state.directory)
 
     state.selected = 1
+    state.scroll_offset = 0
     state.selection = {}
 
     --loads the current directry from the cache to save loading time
@@ -1120,6 +1179,8 @@ local function open()
         mp.add_forced_key_binding(v[1], 'dynamic/'..v[2], v[3], v[4])
     end
 
+    if o.mouse_mode then mp.observe_property("mouse-pos", "native", update_mouse_pos) end
+
     utils.shared_script_property_set("file_browser-open", "yes")
     state.hidden = false
     if state.directory == nil then
@@ -1143,6 +1204,7 @@ local function close()
     end
 
     utils.shared_script_property_set("file_browser-open", "no")
+    if o.mouse_mode then mp.unobserve_property(update_mouse_pos) end
     state.hidden = true
     ass:remove()
 end
@@ -1449,6 +1511,24 @@ state.keybinds = {
     {'S',           'select_item',  toggle_selection},
     {'Ctrl+a',      'select_all',   select_all}
 }
+
+local function add_key(key)
+    table.insert(state.keybinds, key)
+end
+
+--default keybinds for the experimental mouse-mode
+if o.mouse_mode then
+    add_key{'WHEEL_DOWN',       'mouse/scroll_down',    function() wheel(1) end}
+    add_key{'WHEEL_UP',         'mouse/scroll_up',      function() wheel(-1) end}
+    add_key{'MBTN_LEFT',        'mouse/down_dir',       down_dir}
+    add_key{'MBTN_RIGHT',       'mouse/up_dir',         up_dir}
+    add_key{'MBTN_RIGHT_DBL',   'mouse/goto_root',      goto_root}
+    add_key{'Shift+MBTN_LEFT',  'mouse/play_left',      function() open_file('replace', false) end}
+
+    add_key{'MBTN_MID',         'mouse/play_mid',       function() open_file('replace', false) end}
+    add_key{'Shift+MBTN_MID',   'mouse/play_append',    function() open_file('append-play', false) end}
+    add_key{'Alt+MBTN_MID',     'mouse/play_autoload',  function() open_file('replace', true) end}
+end
 
 --a map of key-keybinds - only saves the latest keybind if multiple have the same key code
 local top_level_keys = {}
@@ -2069,6 +2149,16 @@ mp.observe_property('dvd-device', 'string', function(_, device)
     if not device or device == "" then device = "/dev/dvd/" end
     dvd_device = API.fix_path(device, true)
 end)
+
+--if the osd-alignment changes while the browser is open then update immediately
+if o.alignment == 0 then
+    mp.observe_property("osd-align-x", "string", function() update_ass() end)
+    mp.observe_property("osd-align-y", "string", function(_, alignment)
+        state.osd_alignment = alignment
+        update_mouse_pos()
+        update_ass()
+    end)
+end
 
 --declares the keybind to open the browser
 mp.add_key_binding('MENU','browse-files', toggle)
