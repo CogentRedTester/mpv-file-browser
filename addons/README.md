@@ -39,6 +39,9 @@ Implements support for ftp file servers. Requires `curl` in the system path.
 **home-label**  
 Replaces the user's home directory in the directory header with `~/`.
 
+**win-root**  
+Automatically populates the root with windows drives.
+
 **url-decode**  
 Decodes URL directories to make them more readable. Does not decode the names of items in the list.
 
