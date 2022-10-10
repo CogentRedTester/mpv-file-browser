@@ -99,7 +99,8 @@ To see how to enable and use custom keybinds, see [custom-keybinds.md](custom-ke
 Add-ons are ways to add extra features to file-browser, for example adding support for network file servers like ftp, or implementing virtual directories in the root like recently opened files.
 They can be enabled by setting `addon` script-opt to yes, and placing the addon file into the `~~/script-modules/file-browser-addons/` directory.
 
-For a collection of premade addons, and instructions on writing your own addon, see [here](addons/README.md).
+For a list of existing addons see the [wiki](https://github.com/CogentRedTester/mpv-file-browser/wiki/Addon-List).
+For instructions on writing your own addons see [addons.md](addons/addons.md).
 
 ## Script Messages
 
@@ -148,7 +149,7 @@ profile-restore=copy
 osc=no
 ```
 
-See https://github.com/CogentRedTester/mpv-file-browser/issues/55 for more details on this.
+See [#55](https://github.com/CogentRedTester/mpv-file-browser/issues/55) for more details on this.
 
 ## [mpv-user-input](https://github.com/CogentRedTester/mpv-user-input)
 
