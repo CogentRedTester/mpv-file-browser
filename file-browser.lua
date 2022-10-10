@@ -89,6 +89,9 @@ local o = {
     --directory to load external modules - currently just user-input-module
     module_directory = "~~/script-modules",
 
+    --turn the OSC idle screen off and on when opening and closing the browser
+    toggle_idlescreen = false,
+
     --force file-browser to use a specific text alignment (default: top-left)
     --uses ass tag alignment numbers: https://aegi.vmoe.info/docs/3.0/ASS_Tags/#index23h3
     --set to 0 to use the default mpv osd-align options
@@ -1121,6 +1124,7 @@ local function open()
     end
 
     utils.shared_script_property_set("file_browser-open", "yes")
+    if o.toggle_idlescreen then mp.commandv('script-message', 'osc-idlescreen', 'no', 'no_osd') end
     state.hidden = false
     if state.directory == nil then
         local path = mp.get_property('path')
@@ -1143,6 +1147,7 @@ local function close()
     end
 
     utils.shared_script_property_set("file_browser-open", "no")
+    if o.toggle_idlescreen then mp.commandv('script-message', 'osc-idlescreen', 'yes', 'no_osd') end
     state.hidden = true
     ass:remove()
 end
