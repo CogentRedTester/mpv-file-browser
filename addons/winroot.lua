@@ -31,7 +31,6 @@ end
 -- adds windows drives to the root if they are not already present
 local function import_drives()
     local drives = get_drives()
-    local root = fb.get_root()
 
     for _, drive in ipairs(drives) do
         fb.register_root_item(drive)
