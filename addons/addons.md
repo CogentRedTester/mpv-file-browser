@@ -277,9 +277,9 @@ they use the form `file_browser/dynamic/[parser_ID]/[name]`, where `[parser_id]`
 ### Native Functions vs Command Tables
 
 There are two ways of specifying the behaviour of a keybind.
-In the array form, the 3rd argument is a function to be executed, and in the custom-keybind form the `command` field is a table of mpv input commands to run.
-
-These two ways of specifying commands are independant of how the overall keybind is defined.
+It can be in command table form, as done when using custom-keybind syntax, and it can be done in
+native function form, as done when using the `mp.add_key_binding` syntax.
+However, these two ways of specifying commands are independant of how the overall keybind is defined.
 What this means is that the command field of the custom-keybinds syntax can be an array, and the
 3rd value in the array syntax can be a table of mpv commands.
 
@@ -295,11 +295,13 @@ parser.keybinds = {
     {
         key = "Alt+DEL",
         name = "delete_files",
-        command = main,
-        filter = "files"
+        command = main
     }
 }
 ```
+
+There are some limitations however, not all custom-keybind options are supported when using native functions.
+The supported options are: `key`, `name`, `flags`, `parser`, `passthrough`. The other options can be replicated manually (see below).
 
 ### Keybind Functions
 
