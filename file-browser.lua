@@ -1547,8 +1547,11 @@ local function run_custom_command(cmd, items, state)
 end
 
 --runs one of the custom commands
-local function custom_command(cmd, state, co)
+local function run_custom_keybind(cmd, state, co)
     if cmd.parser and cmd.parser ~= (state.parser.keybind_name or state.parser.name) then return false end
+
+    --these are for the default keybinds, or from addons which use direct functions
+    if type(cmd.command) == 'function' then return cmd.command(cmd, cmd.addon and API.copy_table(state) or state, co) end
 
     --the function terminates here if we are running the command on a single item
     if not (cmd.multiselect and next(state.selection)) then
@@ -1597,17 +1600,13 @@ end
 local function run_keybind_recursive(keybind, state, co)
     msg.trace("Attempting custom command:", utils.to_string(keybind))
 
-    --these are for the default keybinds, or from addons which use direct functions
-    local addon_fn = type(keybind.command) == "function"
-    local fn = addon_fn and keybind.command or custom_command
-
     if keybind.passthrough ~= nil then
-        fn(keybind, addon_fn and API.copy_table(state) or state, co)
+        run_custom_keybind(keybind, state, co)
         if keybind.passthrough == true and keybind.prev_key then
             run_keybind_recursive(keybind.prev_key, state, co)
         end
     else
-        if fn(keybind, state, co) == false and keybind.prev_key then
+        if run_custom_keybind(keybind, state, co) == false and keybind.prev_key then
             run_keybind_recursive(keybind.prev_key, state, co)
         end
     end
@@ -1684,6 +1683,7 @@ local function setup_keybinds()
                     else keybind = API.copy_table(keybind) end
 
                     keybind.name = parsers[parser].id.."/"..(keybind.name or tostring(i))
+                    keybind.addon = true
                     insert_custom_keybind(keybind)
                 end
             end
