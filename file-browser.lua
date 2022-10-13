@@ -589,8 +589,8 @@ end
 --------------------------------------------------------------------------------------------------------
 
 --parser object for the root
---this object is not added to the parsers table so that scripts cannot get access to
---the root table, which is returned directly by parse()
+--not inserted to the parser list as it has special behaviour
+--it does get get added to parsers under it's ID to prevent confusing duplicates
 local root_parser = {
     name = "root",
     priority = math.huge,
@@ -1960,6 +1960,8 @@ local function setup_parser(parser, file)
     if parser.priority == nil then parser.priority = 0 end
     if type(parser.priority) ~= "number" then return msg.error("parser", parser:get_id(), "needs a numeric priority") end
 
+    --the root parser has special behaviour, so it should not be in the list of parsers
+    if parser == root_parser then return end
     table.insert(parsers, parser)
 end
 
@@ -2050,6 +2052,7 @@ end
 setup_root()
 
 setup_parser(file_parser, "file-browser.lua")
+setup_parser(root_parser, 'file-browser.lua')
 if o.addons then
     --all of the API functions need to be defined before this point for the addons to be able to access them safely
     setup_addons()
