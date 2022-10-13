@@ -437,7 +437,9 @@ return parser
 | register_parseable_extension | function | string                       | -       | register a file extension that the browser will attempt to open, like a directory - for addons which can parse files     |
 | remove_parseable_extension   | function | string                       | -       | remove a file extension that the browser will attempt to open like a directory                                           |
 | add_default_extension        | function | string                       | -       | adds the given extension to the default extension filter whitelist - can only be run inside setup()                      |
-| insert_root_item             | function | item_table, number(optional) | -       | add an item_table (must be a directory) to the root list at the specified position - if number is nil then append to end |
+| insert_root_item             | function | item_table, number? | -      | add an item_table (must be a directory) to the root list at the specified position - if number is nil then append to end |
+| register_root_item| function| (item_table or string), number? | boolean| registers an item_table or a path string to be added to the root and an optional priority value that determines the position (default is 100) - only adds the item if it is not already in the root and returns a boolean that is true if the item was added and false otherwise |
+| register_root_item           | method   | (item_table or string), number?| -     | a wrapper around the above function which uses the parser's priority value if none is specified                          |
 | browse_directory             | function | string                       | -       | clears the cache and opens the given directory in the browser - if the browser is closed then open it                    |
 | parse_directory              | function | string, parser_state_table | list_table, opts_table       | starts a new scan for the given directory - note that all parsers are called as normal, so beware infinite recursion     |
 
