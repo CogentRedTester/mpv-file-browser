@@ -434,24 +434,71 @@ return parser
 
 ### General Functions
 
-| key                          | type     | arguments                    | returns | description                                                                                                              |
-|------------------------------|----------|------------------------------|---------|--------------------------------------------------------------------------------------------------------------------------|
-| API_VERSION                  | string   | -                            | -       | the current API version in use                                                                                           |
-| register_parseable_extension | function | string                       | -       | register a file extension that the browser will attempt to open, like a directory - for addons which can parse files     |
-| remove_parseable_extension   | function | string                       | -       | remove a file extension that the browser will attempt to open like a directory                                           |
-| add_default_extension        | function | string                       | -       | adds the given extension to the default extension filter whitelist - can only be run inside setup()                      |
-| insert_root_item             | function | item_table, number? | -      | add an item_table (must be a directory) to the root list at the specified position - if number is nil then append to end |
-| register_root_item| function| (item_table or string), number? | boolean| registers an item_table or a path string to be added to the root and an optional priority value that determines the position (default is 100) - only adds the item if it is not already in the root and returns a boolean that is true if the item was added and false otherwise |
-| register_root_item           | method   | (item_table or string), number?| -     | a wrapper around the above function which uses the parser's priority value if none is specified                          |
-| browse_directory             | function | string                       | -       | clears the cache and opens the given directory in the browser - if the browser is closed then open it                    |
-| parse_directory              | function | string, parser_state_table | list_table, opts_table       | starts a new scan for the given directory - note that all parsers are called as normal, so beware infinite recursion     |
+#### `fb.add_default_extension(ext: string): void`
 
-Note that the `parse_directory()` function must be called from inside a [coroutine](#coroutines).
+Adds the given extension to the default extension filter whitelist. Can only be run inside the `setup()` method.
+
+#### `fb.API_VERSION: string`
+
+The current API version in use by file-browser.
+
+#### `fb.browse_directory(directory: string): void`
+
+Clears the cache and opens the given directory in the browser. If the browser is closed then it will be opened.
+This function is non-blocking, it is possible that the function will return before the directory has finished
+being scanned.
+
+This is the equivalent of calling the `browse-directory` script-message.
+
+#### `fb.insert_root_item(item: item_table, pos?: number): void`
+
+Add an item_table to the root list at the specified position - if number is nil then append to end.
+`item` must be a valid item_table of `type='dir'`.
+
+#### `fb.register_parseable_extension(ext: string): void`
+
+Register a file extension that the browser will attempt to open, like a directory - for addons which can parse files such
+as playlist files.
+
+#### `fb.register_root_item(item: string | item_table, priority?: number): boolean`
+
+Registers an item to be added to the root and an optional priority value that determines the position relative to other items (default is 100).
+A lower priority number is better, meaning they will be placed earlier in the list.
+Only adds the item if it is not already in the root and returns a boolean that specifies whether or not the item was added.
+
+If `item` is a string then a new item_table is created with the values: `{ type = 'dir', name = item }`.
+If `item` is an item_table then it must be a valid directory item.
+Use [`fb.fix_path(name, true)`](#fbfix_pathpath-string-is_directory-boolean-string) to ensure the name field is correct.
+
+This function should be used over the older `fb.insert_root_item`.
+
+#### `fb.remove_parseable_extension(ext: string): void`
+
+Remove a file extension that the browser will attempt to open like a directory.
+
+#### `fb.parse_directory(directory: string, parse?: parse_state_table): (list: list_table, opts: opts_table) | nil`
+
+Starts a new scan for the given directory and returns a list_table and opts_table on success and `nil` on failure.
+Must be called from inside a [coroutine](#coroutines).
+
+This function allows addons to request the contents of directories from the loaded parsers. There are no protections
+against infinite recursion, so be careful about calling this from within another parse.
+
+Do not use the same `parse` table for multiple parses, state values for the two operations may intefere with each other
+and cause undefined behaviour. If the `parse.source` field is not set then it will be set to `"addon"`.
+
+Note that this function is for creating new parse operations, if you wish to create virtual directories or modify
+the results of other parsers then use [`defer`](#parserdeferdirectory-string-list-list_table-opts-opts_table--nil).
 
 Also note that every parse operation is expected to have its own unique coroutine. This acts as a unique
 ID that can be used internally or by other addons. This means that if multiple `parse_directory` operations
 are run within a single coroutine then file-browser will automatically create a new coroutine for the scan,
 which hands execution back to the original coroutine upon completion.
+
+#### `parser:register_root_item(item: string | item_table, priority?: number): boolean`
+
+A wrapper around [`fb.register_root_item`](#fbregister_root_itemitem-string--item_table-priority-number-boolean)
+which uses the parser's priority value if `priority` is `nil`.
 
 ### Advanced Functions
 
