@@ -400,7 +400,7 @@ local parser = {
 }
 
 function parser:setup()
-    fb.insert_root_item({ name = "Example/", type = "dir" })
+    fb.register_root_item("Example/")
 end
 
 return parser
@@ -409,9 +409,8 @@ return parser
 ### Parser API
 
 In addition to the standard API there is also an extra parser API that provides
-several parser specific methods,
-labeled `method` below instead of `function`. This API is added to the parser
-object after it is loaded by file-browser,
+several parser specific methods, listed below using `parser:method` instead of `fb.function`.
+This API is added to the parser object after it is loaded by file-browser,
 so if a script wants to call them immediately on load they must do so in the `setup` method.
 All the standard API functions are also available in the parser API.
 
@@ -465,6 +464,7 @@ as playlist files.
 Registers an item to be added to the root and an optional priority value that determines the position relative to other items (default is 100).
 A lower priority number is better, meaning they will be placed earlier in the list.
 Only adds the item if it is not already in the root and returns a boolean that specifies whether or not the item was added.
+Must be called during or after the `parser:setup()` method is run.
 
 If `item` is a string then a new item_table is created with the values: `{ type = 'dir', name = item }`.
 If `item` is an item_table then it must be a valid directory item.
@@ -502,17 +502,125 @@ which uses the parser's priority value if `priority` is `nil`.
 
 ### Advanced Functions
 
-| key           | type     | arguments        | returns                 | description                     |
-|---------------|----------|------------------|-------------------------|---------------------------------|
-| defer         | method   | string | list_table, opts_table  | forwards the given directory to the next valid parser - can be used to redirect the browser or to modify the results of lower priority parsers - see [Using `defer`](#using-defer) |
-| rescan             | function |                              | -      | rescans the current directory - equivalent to Ctrl+r without the cache refresh for higher level directories              |
-| redraw             | function |                              | -      | forces a redraw of the browser                                                                                           |
-| clear_cache                  | function |                             | -       | clears the cache - use if modifying the contents of higher level directories                                             |
-| coroutine.run        | function | function, ...    | -                | runs the given function in a new coroutine - passes any additional arguments to the function |
-| coroutine.resume_err | function | coroutine, ...   | -                | resumes the given coroutine with the given arguments, if an error is returned then log an error message with `mp.msg.error()` |
-| coroutine.resume_catch | function | coroutine, ...   | ...            | same as `coroutine.resume_err` but actually captures and returns the results of `coroutine.resume()`|
-| coroutine.assert     | function   | string     | coroutine       | throws an error if the function is not called from within a coroutine and returns the running coroutine on success - the string argument can be used to set a custom error message |
-| coroutine.callback   | function   | -          | function        | creates and returns a callback function that resumes the current coroutine - see [using `coroutine.callback`](#using-coroutinecallback) for more details |
+#### `fb.clear_cache(): void`
+
+Clears the directory cache. Use this if you are modifying the contents of directories other
+than the current one to ensure that their contents will be rescanned when next opened.
+
+#### `fb.coroutine.assert(err: string): coroutine`
+
+Throws an error if it is not called from within a coroutine. Returns the currently running coroutine on success.
+The string argument can be used to throw a custom error string.
+
+#### `fb.coroutine.callback(): function`
+
+Creates and returns a callback function that resumes the current coroutine.
+This function is designed to help streamline asynchronous operations. The best way to explain is with an example:
+
+```lua
+local function execute(args)
+    mp.command_native_async({
+            name = "subprocess",
+            playback_only = false,
+            capture_stdout = true,
+            capture_stderr = true,
+            args = args
+        }, fb.coroutine.callback())
+
+    local _, cmd = coroutine.yield()
+
+    return cmd.status == 0 and cmd.stdout or nil
+end
+```
+
+This function uses the mpv [subprocess](https://mpv.io/manual/master/#command-interface-subprocess)
+command to execute some system operation. To prevent the whole script (file-browser and all addons) from freezing
+it uses the [command_native_async](https://mpv.io/manual/master/#lua-scripting-mp-command-native-async(table-[,fn])) command
+to execute the operation asynchronously and takes a callback function as its second argument.
+
+`coroutine.callback())` will automatically create a callback function to resume whatever coroutine ran the `execute` function.
+Any arguments passed into the callback function (by the async function, not by you) will be passed on to the resume;
+in this case `command_native_async` passes three values into the callback, of which only the second is of interest to me.
+
+The unsaid expectation is that the programmer will yield execution before that callback returns. In this example I
+yield immediately after running the async command.
+
+If you are doing this during a parse operation you could also substitute `coroutine.yield()` with `parse_state:yield()` to abort the parse if the user changed
+browser directories during the asynchronous operation.
+
+If you have no idea what I've been talking about read the [Lua manual on coroutines](https://www.lua.org/manual/5.1/manual.html#2.11).
+
+#### `fb.coroutine.resume_catch(co: coroutine, ...): (boolean, ...)`
+
+Runs `coroutine.resume(co, ...)` with the given coroutine, passing through any additional arguments.
+If the coroutine throws an error then an error message and stacktrace is printed to the console.
+All the return values of `coroutine.resume` are caught and returned.
+
+#### `fb.coroutine.resume_err(co: coroutine, ...): boolean`
+
+Runs `coroutine.resume(co, ...)` with the given coroutine, passing through any additional arguments.
+If the coroutine throws an error then an error message and stacktrace is printed to the console.
+Returns the success boolean returned by `coroutine.resume`, but drops all other return values.
+
+#### `fb.coroutine.run(fn: function, ...): void`
+
+Runs the given function in a new coroutine, passing through any additional arguments.
+
+#### `fb.rescan(): void`
+
+Rescans the current directory. Equivalent to Ctrl+r without the cache refresh for higher level directories.
+
+#### `fb.redraw(): void`
+
+Forces a redraw of the browser UI.
+
+#### `parser:defer(directory: string): (list: list_table, opts: opts_table) | nil`
+
+Forwards the given directory to the next valid parser. For use from within a parse operation.
+
+The `defer` function is very powerful, and can be used by scripts to create virtual directories, or to modify the results of other parsers.
+However, due to how much freedom Lua gives coders, it is impossible for file-browser to ensure that parsers are using defer correctly, which can cause unexpected results.
+The following are a list of recommendations that will increase the compatability with other parsers:
+
+* Always return the opts table that is returned by defer, this can contain important values for file-browser, as described [above](#the-opts-table).
+  * If required modify values in the existing opts table, don't create a new one.
+* Respect the `sorted` and `filtered` values in the opts table. This may mean calling `sort` or `filter` manually.
+* Think about how to handle the `directory_label` field, especially how it might interract with any virtual paths the parser may be maintaining.
+* Think about what to do if the `directory` field is set.
+* Think if you want your parser to take full ownership of the results of `defer`, if so consider setting `opts.id = self:get_id()`.
+  * Currently this only affects custom keybind filtering, though it may be changed in the future.
+
+The [home-label](https://github.com/CogentRedTester/mpv-file-browser/blob/master/addons/home-label.lua)
+addon provides a good simple example of the safe use of defer. It lets the normal file
+parser load the home directory, then modifies the directory label.
+
+```lua
+local mp = require "mp"
+local fb = require "file-browser"
+
+local home = fb.fix_path(mp.command_native({"expand-path", "~/"}), true)
+
+local home_label = {
+    version = '1.0.0',
+    priority = 100
+}
+
+function home_label:can_parse(directory)
+    return directory:sub(1, home:len()) == home
+end
+
+function home_label:parse(directory, ...)
+    local list, opts = self:defer(directory, ...)
+
+    if (not opts.directory or opts.directory == directory) and not opts.directory_label then
+        opts.directory_label = "~/"..(directory:sub(home:len()+1) or "")
+    end
+
+    return list, opts
+end
+
+return home_label
+```
 
 #### Using `coroutine.callback`
 
@@ -551,51 +659,6 @@ If you are doing this during a parse operation you could also substitute `corout
 browser directories during the asynchronous operation.
 
 If you have no idea what I've been talking about read the [Lua manual on coroutines](https://www.lua.org/manual/5.1/manual.html#2.11).
-
-#### Using `defer`
-
-The `defer` function is very powerful, and can be used by scripts to create virtual directories, or to modify the results of other parsers.
-However, due to how much freedom Lua gives coders, it is impossible for file-browser to ensure that parsers are using defer correctly, which can cause unexpected results.
-The following are a list of recommendations that will increase the compatability with other parsers:
-
-* Always return the opts table that is returned by defer, this can contain important values for file-browser, as described [above](#the-opts-table).
-  * If required modify values in the existing opts table, don't create a new one.
-* Respect the `sorted` and `filtered` values in the opts table. This may mean calling `sort` or `filter` manually.
-* Think about how to handle the `directory_label` field, especially how it might interract with any virtual paths the parser may be maintaining.
-* Think about what to do if the `directory` field is set.
-* Think if you want your parser to take full ownership of the results of `defer`, if so consider setting `opts.id = self:get_id()`.
-  * Currently this only affects custom keybind filtering, though it may be changed in the future.
-
-The [home-label](https://github.com/CogentRedTester/mpv-file-browser/blob/master/addons/home-label.lua)
-addon provides a good simple example of the safe use of defer. It lets the normal file
-parser load the home directory, then modifies the directory label.
-
-```lua
-local mp = require "mp"
-local fb = require "file-browser"
-
-local home = fb.fix_path(mp.command_native({"expand-path", "~/"}), true)
-
-local home_label = {
-    priority = 100
-}
-
-function home_label:can_parse(directory)
-    return directory:sub(1, home:len()) == home
-end
-
-function home_label:parse(directory, ...)
-    local list, opts = self:defer(directory, ...)
-
-    if (not opts.directory or opts.directory == directory) and not opts.directory_label then
-        opts.directory_label = "~/"..(directory:sub(home:len()+1) or "")
-    end
-
-    return list, opts
-end
-
-return home_label
-```
 
 ### Utility Functions
 
