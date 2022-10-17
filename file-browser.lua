@@ -423,7 +423,7 @@ end
 --standardises filepaths across systems
 function API.fix_path(str, is_directory)
     str = string.gsub(str, [[\]],[[/]])
-    str = str:gsub([[/./]], [[/]])
+    str = str:gsub([[/%./]], [[/]])
     if is_directory and str:sub(-1) ~= '/' then str = str..'/' end
     return str
 end
