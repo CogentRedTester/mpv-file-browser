@@ -56,6 +56,7 @@ Here is an extremely simple example of an addon creating a parser table and retu
 
 ```lua
 local parser = {
+    version = '1.0.0',
     priority = 100,
     name = "example"        -- this parser will have the id 'example' or 'example_#' if there are duplicates
 }
@@ -159,7 +160,7 @@ Each item has the following members:
 
 File-browser expects that `type` and `name` will be set for each item, so leaving these out will probably crash the script.
 File-browser also assumes that all directories end in a `/` when appending name, and that there will be no backslashes.
-The API function [`fix_path`](#Utility-Functions) can be used to ensure that paths conform to file-browser rules.
+The API function [`fix_path`](#utility-functions) can be used to ensure that paths conform to file-browser rules.
 
 Here is an example of a static list table being returned by the `parse` method.
 This would allow one to specify a custom list of items.
@@ -277,9 +278,9 @@ they use the form `file_browser/dynamic/[parser_ID]/[name]`, where `[parser_id]`
 ### Native Functions vs Command Tables
 
 There are two ways of specifying the behaviour of a keybind.
-In the array form, the 3rd argument is a function to be executed, and in the custom-keybind form the `command` field is a table of mpv input commands to run.
-
-These two ways of specifying commands are independant of how the overall keybind is defined.
+It can be in command table form, as done when using custom-keybind syntax, and it can be done in
+native function form, as done when using the `mp.add_key_binding` syntax.
+However, these two ways of specifying commands are independant of how the overall keybind is defined.
 What this means is that the command field of the custom-keybinds syntax can be an array, and the
 3rd value in the array syntax can be a table of mpv commands.
 
@@ -295,11 +296,13 @@ parser.keybinds = {
     {
         key = "Alt+DEL",
         name = "delete_files",
-        command = main,
-        filter = "files"
+        command = main
     }
 }
 ```
+
+There are some limitations however, not all custom-keybind options are supported when using native functions.
+The supported options are: `key`, `name`, `flags`, `parser`, `passthrough`. The other options can be replicated manually (see below).
 
 ### Keybind Functions
 
@@ -437,7 +440,9 @@ return parser
 | register_parseable_extension | function | string                       | -       | register a file extension that the browser will attempt to open, like a directory - for addons which can parse files     |
 | remove_parseable_extension   | function | string                       | -       | remove a file extension that the browser will attempt to open like a directory                                           |
 | add_default_extension        | function | string                       | -       | adds the given extension to the default extension filter whitelist - can only be run inside setup()                      |
-| insert_root_item             | function | item_table, number(optional) | -       | add an item_table (must be a directory) to the root list at the specified position - if number is nil then append to end |
+| insert_root_item             | function | item_table, number? | -      | add an item_table (must be a directory) to the root list at the specified position - if number is nil then append to end |
+| register_root_item| function| (item_table or string), number? | boolean| registers an item_table or a path string to be added to the root and an optional priority value that determines the position (default is 100) - only adds the item if it is not already in the root and returns a boolean that is true if the item was added and false otherwise |
+| register_root_item           | method   | (item_table or string), number?| -     | a wrapper around the above function which uses the parser's priority value if none is specified                          |
 | browse_directory             | function | string                       | -       | clears the cache and opens the given directory in the browser - if the browser is closed then open it                    |
 | parse_directory              | function | string, parser_state_table | list_table, opts_table       | starts a new scan for the given directory - note that all parsers are called as normal, so beware infinite recursion     |
 
@@ -506,7 +511,7 @@ The `defer` function is very powerful, and can be used by scripts to create virt
 However, due to how much freedom Lua gives coders, it is impossible for file-browser to ensure that parsers are using defer correctly, which can cause unexpected results.
 The following are a list of recommendations that will increase the compatability with other parsers:
 
-* Always return the opts table that is returned by defer, this can contain important values for file-browser, as described [above](#The-Opts-Table).
+* Always return the opts table that is returned by defer, this can contain important values for file-browser, as described [above](#the-opts-table).
   * If required modify values in the existing opts table, don't create a new one.
 * Respect the `sorted` and `filtered` values in the opts table. This may mean calling `sort` or `filter` manually.
 * Think about how to handle the `directory_label` field, especially how it might interract with any virtual paths the parser may be maintaining.
