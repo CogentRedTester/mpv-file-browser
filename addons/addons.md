@@ -56,6 +56,7 @@ Here is an extremely simple example of an addon creating a parser table and retu
 
 ```lua
 local parser = {
+    version = '1.0.0',
     priority = 100,
     name = "example"        -- this parser will have the id 'example' or 'example_#' if there are duplicates
 }
@@ -159,7 +160,7 @@ Each item has the following members:
 
 File-browser expects that `type` and `name` will be set for each item, so leaving these out will probably crash the script.
 File-browser also assumes that all directories end in a `/` when appending name, and that there will be no backslashes.
-The API function [`fix_path`](#Utility-Functions) can be used to ensure that paths conform to file-browser rules.
+The API function [`fix_path`](#utility-functions) can be used to ensure that paths conform to file-browser rules.
 
 Here is an example of a static list table being returned by the `parse` method.
 This would allow one to specify a custom list of items.
@@ -510,7 +511,7 @@ The `defer` function is very powerful, and can be used by scripts to create virt
 However, due to how much freedom Lua gives coders, it is impossible for file-browser to ensure that parsers are using defer correctly, which can cause unexpected results.
 The following are a list of recommendations that will increase the compatability with other parsers:
 
-* Always return the opts table that is returned by defer, this can contain important values for file-browser, as described [above](#The-Opts-Table).
+* Always return the opts table that is returned by defer, this can contain important values for file-browser, as described [above](#the-opts-table).
   * If required modify values in the existing opts table, don't create a new one.
 * Respect the `sorted` and `filtered` values in the opts table. This may mean calling `sort` or `filter` manually.
 * Think about how to handle the `directory_label` field, especially how it might interract with any virtual paths the parser may be maintaining.
