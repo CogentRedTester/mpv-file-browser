@@ -622,44 +622,6 @@ end
 return home_label
 ```
 
-#### Using `coroutine.callback`
-
-This function is designed to help streamline asynchronous operations. The best way to explain is with an example:
-
-```lua
-local function execute(args)
-    local _, cmd = coroutine.yield(
-        mp.command_native_async({
-            name = "subprocess",
-            playback_only = false,
-            capture_stdout = true,
-            capture_stderr = true,
-            args = args
-        }, fb.coroutine.callback())
-    )
-
-    return cmd.status == 0 and cmd.stdout or nil
-end
-```
-
-This function uses the mpv [subprocess](https://mpv.io/manual/master/#command-interface-subprocess)
-command to execute some system operation. To prevent the whole script (including file-browser and all addons) from freezing
-it uses the [command_native_async](https://mpv.io/manual/master/#lua-scripting-mp-command-native-async(table-[,fn])) command
-to execute the operation asynchronously and takes a callback function as its second argument.
-
-`coroutine.callback())` will automatically create a callback function to resume whatever coroutine ran the `execute` function.
-Any arguments passed into the callback function (by the async function, not by you) will be passed on to the resume;
-in this case `command_native_async` passes three values into the callback, of which only the second is of interest to me.
-
-The unsaid expectation is that the programmer will yield execution before that callback returns. In this example I
-have placed the `command_native_async` command inside the yield call; this is not necessary, I just did this because I think it
-makes the code look more synchronous.
-
-If you are doing this during a parse operation you could also substitute `coroutine.yield()` with `parse_state:yield()` to abort the parse if the user changed
-browser directories during the asynchronous operation.
-
-If you have no idea what I've been talking about read the [Lua manual on coroutines](https://www.lua.org/manual/5.1/manual.html#2.11).
-
 ### Utility Functions
 
 #### `fb.ass_escape(str: string, newline_sub?: true | string): string`
