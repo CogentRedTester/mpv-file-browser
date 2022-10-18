@@ -746,35 +746,118 @@ These functions allow addons to safely get information from file-browser.
 All tables returned by these functions are copies sent through the [`fb.copy_table`](#fbcopy_tablet-table-depth-number-table)
 function to ensure addons can't accidentally break things.
 
-| key                        | type     | arguments | returns | description                                                                                                           |
-|----------------------------|----------|-----------|---------|-----------------------------------------------------------------------------------------------------------------------|
-| get_id                     | method   | -         | number  | the unique id of the parser - used internally to set ownership of list results for cutom-keybind filtering            |
-| get_index                  | method   | -         | number  | the index of the parser in order of preference - `defer` uses this internally                                         |
-| get_script_opts            | function | -         | table   | the table of script opts set by the user - this never gets changed during runtime                                     |
-| get_opt                    | function | string    | string or number or boolean | returns the script-opt with the given key                                                         |
-| get_parse_state            | function | coroutine | table   | returns the [parse_state table](#parse-state-table) for the given coroutine - if no coroutine is given then it uses `coroutine.running()` |
-| get_root                   | function | -         | table   | the root table - an array of item_tables                                                                              |
-| get_extensions             | function | -         | table   | a set of valid extensions after applying the user's whitelist/blacklist - in the form {ext1 = true, ext2 = true, ...} |
-| get_sub_extensions         | function | -         | table   | like above but with subtitle extensions - note that subtitles show up in the above list as well                       |
-| get_audio_extensions       | function | -         | table   | like above but with audio extensions (ones added as additional tracks) - these all show up in the `get_extensions` list as well |
-| get_parseable_extensions   | function | -         | table   | shows parseable file extensions in the same format as the above functions                                             |
-| get_parsers                | function | -         | table   | an array of the loaded parsers                                                                                        |
-| get_dvd_device             | function | -         | string  | the current dvd-device - formatted to work with file-browser                                                          |
-| get_directory              | function | -         | string  | the current directory open in the browser - formatted to work with file-browser                                       |
-| get_list                   | function | -         | table   | the list_table for the currently open directory                                                                       |
-| get_current_file           | function | -         | table   | a table containing the path of the current open file - in the form {directory = "", name = "", path = ""}             |
-| get_current_parser         | function | -         | string  | the unique id of the parser used for the currently open directory                                                     |
-| get_current_parser_keyname | function | -         | string  | the string name of the parser used for the currently open directory - as used by custom keybinds                      |
-| get_selected_index         | function | -         | number  | the current index of the cursor - if the list is empty this should return 1                                           |
-| get_selected_item          | function | -         | table   | returns the item_table of the currently selected item - returns nil if no item is selected (empty list)               |
-| get_open_status            | function | -         | boolean | returns true if the browser is currently open and false if not                                                        |
-| get_state                  | function | -         | table   | the current state values of the browser - not documented and subject to change at any time - adding a proper getter for anything is a valid request |
+#### `fb.get_audio_extensions`
+
+Returns a set of extensions like [`fb.get_extensions`](#fbget_extensions-table) but for extensions that are opened
+as additional audio tracks.
+All of these are included in `fb.get_extensions`.
+
+#### `fb.get_current_file(): table`
+
+A table containing the path of the current open file in the form:
+`{directory = "/home/me/", name = "bunny.mkv", path = "/home/me/bunny.mkv"}`.
+
+#### `fb.get_current_parser(): string`
+
+The unique id of the parser that successfully parsed the current directory.
+
+#### `fb.get_current_parser_keyname(): string`
+
+The `keybind_name` of the parser that successfully parsed the current directory.
+Used for custom-keybind filtering.
+
+#### `fb.get_directory(): string`
+
+The current directory open in the browser.
+
+#### `fb.get_dvd_device(): string`
+
+The current dvd-device as reported by mpv's `dvd-device` property.
+Formatted to work with file-browser.
+
+#### `fb.get_extensions(): table`
+
+Returns the set of valid extensions after applying the user's whitelist/blacklist options.
+The table is in the form `{ mkv = true, mp3 = true, ... }`.
+Sub extensions, audio extensions, and parseable extensions are all included in this set.
+
+#### `fb.get_list(): list_table`
+
+The list_table currently open in the browser.
+
+#### `fb.get_open_status(): boolean`
+
+Returns true if the browser is currently open and false if not.
+
+#### `fb.get_opt(name: string): string | number | boolean`
+
+Returns the script-opt with the given name.
+
+#### `fb.get_parsers(): table`
+
+Returns a table of all the loaded parsers/addons.
+The formatting of this table in undefined, but it should
+always contain an array of the parsers in order of priority.
+
+#### `fb.get_parse_state(co: coroutine): parse_state_table`
+
+Returns the [parse_state table](#parse-state-table) for the given coroutine
+If no coroutine is given then it uses the running coroutine.
+Every parse operation is guaranteed to have a unique coroutine.
+
+#### `fb.get_parseable_extensions(): table`
+
+Returns a set of extensions like [`fb.get_extensions`](#fbget_extensions-table) but for extensions that are
+treated as parseable by the browser.
+All of these are included in `fb.get_extensions`.
+
+#### `fb.get_root(): list_table`
+
+Returns the root table.
+
+#### `fb.get_script_opts(): table`
+
+The table of script opts set by the user. This currently does not get
+changed during runtime, but that is not guaranteed for future minor version increments.
+
+#### `fb.get_selected_index(): number`
+
+The current index of the cursor.
+Note that it is possible for the cursor to be outside the bounds of the list,
+e.g. if the list is empty this should return 1.
+
+#### `fb.get_selected_item(): item_table | nil`
+
+Returns the item_table of the currently selected item.
+If no item is selected (for example an empty list) then returns nil.
+
+#### `fb.get_state(): table`
+
+Returns the current state values of the browser.
+These are not documented and are subject to change at any time,
+adding a proper getter for anything is a valid request.
+
+#### `fb.get_sub_extensions(): table`
+
+Returns a set of extensions like [`fb.get_extensions`](#fbget_extensions-table) but for extensions that are opened
+as additional subtitle tracks.
+All of these are included in `fb.get_extensions`.
+
+#### `parser:get_id(): string`
+
+The unique id of the parser. Used for log messages and various internal functions.
+
+#### `parser:get_index(): number`
+
+The index of the parser in order of preference (based on the priority value).
+`defer` uses this internally.
 
 ### Setters
 
-| key                        | type     | arguments | returns | description                                                                                                           |
-|----------------------------|----------|-----------|---------|-----------------------------------------------------------------------------------------------------------------------|
-| set_selected_index         | function | number    | number or bool  | sets the cursor position - returns the new index, if the input is not a number return false, if the input is out of bounds move it in bounds |
+#### `fb.set_selected_index(pos: number): number | false`
+
+Sets the cursor position and returns the new index.
+If the input is not a number return false, if the input is out of bounds move it in bounds.
 
 ## Examples
 
