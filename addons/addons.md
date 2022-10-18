@@ -662,31 +662,29 @@ If you have no idea what I've been talking about read the [Lua manual on corouti
 
 ### Utility Functions
 
+#### `fb.ass_escape(str: string, newline_sub?: true | string): string`
+
+Returns the `str` string with escaped ass styling codes.
+The optional 2nd argument allows replacing newlines with the given string, or `'\\n'` if set to `true`.
+
+#### `fb.copy_table(t: table, depth?: number): table`
+
+Returns a copy of table `t`.
+The copy is done recursively to the given `depth`, and any cyclical table references are maintained.
+Both keys and values are copied. If `depth` is undefined then it defaults to `math.huge` (infinity).
+Additionally, the original table is stored in the `__original` field of the copy's metatable.
+The copy behaviour of the metatable itself is subject to change, but currently it is not copied.
+
+#### `fb.filter(list: list_table): list_table`
+
+Iterates through the given list and removes items that don't pass the user set filters.
+Returns the list but does not create a copy, the `list` table is filtered in-place.
+
 #### `fb.fix_path(path: string, is_directory?: boolean): string`
 
 Takes a path and returns a file-browser compatible path string.
 The optional second argument is a boolean that tells the function to format the path to be a
 directory.
-
-#### `fb.join_path(p1: string, p2: string): string`
-
-A wrapper around [`mp.utils.join_path`](https://mpv.io/manual/master/#lua-scripting-utils-join-path(p1,-p2))
-which treats paths with network protocols as absolute paths.
-
-#### `fb.get_full_path(item: item_table, directory?: string): string`
-
-Takes an item table and returns the item's full path assuming it is in the given directory.
-Takes into account `item.name`/`item.path` fields, etc.
-If directory is nil then it uses the currently open directory.
-
-#### `fb.ass_escape(str: string, newline_sub?: true | string): string`
-
-Returns the `str` string with escaped ass styling codes.
-The optional 2nd argument allows replacing newlines with the given string, or `\n` if set to `true`.
-
-#### `fb.pattern_escape(str: string): string`
-
-Returns `str` with Lua special pattern characters escaped.
 
 #### `fb.get_extension(filename: string, def?: any): string | def`
 
@@ -695,30 +693,18 @@ If `def` is defined then that is returned instead of `nil`.
 
 The full stop is not included in the extension, so `test.mkv` will return `mkv`.
 
+#### `fb.get_full_path(item: item_table, directory?: string): string`
+
+Takes an item table and returns the item's full path assuming it is in the given directory.
+Takes into account `item.name`/`item.path` fields, etc.
+If directory is nil then it uses the currently open directory.
+
 #### `fb.get_protocol(url: string, def?: any): string | def`
 
 Returns the protocol scheme for the string `url`, or `nil` if there is no scheme.
 If `def` is defined then that is returned instead of `nil`.
 
 The `://` is not included, so `https://example.com/test.mkv` will return `https`.
-
-#### `fb.valid_file(name: string): boolean`
-
-Tests if the string `name` passes the user set filters for valid files (extensions/dot files/etc).
-
-#### `fb.valid_dir(name: string): boolean`
-
-Tests if the string `name` passes the user set filters for valid directories (dot folders/etc).
-
-#### `fb.filter(list: list_table): list_table`
-
-Iterates through the given list and removes items that don't pass the user set filters.
-Returns the list but does not create a copy, the `list` table is filtered in-place.
-
-#### `fb.sort(list: list_table): list_table`
-
-Iterates through the given list and sorts the items using file-browser's sorting algorithm.
-Returns the list but does not create a copy, the `list` table is sorted in-place.
 
 #### `fb.iterate_opt(opts: string): iterator`
 
@@ -728,17 +714,31 @@ returns an iterator function that can be used to iterate over each item in the l
 ```lua
 local opt = "a,b,zz z"                -- root_separators=,
 for item in fb.iterate_opt(opt) do
-    print(item)                       -- prints: a   b   zz z
+    print(item)                       -- prints: 'a', 'b', 'zz z'
 end
 ```
 
-#### `fb.copy_table(t: table, depth?: number): table`
+#### `fb.join_path(p1: string, p2: string): string`
 
-Returns a copy of table `t`.
-The copy is done recursively to the given `depth`, and any cyclical table references are maintained.
-Both keys and values are copied. If `depth` is undefined then it defaults to `math.huge` (infinity).
-Additionally, the original table is stored in the `__original` field of the copy's metatable.
-The copy behaviour of the metatable itself is subject to change, but currently it is not copied.
+A wrapper around [`mp.utils.join_path`](https://mpv.io/manual/master/#lua-scripting-utils-join-path(p1,-p2))
+which treats paths with network protocols as absolute paths.
+
+#### `fb.pattern_escape(str: string): string`
+
+Returns `str` with Lua special pattern characters escaped.
+
+#### `fb.sort(list: list_table): list_table`
+
+Iterates through the given list and sorts the items using file-browser's sorting algorithm.
+Returns the list but does not create a copy, the `list` table is sorted in-place.
+
+#### `fb.valid_file(name: string): boolean`
+
+Tests if the string `name` passes the user set filters for valid files (extensions/dot files/etc).
+
+#### `fb.valid_dir(name: string): boolean`
+
+Tests if the string `name` passes the user set filters for valid directories (dot folders/etc).
 
 ### Getters
 
