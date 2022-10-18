@@ -732,18 +732,19 @@ for item in fb.iterate_opt(opt) do
 end
 ```
 
-#### `fb.copy_table(t: table): table`
+#### `fb.copy_table(t: table, depth?: number): table`
 
 Returns a copy of table `t`.
-The copy is done recursively, and any cyclical table references are maintained.
+The copy is done recursively to the given `depth`, and any cyclical table references are maintained.
+Both keys and values are copied. If `depth` is undefined then it defaults to `math.huge` (infinity).
 Additionally, the original table is stored in the `__original` field of the copy's metatable.
-The copy behaviour of the metatable itself is currently subject to change.
+The copy behaviour of the metatable itself is subject to change, but currently it is not copied.
 
 ### Getters
 
 These functions allow addons to safely get information from file-browser.
-All tables returned by these functions are copies to ensure addons can't break things, but a reference to the original table
-is stored in the `__original` field of the metatable.
+All tables returned by these functions are copies sent through the [`fb.copy_table`](#fbcopy_tablet-table-depth-number-table)
+function to ensure addons can't accidentally break things.
 
 | key                        | type     | arguments | returns | description                                                                                                           |
 |----------------------------|----------|-----------|---------|-----------------------------------------------------------------------------------------------------------------------|

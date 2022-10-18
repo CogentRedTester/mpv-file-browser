@@ -561,9 +561,7 @@ local function copy_table_recursive(t, references, depth)
     if type(t) ~= "table" or depth == 0 then return t end
     if references[t] then return references[t] end
 
-    local mt = copy_table_recursive(getmetatable(t), {}, 1) or {}
-    mt.__original = t
-    local copy = setmetatable({}, mt)
+    local copy = setmetatable({}, { __original = t })
     references[t] = copy
 
     for key, value in pairs(t) do
@@ -574,9 +572,9 @@ local function copy_table_recursive(t, references, depth)
 end
 
 --a wrapper around copy_table to provide the reference table
-function API.copy_table(t)
+function API.copy_table(t, depth)
     --this is to handle cyclic table references
-    return copy_table_recursive(t, {}, math.huge)
+    return copy_table_recursive(t, {}, depth or math.huge)
 end
 
 
