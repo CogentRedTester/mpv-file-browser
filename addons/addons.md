@@ -391,6 +391,7 @@ parser.keybinds = {
 The API is available through a module, which can be loaded with `require "file-browser"`.
 The API provides a variety of different values and functions for an addon to use
 in order to make them more powerful.
+Function definitions are written using Typescript-style type annotations.
 
 ```lua
 local fb = require "file-browser"
@@ -433,13 +434,13 @@ return parser
 
 ### General Functions
 
-#### `fb.add_default_extension(ext: string): void`
-
-Adds the given extension to the default extension filter whitelist. Can only be run inside the `setup()` method.
-
 #### `fb.API_VERSION: string`
 
 The current API version in use by file-browser.
+
+#### `fb.add_default_extension(ext: string): void`
+
+Adds the given extension to the default extension filter whitelist. Can only be run inside the `setup()` method.
 
 #### `fb.browse_directory(directory: string): void`
 
@@ -451,7 +452,7 @@ This is the equivalent of calling the `browse-directory` script-message.
 
 #### `fb.insert_root_item(item: item_table, pos?: number): void`
 
-Add an item_table to the root list at the specified position - if number is nil then append to end.
+Add an item_table to the root list at the specified position. If `pos` is nil then append to the end of the root.
 `item` must be a valid item_table of `type='dir'`.
 
 #### `fb.register_parseable_extension(ext: string): void`
@@ -476,7 +477,7 @@ This function should be used over the older `fb.insert_root_item`.
 
 Remove a file extension that the browser will attempt to open like a directory.
 
-#### `fb.parse_directory(directory: string, parse?: parse_state_table): (list: list_table, opts: opts_table) | nil`
+#### `fb.parse_directory(directory: string, parse?: parse_state_table): (list_table, opts_table) | nil`
 
 Starts a new scan for the given directory and returns a list_table and opts_table on success and `nil` on failure.
 Must be called from inside a [coroutine](#coroutines).
@@ -488,7 +489,7 @@ Do not use the same `parse` table for multiple parses, state values for the two 
 and cause undefined behaviour. If the `parse.source` field is not set then it will be set to `"addon"`.
 
 Note that this function is for creating new parse operations, if you wish to create virtual directories or modify
-the results of other parsers then use [`defer`](#parserdeferdirectory-string-list-list_table-opts-opts_table--nil).
+the results of other parsers then use [`defer`](#parserdeferdirectory-string-list_table-opts_table--nil).
 
 Also note that every parse operation is expected to have its own unique coroutine. This acts as a unique
 ID that can be used internally or by other addons. This means that if multiple `parse_directory` operations
@@ -498,7 +499,7 @@ which hands execution back to the original coroutine upon completion.
 #### `parser:register_root_item(item: string | item_table, priority?: number): boolean`
 
 A wrapper around [`fb.register_root_item`](#fbregister_root_itemitem-string--item_table-priority-number-boolean)
-which uses the parser's priority value if `priority` is `nil`.
+which uses the parser's priority value if `priority` is undefined.
 
 ### Advanced Functions
 
@@ -507,7 +508,7 @@ which uses the parser's priority value if `priority` is `nil`.
 Clears the directory cache. Use this if you are modifying the contents of directories other
 than the current one to ensure that their contents will be rescanned when next opened.
 
-#### `fb.coroutine.assert(err: string): coroutine`
+#### `fb.coroutine.assert(err?: string): coroutine`
 
 Throws an error if it is not called from within a coroutine. Returns the currently running coroutine on success.
 The string argument can be used to throw a custom error string.
@@ -574,7 +575,7 @@ Rescans the current directory. Equivalent to Ctrl+r without the cache refresh fo
 
 Forces a redraw of the browser UI.
 
-#### `parser:defer(directory: string): (list: list_table, opts: opts_table) | nil`
+#### `parser:defer(directory: string): (list_table, opts_table) | nil`
 
 Forwards the given directory to the next valid parser. For use from within a parse operation.
 
@@ -624,7 +625,7 @@ return home_label
 
 ### Utility Functions
 
-#### `fb.ass_escape(str: string, newline_sub?: true | string): string`
+#### `fb.ass_escape(str: string, substitute_newline?: true | string): string`
 
 Returns the `str` string with escaped ass styling codes.
 The optional 2nd argument allows replacing newlines with the given string, or `'\\n'` if set to `true`.
@@ -639,8 +640,9 @@ The copy behaviour of the metatable itself is subject to change, but currently i
 
 #### `fb.filter(list: list_table): list_table`
 
-Iterates through the given list and removes items that don't pass the user set filters.
-Returns the list but does not create a copy, the `list` table is filtered in-place.
+Iterates through the given list and removes items that don't pass the user set filters
+(dot files/directories and valid file extensions).
+Returns the list but does not create a copy; the `list` table is filtered in-place.
 
 #### `fb.fix_path(path: string, is_directory?: boolean): string`
 
@@ -692,7 +694,7 @@ Returns `str` with Lua special pattern characters escaped.
 #### `fb.sort(list: list_table): list_table`
 
 Iterates through the given list and sorts the items using file-browser's sorting algorithm.
-Returns the list but does not create a copy, the `list` table is sorted in-place.
+Returns the list but does not create a copy; the `list` table is sorted in-place.
 
 #### `fb.valid_file(name: string): boolean`
 
@@ -708,7 +710,7 @@ These functions allow addons to safely get information from file-browser.
 All tables returned by these functions are copies sent through the [`fb.copy_table`](#fbcopy_tablet-table-depth-number-table)
 function to ensure addons can't accidentally break things.
 
-#### `fb.get_audio_extensions`
+#### `fb.get_audio_extensions(): table`
 
 Returns a set of extensions like [`fb.get_extensions`](#fbget_extensions-table) but for extensions that are opened
 as additional audio tracks.
@@ -761,9 +763,9 @@ Returns a table of all the loaded parsers/addons.
 The formatting of this table in undefined, but it should
 always contain an array of the parsers in order of priority.
 
-#### `fb.get_parse_state(co: coroutine): parse_state_table`
+#### `fb.get_parse_state(co?: coroutine): parse_state_table`
 
-Returns the [parse_state table](#parse-state-table) for the given coroutine
+Returns the [parse_state table](#parse-state-table) for the given coroutine.
 If no coroutine is given then it uses the running coroutine.
 Every parse operation is guaranteed to have a unique coroutine.
 
@@ -785,8 +787,8 @@ changed during runtime, but that is not guaranteed for future minor version incr
 #### `fb.get_selected_index(): number`
 
 The current index of the cursor.
-Note that it is possible for the cursor to be outside the bounds of the list,
-e.g. if the list is empty this should return 1.
+Note that it is possible for the cursor to be outside the bounds of the list;
+for example when the list is empty this usually returns 1.
 
 #### `fb.get_selected_item(): item_table | nil`
 
