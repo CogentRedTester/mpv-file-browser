@@ -391,6 +391,7 @@ parser.keybinds = {
 The API is available through a module, which can be loaded with `require "file-browser"`.
 The API provides a variety of different values and functions for an addon to use
 in order to make them more powerful.
+Function definitions are written using Typescript-style type annotations.
 
 ```lua
 local fb = require "file-browser"
@@ -400,7 +401,7 @@ local parser = {
 }
 
 function parser:setup()
-    fb.insert_root_item({ name = "Example/", type = "dir" })
+    fb.register_root_item("Example/")
 end
 
 return parser
@@ -409,9 +410,8 @@ return parser
 ### Parser API
 
 In addition to the standard API there is also an extra parser API that provides
-several parser specific methods,
-labeled `method` below instead of `function`. This API is added to the parser
-object after it is loaded by file-browser,
+several parser specific methods, listed below using `parser:method` instead of `fb.function`.
+This API is added to the parser object after it is loaded by file-browser,
 so if a script wants to call them immediately on load they must do so in the `setup` method.
 All the standard API functions are also available in the parser API.
 
@@ -434,61 +434,108 @@ return parser
 
 ### General Functions
 
-| key                          | type     | arguments                    | returns | description                                                                                                              |
-|------------------------------|----------|------------------------------|---------|--------------------------------------------------------------------------------------------------------------------------|
-| API_VERSION                  | string   | -                            | -       | the current API version in use                                                                                           |
-| register_parseable_extension | function | string                       | -       | register a file extension that the browser will attempt to open, like a directory - for addons which can parse files     |
-| remove_parseable_extension   | function | string                       | -       | remove a file extension that the browser will attempt to open like a directory                                           |
-| add_default_extension        | function | string                       | -       | adds the given extension to the default extension filter whitelist - can only be run inside setup()                      |
-| insert_root_item             | function | item_table, number? | -      | add an item_table (must be a directory) to the root list at the specified position - if number is nil then append to end |
-| register_root_item| function| (item_table or string), number? | boolean| registers an item_table or a path string to be added to the root and an optional priority value that determines the position (default is 100) - only adds the item if it is not already in the root and returns a boolean that is true if the item was added and false otherwise |
-| register_root_item           | method   | (item_table or string), number?| -     | a wrapper around the above function which uses the parser's priority value if none is specified                          |
-| browse_directory             | function | string                       | -       | clears the cache and opens the given directory in the browser - if the browser is closed then open it                    |
-| parse_directory              | function | string, parser_state_table | list_table, opts_table       | starts a new scan for the given directory - note that all parsers are called as normal, so beware infinite recursion     |
+#### `fb.API_VERSION: string`
 
-Note that the `parse_directory()` function must be called from inside a [coroutine](#coroutines).
+The current API version in use by file-browser.
+
+#### `fb.add_default_extension(ext: string): void`
+
+Adds the given extension to the default extension filter whitelist. Can only be run inside the `setup()` method.
+
+#### `fb.browse_directory(directory: string): void`
+
+Clears the cache and opens the given directory in the browser. If the browser is closed then it will be opened.
+This function is non-blocking, it is possible that the function will return before the directory has finished
+being scanned.
+
+This is the equivalent of calling the `browse-directory` script-message.
+
+#### `fb.insert_root_item(item: item_table, pos?: number): void`
+
+Add an item_table to the root list at the specified position. If `pos` is nil then append to the end of the root.
+`item` must be a valid item_table of `type='dir'`.
+
+#### `fb.register_parseable_extension(ext: string): void`
+
+Register a file extension that the browser will attempt to open, like a directory - for addons which can parse files such
+as playlist files.
+
+#### `fb.register_root_item(item: string | item_table, priority?: number): boolean`
+
+Registers an item to be added to the root and an optional priority value that determines the position relative to other items (default is 100).
+A lower priority number is better, meaning they will be placed earlier in the list.
+Only adds the item if it is not already in the root and returns a boolean that specifies whether or not the item was added.
+Must be called during or after the `parser:setup()` method is run.
+
+If `item` is a string then a new item_table is created with the values: `{ type = 'dir', name = item }`.
+If `item` is an item_table then it must be a valid directory item.
+Use [`fb.fix_path(name, true)`](#fbfix_pathpath-string-is_directory-boolean-string) to ensure the name field is correct.
+
+This function should be used over the older `fb.insert_root_item`.
+
+#### `fb.remove_parseable_extension(ext: string): void`
+
+Remove a file extension that the browser will attempt to open like a directory.
+
+#### `fb.parse_directory(directory: string, parse?: parse_state_table): (list_table, opts_table) | nil`
+
+Starts a new scan for the given directory and returns a list_table and opts_table on success and `nil` on failure.
+Must be called from inside a [coroutine](#coroutines).
+
+This function allows addons to request the contents of directories from the loaded parsers. There are no protections
+against infinite recursion, so be careful about calling this from within another parse.
+
+Do not use the same `parse` table for multiple parses, state values for the two operations may intefere with each other
+and cause undefined behaviour. If the `parse.source` field is not set then it will be set to `"addon"`.
+
+Note that this function is for creating new parse operations, if you wish to create virtual directories or modify
+the results of other parsers then use [`defer`](#parserdeferdirectory-string-list_table-opts_table--nil).
 
 Also note that every parse operation is expected to have its own unique coroutine. This acts as a unique
 ID that can be used internally or by other addons. This means that if multiple `parse_directory` operations
 are run within a single coroutine then file-browser will automatically create a new coroutine for the scan,
 which hands execution back to the original coroutine upon completion.
 
+#### `parser:register_root_item(item: string | item_table, priority?: number): boolean`
+
+A wrapper around [`fb.register_root_item`](#fbregister_root_itemitem-string--item_table-priority-number-boolean)
+which uses the parser's priority value if `priority` is undefined.
+
 ### Advanced Functions
 
-| key           | type     | arguments        | returns                 | description                     |
-|---------------|----------|------------------|-------------------------|---------------------------------|
-| defer         | method   | string | list_table, opts_table  | forwards the given directory to the next valid parser - can be used to redirect the browser or to modify the results of lower priority parsers - see [Using `defer`](#using-defer) |
-| rescan             | function |                              | -      | rescans the current directory - equivalent to Ctrl+r without the cache refresh for higher level directories              |
-| redraw             | function |                              | -      | forces a redraw of the browser                                                                                           |
-| clear_cache                  | function |                             | -       | clears the cache - use if modifying the contents of higher level directories                                             |
-| coroutine.run        | function | function, ...    | -                | runs the given function in a new coroutine - passes any additional arguments to the function |
-| coroutine.resume_err | function | coroutine, ...   | -                | resumes the given coroutine with the given arguments, if an error is returned then log an error message with `mp.msg.error()` |
-| coroutine.resume_catch | function | coroutine, ...   | ...            | same as `coroutine.resume_err` but actually captures and returns the results of `coroutine.resume()`|
-| coroutine.assert     | function   | string     | coroutine       | throws an error if the function is not called from within a coroutine and returns the running coroutine on success - the string argument can be used to set a custom error message |
-| coroutine.callback   | function   | -          | function        | creates and returns a callback function that resumes the current coroutine - see [using `coroutine.callback`](#using-coroutinecallback) for more details |
+#### `fb.clear_cache(): void`
 
-#### Using `coroutine.callback`
+Clears the directory cache. Use this if you are modifying the contents of directories other
+than the current one to ensure that their contents will be rescanned when next opened.
 
+#### `fb.coroutine.assert(err?: string): coroutine`
+
+Throws an error if it is not called from within a coroutine. Returns the currently running coroutine on success.
+The string argument can be used to throw a custom error string.
+
+#### `fb.coroutine.callback(): function`
+
+Creates and returns a callback function that resumes the current coroutine.
 This function is designed to help streamline asynchronous operations. The best way to explain is with an example:
 
 ```lua
 local function execute(args)
-    local _, cmd = coroutine.yield(
-        mp.command_native_async({
+    mp.command_native_async({
             name = "subprocess",
             playback_only = false,
             capture_stdout = true,
             capture_stderr = true,
             args = args
         }, fb.coroutine.callback())
-    )
+
+    local _, cmd = coroutine.yield()
 
     return cmd.status == 0 and cmd.stdout or nil
 end
 ```
 
 This function uses the mpv [subprocess](https://mpv.io/manual/master/#command-interface-subprocess)
-command to execute some system operation. To prevent the whole script (including file-browser and all addons) from freezing
+command to execute some system operation. To prevent the whole script (file-browser and all addons) from freezing
 it uses the [command_native_async](https://mpv.io/manual/master/#lua-scripting-mp-command-native-async(table-[,fn])) command
 to execute the operation asynchronously and takes a callback function as its second argument.
 
@@ -497,15 +544,40 @@ Any arguments passed into the callback function (by the async function, not by y
 in this case `command_native_async` passes three values into the callback, of which only the second is of interest to me.
 
 The unsaid expectation is that the programmer will yield execution before that callback returns. In this example I
-have placed the `command_native_async` command inside the yield call; this is not necessary, I just did this because I think it
-makes the code look more synchronous.
+yield immediately after running the async command.
 
 If you are doing this during a parse operation you could also substitute `coroutine.yield()` with `parse_state:yield()` to abort the parse if the user changed
 browser directories during the asynchronous operation.
 
 If you have no idea what I've been talking about read the [Lua manual on coroutines](https://www.lua.org/manual/5.1/manual.html#2.11).
 
-#### Using `defer`
+#### `fb.coroutine.resume_catch(co: coroutine, ...): (boolean, ...)`
+
+Runs `coroutine.resume(co, ...)` with the given coroutine, passing through any additional arguments.
+If the coroutine throws an error then an error message and stacktrace is printed to the console.
+All the return values of `coroutine.resume` are caught and returned.
+
+#### `fb.coroutine.resume_err(co: coroutine, ...): boolean`
+
+Runs `coroutine.resume(co, ...)` with the given coroutine, passing through any additional arguments.
+If the coroutine throws an error then an error message and stacktrace is printed to the console.
+Returns the success boolean returned by `coroutine.resume`, but drops all other return values.
+
+#### `fb.coroutine.run(fn: function, ...): void`
+
+Runs the given function in a new coroutine, passing through any additional arguments.
+
+#### `fb.rescan(): void`
+
+Rescans the current directory. Equivalent to Ctrl+r without the cache refresh for higher level directories.
+
+#### `fb.redraw(): void`
+
+Forces a redraw of the browser UI.
+
+#### `parser:defer(directory: string): (list_table, opts_table) | nil`
+
+Forwards the given directory to the next valid parser. For use from within a parse operation.
 
 The `defer` function is very powerful, and can be used by scripts to create virtual directories, or to modify the results of other parsers.
 However, due to how much freedom Lua gives coders, it is impossible for file-browser to ensure that parsers are using defer correctly, which can cause unexpected results.
@@ -530,6 +602,7 @@ local fb = require "file-browser"
 local home = fb.fix_path(mp.command_native({"expand-path", "~/"}), true)
 
 local home_label = {
+    version = '1.0.0',
     priority = 100
 }
 
@@ -552,57 +625,203 @@ return home_label
 
 ### Utility Functions
 
-| key           | type     | arguments        | returns    | description                                                                                                                                            |
-|---------------|----------|------------------|------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| fix_path      | function | string, boolean  | string     | takes a path and an is_directory boolean and returns a file-browser compatible path                                                                    |
-| join_path     | function | string, string   | string     | a wrapper for `mp.utils.join_path` which adds support for network protocols                                                                            |
-| get_full_path | function | item_table, string | string   | returns the full path of a given item for a given directory - takes into account item.name/item.path, etc                                              |
-| ass_escape    | function | string, string   | string     | returns the string with escaped ass styling codes - the 2nd argument allows optionally replacing newlines with the given string, or `\n` if set to `true`|
-| pattern_escape| function | string           | string     | returns the string with special lua pattern characters escaped                                                                                         |
-| get_extension | function | string, def      | string     | returns the file extension of the given file - returns def if file has no extension                                                                    |
-| get_protocol  | function | string, def      | string     | returns the protocol scheme of the given url (https, ftp, etc) - returns def if path has no url scheme                                                 |
-| valid_file    | function | string           | boolean    | tests if the given filename passes the user set filters (valid extensions and dot files)                                                               |
-| valid_dir     | function | string           | boolean    | tests if the given directory name passes the user set filters (dot directories)                                                                        |
-| filter        | function | list_table       | list_table | iterates through the given list and removes items that don't pass the filters - acts directly on the given list, it does not create a copy             |
-| sort          | function | list_table       | list_table | iterates through the given list and sorts the items using file-browsers sorting algorithm - acts directly on the given list, it does not create a copy |
-| iterate_opt   | function | string           | iterator function | returns an iterator that returns substrings of the given string split by the root separators                                                    |
-| copy_table    | function |table|table| recursively makes a deep copy of the given table and returns it, maintaining any cyclical references - the original table is stored in the `__original` field of the metatable|
+#### `fb.ass_escape(str: string, substitute_newline?: true | string): string`
+
+Returns the `str` string with escaped ass styling codes.
+The optional 2nd argument allows replacing newlines with the given string, or `'\\n'` if set to `true`.
+
+#### `fb.copy_table(t: table, depth?: number): table`
+
+Returns a copy of table `t`.
+The copy is done recursively to the given `depth`, and any cyclical table references are maintained.
+Both keys and values are copied. If `depth` is undefined then it defaults to `math.huge` (infinity).
+Additionally, the original table is stored in the `__original` field of the copy's metatable.
+The copy behaviour of the metatable itself is subject to change, but currently it is not copied.
+
+#### `fb.filter(list: list_table): list_table`
+
+Iterates through the given list and removes items that don't pass the user set filters
+(dot files/directories and valid file extensions).
+Returns the list but does not create a copy; the `list` table is filtered in-place.
+
+#### `fb.fix_path(path: string, is_directory?: boolean): string`
+
+Takes a path and returns a file-browser compatible path string.
+The optional second argument is a boolean that tells the function to format the path to be a
+directory.
+
+#### `fb.get_extension(filename: string, def?: any): string | def`
+
+Returns the file extension for the string `filename`, or `nil` if there is no extension.
+If `def` is defined then that is returned instead of `nil`.
+
+The full stop is not included in the extension, so `test.mkv` will return `mkv`.
+
+#### `fb.get_full_path(item: item_table, directory?: string): string`
+
+Takes an item table and returns the item's full path assuming it is in the given directory.
+Takes into account `item.name`/`item.path` fields, etc.
+If directory is nil then it uses the currently open directory.
+
+#### `fb.get_protocol(url: string, def?: any): string | def`
+
+Returns the protocol scheme for the string `url`, or `nil` if there is no scheme.
+If `def` is defined then that is returned instead of `nil`.
+
+The `://` is not included, so `https://example.com/test.mkv` will return `https`.
+
+#### `fb.iterate_opt(opts: string): iterator`
+
+Takes an options string consisting of a list of items separated by the `root_separators` defined in `file_browser.conf` and
+returns an iterator function that can be used to iterate over each item in the list.
+
+```lua
+local opt = "a,b,zz z"                -- root_separators=,
+for item in fb.iterate_opt(opt) do
+    print(item)                       -- prints: 'a', 'b', 'zz z'
+end
+```
+
+#### `fb.join_path(p1: string, p2: string): string`
+
+A wrapper around [`mp.utils.join_path`](https://mpv.io/manual/master/#lua-scripting-utils-join-path(p1,-p2))
+which treats paths with network protocols as absolute paths.
+
+#### `fb.pattern_escape(str: string): string`
+
+Returns `str` with Lua special pattern characters escaped.
+
+#### `fb.sort(list: list_table): list_table`
+
+Iterates through the given list and sorts the items using file-browser's sorting algorithm.
+Returns the list but does not create a copy; the `list` table is sorted in-place.
+
+#### `fb.valid_file(name: string): boolean`
+
+Tests if the string `name` passes the user set filters for valid files (extensions/dot files/etc).
+
+#### `fb.valid_dir(name: string): boolean`
+
+Tests if the string `name` passes the user set filters for valid directories (dot folders/etc).
 
 ### Getters
 
 These functions allow addons to safely get information from file-browser.
-All tables returned by these functions are copies to ensure addons can't break things, but a reference to the original table
-is stored in the `__original` field of the metatable.
+All tables returned by these functions are copies sent through the [`fb.copy_table`](#fbcopy_tablet-table-depth-number-table)
+function to ensure addons can't accidentally break things.
 
-| key                        | type     | arguments | returns | description                                                                                                           |
-|----------------------------|----------|-----------|---------|-----------------------------------------------------------------------------------------------------------------------|
-| get_id                     | method   | -         | number  | the unique id of the parser - used internally to set ownership of list results for cutom-keybind filtering            |
-| get_index                  | method   | -         | number  | the index of the parser in order of preference - `defer` uses this internally                                         |
-| get_script_opts            | function | -         | table   | the table of script opts set by the user - this never gets changed during runtime                                     |
-| get_opt                    | function | string    | string or number or boolean | returns the script-opt with the given key                                                         |
-| get_parse_state            | function | coroutine | table   | returns the [parse_state table](#parse-state-table) for the given coroutine - if no coroutine is given then it uses `coroutine.running()` |
-| get_root                   | function | -         | table   | the root table - an array of item_tables                                                                              |
-| get_extensions             | function | -         | table   | a set of valid extensions after applying the user's whitelist/blacklist - in the form {ext1 = true, ext2 = true, ...} |
-| get_sub_extensions         | function | -         | table   | like above but with subtitle extensions - note that subtitles show up in the above list as well                       |
-| get_audio_extensions       | function | -         | table   | like above but with audio extensions (ones added as additional tracks) - these all show up in the `get_extensions` list as well |
-| get_parseable_extensions   | function | -         | table   | shows parseable file extensions in the same format as the above functions                                             |
-| get_parsers                | function | -         | table   | an array of the loaded parsers                                                                                        |
-| get_dvd_device             | function | -         | string  | the current dvd-device - formatted to work with file-browser                                                          |
-| get_directory              | function | -         | string  | the current directory open in the browser - formatted to work with file-browser                                       |
-| get_list                   | function | -         | table   | the list_table for the currently open directory                                                                       |
-| get_current_file           | function | -         | table   | a table containing the path of the current open file - in the form {directory = "", name = "", path = ""}             |
-| get_current_parser         | function | -         | string  | the unique id of the parser used for the currently open directory                                                     |
-| get_current_parser_keyname | function | -         | string  | the string name of the parser used for the currently open directory - as used by custom keybinds                      |
-| get_selected_index         | function | -         | number  | the current index of the cursor - if the list is empty this should return 1                                           |
-| get_selected_item          | function | -         | table   | returns the item_table of the currently selected item - returns nil if no item is selected (empty list)               |
-| get_open_status            | function | -         | boolean | returns true if the browser is currently open and false if not                                                        |
-| get_state                  | function | -         | table   | the current state values of the browser - not documented and subject to change at any time - adding a proper getter for anything is a valid request |
+#### `fb.get_audio_extensions(): table`
+
+Returns a set of extensions like [`fb.get_extensions`](#fbget_extensions-table) but for extensions that are opened
+as additional audio tracks.
+All of these are included in `fb.get_extensions`.
+
+#### `fb.get_current_file(): table`
+
+A table containing the path of the current open file in the form:
+`{directory = "/home/me/", name = "bunny.mkv", path = "/home/me/bunny.mkv"}`.
+
+#### `fb.get_current_parser(): string`
+
+The unique id of the parser that successfully parsed the current directory.
+
+#### `fb.get_current_parser_keyname(): string`
+
+The `keybind_name` of the parser that successfully parsed the current directory.
+Used for custom-keybind filtering.
+
+#### `fb.get_directory(): string`
+
+The current directory open in the browser.
+
+#### `fb.get_dvd_device(): string`
+
+The current dvd-device as reported by mpv's `dvd-device` property.
+Formatted to work with file-browser.
+
+#### `fb.get_extensions(): table`
+
+Returns the set of valid extensions after applying the user's whitelist/blacklist options.
+The table is in the form `{ mkv = true, mp3 = true, ... }`.
+Sub extensions, audio extensions, and parseable extensions are all included in this set.
+
+#### `fb.get_list(): list_table`
+
+The list_table currently open in the browser.
+
+#### `fb.get_open_status(): boolean`
+
+Returns true if the browser is currently open and false if not.
+
+#### `fb.get_opt(name: string): string | number | boolean`
+
+Returns the script-opt with the given name.
+
+#### `fb.get_parsers(): table`
+
+Returns a table of all the loaded parsers/addons.
+The formatting of this table in undefined, but it should
+always contain an array of the parsers in order of priority.
+
+#### `fb.get_parse_state(co?: coroutine): parse_state_table`
+
+Returns the [parse_state table](#parse-state-table) for the given coroutine.
+If no coroutine is given then it uses the running coroutine.
+Every parse operation is guaranteed to have a unique coroutine.
+
+#### `fb.get_parseable_extensions(): table`
+
+Returns a set of extensions like [`fb.get_extensions`](#fbget_extensions-table) but for extensions that are
+treated as parseable by the browser.
+All of these are included in `fb.get_extensions`.
+
+#### `fb.get_root(): list_table`
+
+Returns the root table.
+
+#### `fb.get_script_opts(): table`
+
+The table of script opts set by the user. This currently does not get
+changed during runtime, but that is not guaranteed for future minor version increments.
+
+#### `fb.get_selected_index(): number`
+
+The current index of the cursor.
+Note that it is possible for the cursor to be outside the bounds of the list;
+for example when the list is empty this usually returns 1.
+
+#### `fb.get_selected_item(): item_table | nil`
+
+Returns the item_table of the currently selected item.
+If no item is selected (for example an empty list) then returns nil.
+
+#### `fb.get_state(): table`
+
+Returns the current state values of the browser.
+These are not documented and are subject to change at any time,
+adding a proper getter for anything is a valid request.
+
+#### `fb.get_sub_extensions(): table`
+
+Returns a set of extensions like [`fb.get_extensions`](#fbget_extensions-table) but for extensions that are opened
+as additional subtitle tracks.
+All of these are included in `fb.get_extensions`.
+
+#### `parser:get_id(): string`
+
+The unique id of the parser. Used for log messages and various internal functions.
+
+#### `parser:get_index(): number`
+
+The index of the parser in order of preference (based on the priority value).
+`defer` uses this internally.
 
 ### Setters
 
-| key                        | type     | arguments | returns | description                                                                                                           |
-|----------------------------|----------|-----------|---------|-----------------------------------------------------------------------------------------------------------------------|
-| set_selected_index         | function | number    | number or bool  | sets the cursor position - returns the new index, if the input is not a number return false, if the input is out of bounds move it in bounds |
+#### `fb.set_selected_index(pos: number): number | false`
+
+Sets the cursor position and returns the new index.
+If the input is not a number return false, if the input is out of bounds move it in bounds.
 
 ## Examples
 
