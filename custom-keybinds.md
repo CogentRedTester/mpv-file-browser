@@ -17,7 +17,7 @@ Keybinds are declared in the `~~/script-opts/file-browser-keybinds.json` file, t
 | multiselect   | no       | `false`    | command is run on all selected items                                                       |
 | multi-type    | no       | `repeat`   | which multiselect mode to use - `repeat` or `concat`                                       |
 | delay         | no       | `0`        | time to wait between sending repeated multi commands                                       |
-| concat-string | no       | ` `        | string to insert between items when concatenating multi commands (default is a space)      |
+| concat-string | no       | `' '` (space) | string to insert between items when concatenating multi commands                        |
 | passthrough   | no       | -          | force or ban passthrough behaviour - see [passthrough](#passthrough-keybinds)              |
 
 Example:
@@ -103,8 +103,8 @@ If time is needed between running commands of multiple selected items (for examp
 ### `concat`
 
 Run a single command, but replace item specific codes with a concatenated string made from each selected item.
-For example `["print-text", "%n" ]` would print the name of each item selected separated by ` ` (space).
-The string inserted between each item is determined by the `concat-string` option, but ` ` is the default.
+For example `["print-text", "%n" ]` would print the name of each item selected separated by `' '` (space).
+The string inserted between each item is determined by the `concat-string` option, but `' '` is the default.
 
 ## Passthrough Keybinds
 
