@@ -48,6 +48,15 @@ The parser filter is for filtering keybinds to only work inside directories load
 There are two parsers in the base script, the default parser for native filesystems is called `file`, while the root parser is called `root`.
 Other parsers can be supplied by addons, and use the addon's filename with `-browser.lua` or just `.lua` stripped unless otherwise stated.
 For example `ftp-browser.lua` would have a parser called `ftp`.
+You can set the filter to match multiple parsers by separating the names with spaces.
+
+```json
+{
+    "key": "KP2",
+    "command": [ ["print-text", "example3"] ],
+    "parser": "ftp file"
+}
+```
 
 The `flags` field is mostly only useful for addons, but can also be useful if one wants a key to be repeatable.
 In this case the the keybind would look like the following:
@@ -90,7 +99,7 @@ Example of a command to add an audio track:
 }
 ```
 
-Any commands that contain codes representing specific items (`%f`, `%n`, ``%i` etc) will
+Any commands that contain codes representing specific items (`%f`, `%n`, `%i` etc) will
 not be run if no item is selected (for example in an empty directory).
 The `%j` code will similarly cause keybinds to only be run on multiselections.
 In these cases [passthrough](#passthrough-keybinds) rules will apply.

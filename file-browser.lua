@@ -1586,7 +1586,10 @@ end
 
 --runs one of the custom commands
 local function run_custom_keybind(cmd, state, co)
-    if cmd.parser and cmd.parser ~= (state.parser.keybind_name or state.parser.name) then return false end
+    if cmd.parser then
+       local parser_str = ' '..cmd.parser..' '
+       if not parser_str:find( '%W'..(state.parser.keybind_name or state.parser.name)..'%W' ) then return false end
+    end
 
     --these are for the default keybinds, or from addons which use direct functions
     if type(cmd.command) == 'function' then return cmd.command(cmd, cmd.addon and API.copy_table(state) or state, co) end
