@@ -2136,6 +2136,15 @@ mp.register_script_message('delay-command', function(delay, ...)
 end)
 
 --a helper script message for custom keybinds
+--sends a command only if the given expression returns true
+mp.register_script_message('conditional-command', function(condition, ...)
+    local command = table.pack(...)
+    API.coroutine.run(function()
+        if API.evaluate_string('return '..condition) == true then mp.commandv(table.unpack(command)) end
+    end)
+end)
+
+--a helper script message for custom keybinds
 --extracts lua expressions from the command and evaluates them
 --expressions must be surrounded by !{}. Another ! before the { will escape the evaluation
 mp.register_script_message('evaluate-expressions', function(...)

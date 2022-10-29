@@ -154,6 +154,34 @@ To avoid conflicts custom keybinds use the format: `file_browser/dynamic/custom/
 
 There are a small number of custom script messages defined by file-browser to support custom keybinds.
 
+### `conditional-command [condition] ...`
+
+Runs the following command only if the condition is `true`. The condition
+is a Lua expression similar to those used for [`profile-cond`](https://mpv.io/manual/master/#conditional-auto-profiles)
+values.
+The `mp`, `mp.msg`, and `mp.utils` modules are available as `mp`, `msg`, and `utils` respectively.
+Additionally the [file-browser addon API](addons/addons.md#the-api) is available as `fb`.
+
+This example command will only run if the player is currently paused:
+
+```json
+{
+    "key": "KP1",
+    "command": ["script-message", "conditional-command", "mp.get_property_bool('pause')", "print-text", "is paused"],
+}
+```
+
+Custom keybind codes are evaluated before the expressions.
+
+This example only runs if the currently selected item in the browser has a `.mkv` extension:
+
+```json
+{
+    "key": "KP1",
+    "command": ["script-message", "conditional-command", "fb.get_extension(%N) == 'mkv'", "print-text", "a matroska file"],
+}
+```
+
 ### `delay-command [delay] ...`
 
 Delays the following command by `[delay]` seconds.
@@ -170,7 +198,10 @@ The following example will send the `print-text` command after 5 seconds:
 ### `evaluate-expressions ...`
 
 Evaluates embedded Lua expressions in the following command.
+Expressions have the same behaviour as the [`conditional-command`](#conditional-command-condition) script-message.
 Expressions must be surrounded by `!{}` characters.
+Additional `!` characters can be placed at the start of the expression to
+escape the evaluation.
 
 For example the following keybind will print 3 to the console:
 
@@ -181,20 +212,6 @@ For example the following keybind will print 3 to the console:
 }
 ```
 
-The `mp`, `mp.msg`, and `mp.utils` modules are available as `mp`, `msg`, and `utils` respectively.
-Additionally the [file-browser addon API](addons/addons.md#the-api) is available as `fb`.
-
-This example prints the current directory open in file-browser and the directory of the currently playing file:
-
-```json
-{
-    "key": "KP1",
-    "command": ["script-message", "evaluate-expressions", "print-text", "!{fb.get_directory()} !{ utils.split_path(mp.get_property('path', '')) }"],
-}
-```
-
-Custom keybind codes are evaluated before the expressions.
-
 This example replaces all `/` characters in the path with `\`
 (note that the `\` needs to be escaped twice, once for the json file, and once for the string in the lua expression):
 
@@ -202,18 +219,6 @@ This example replaces all `/` characters in the path with `\`
 {
     "key": "KP1",
     "command": ["script-message", "evaluate-expressions", "print-text", "!{ string.gsub(%F, '/', '\\\\') }"],
-}
-```
-
-Finally, additional `!` characters can be placed at the start of the expression to
-escape the evaluation.
-
-This example prints `!{1 + 2}`:
-
-```json
-{
-    "key": "KP1",
-    "command": ["script-message", "evaluate-expressions", "print-text", "!!{1 + 2}"],
 }
 ```
 
