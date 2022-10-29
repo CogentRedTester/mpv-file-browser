@@ -315,6 +315,12 @@ function API.traceback(errmsg, co)
     msg.error(errmsg)
 end
 
+--returns a table that stores the given table t as the __index in its metatable
+--creates a prototypally inherited table
+function API.redirect_table(t)
+    return setmetatable({}, { __index = t })
+end
+
 --prints an error if a coroutine returns an error
 --unlike the next function this one still returns the results of coroutine.resume()
 function API.coroutine.resume_catch(...)
@@ -553,6 +559,32 @@ function API.format_json_safe(t)
     local success, result, err = pcall(utils.format_json, t)
     if success then return result, err
     else return nil, result end
+end
+
+--evaluates and runs the given string in both Lua 5.1 and 5.2
+--the name argument is used for error reporting
+--provides the mpv modules and the fb module to the string
+function API.evaluate_string(str, name)
+    local env = API.redirect_table(_G)
+    env.mp = API.redirect_table(mp)
+    env.msg = API.redirect_table(msg)
+    env.utils = API.redirect_table(utils)
+    env.fb = API.redirect_table(API)
+
+    local chunk, err
+    if setfenv then
+        chunk, err = loadstring(str, name)
+        if chunk then setfenv(chunk, env) end
+    else
+        chunk, err = load(str, name, 't', env)
+    end
+    if not chunk then
+        msg.warn('failed to load string:', str)
+        msg.error(err)
+        chunk = function() return nil end
+    end
+
+    return chunk()
 end
 
 --copies a table without leaving any references to the original
@@ -1891,19 +1923,15 @@ local function set_parser_id(parser)
     parsers[parser] = { id = name }
 end
 
-local function redirect_table(t)
-    return setmetatable({}, { __index = t })
-end
-
 --loads an addon in a separate environment
 local function load_addon(path)
     local name_sqbr = string.format("[%s]", path:match("/([^/]*)%.lua$"))
-    local addon_environment = redirect_table(_G)
+    local addon_environment = API.redirect_table(_G)
     addon_environment._G = addon_environment
 
     --gives each addon custom debug messages
-    addon_environment.package = redirect_table(addon_environment.package)
-    addon_environment.package.loaded = redirect_table(addon_environment.package.loaded)
+    addon_environment.package = API.redirect_table(addon_environment.package)
+    addon_environment.package.loaded = API.redirect_table(addon_environment.package.loaded)
     local msg_module = {
         log = function(level, ...) msg.log(level, name_sqbr, ...) end,
         fatal = function(...) return msg.fatal(name_sqbr, ...) end,
@@ -2096,6 +2124,47 @@ end)
 
 
 ------------------------------------------------------------------------------------------
+----------------------------------Script Messages-----------------------------------------
+------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+
+--a helper script message for custom keybinds
+--sends a command after the specified delay
+mp.register_script_message('delay-command', function(delay, ...)
+    local command = table.pack(...)
+    mp.add_timeout(delay, function() mp.commandv(table.unpack(command)) end)
+end)
+
+--a helper script message for custom keybinds
+--extracts lua expressions from the command and evaluates them
+--expressions must be surrounded by !{}. Another ! before the { will escape the evaluation
+mp.register_script_message('evaluate-expressions', function(...)
+    local args = table.pack(...)
+    API.coroutine.run(function()
+        for i, arg in ipairs(args) do
+            args[i] = arg:gsub('(!+)(%b{})', function(lead, expression)
+                if #lead % 2 == 0 then return string.rep('!', #lead/2)..expression end
+
+                local eval = API.evaluate_string('return '..expression:sub(2, -2))
+                return type(eval) == "table" and utils.to_string(eval) or tostring(eval)
+            end)
+        end
+
+        mp.commandv(table.unpack(args))
+    end)
+end)
+
+--allows keybinds/other scripts to auto-open specific directories
+mp.register_script_message('browse-directory', browse_directory)
+
+--allows other scripts to request directory contents from file-browser
+mp.register_script_message("get-directory-contents", function(directory, response_str)
+    API.coroutine.run(scan_directory_json, directory, response_str)
+end)
+
+
+
+------------------------------------------------------------------------------------------
 --------------------------------mpv API Callbacks-----------------------------------------
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
@@ -2117,19 +2186,4 @@ end)
 --declares the keybind to open the browser
 mp.add_key_binding('MENU','browse-files', toggle)
 mp.add_key_binding('Ctrl+o','open-browser', open)
-
---allows keybinds/other scripts to auto-open specific directories
-mp.register_script_message('browse-directory', browse_directory)
-
---allows other scripts to request directory contents from file-browser
-mp.register_script_message("get-directory-contents", function(directory, response_str)
-    API.coroutine.run(scan_directory_json, directory, response_str)
-end)
-
---a helper script message for custom keybinds
---sends a command after the specified delay
-mp.register_script_message('delay-command', function(delay, ...)
-    local command = table.pack(...)
-    mp.add_timeout(delay, function() mp.commandv(table.unpack(command)) end)
-end)
 

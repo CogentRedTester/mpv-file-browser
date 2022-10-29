@@ -167,6 +167,56 @@ The following example will send the `print-text` command after 5 seconds:
 }
 ```
 
+### `evaluate-expressions ...`
+
+Evaluates embedded Lua expressions in the following command.
+Expressions must be surrounded by `!{}` characters.
+
+For example the following keybind will print 3 to the console:
+
+```json
+{
+    "key": "KP1",
+    "command": ["script-message", "evaluate-expressions", "print-text", "!{1 + 2}"],
+}
+```
+
+The `mp`, `mp.msg`, and `mp.utils` modules are available as `mp`, `msg`, and `utils` respectively.
+Additionally the [file-browser addon API](addons/addons.md#the-api) is available as `fb`.
+
+This example prints the current directory open in file-browser and the directory of the currently playing file:
+
+```json
+{
+    "key": "KP1",
+    "command": ["script-message", "evaluate-expressions", "print-text", "!{fb.get_directory()} !{ utils.split_path(mp.get_property('path', '')) }"],
+}
+```
+
+Custom keybind codes are evaluated before the expressions.
+
+This example replaces all `/` characters in the path with `\`
+(note that the `\` needs to be escaped twice, once for the json file, and once for the string in the lua expression):
+
+```json
+{
+    "key": "KP1",
+    "command": ["script-message", "evaluate-expressions", "print-text", "!{ string.gsub(%F, '/', '\\\\') }"],
+}
+```
+
+Finally, additional `!` characters can be placed at the start of the expression to
+escape the evaluation.
+
+This example prints `!{1 + 2}`:
+
+```json
+{
+    "key": "KP1",
+    "command": ["script-message", "evaluate-expressions", "print-text", "!!{1 + 2}"],
+}
+```
+
 ## Examples
 
 See [here](file-browser-keybinds.json).
