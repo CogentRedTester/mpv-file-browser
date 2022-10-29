@@ -72,11 +72,13 @@ The script will scan every string in the command for the special substitution st
 | %p   | currently open directory                                            |
 | %d   | name of the current directory (characters between the last two '/') |
 | %r   | name of the parser for the currently open directory                 |
-| %%_  | escape code for `%_` where `%_` is one of the previous codes        |
+| %i   | the 1-based index of the selected item in the list                  |
+| %j   | the 1-based index of the item in a multiselection                   |
 
 Additionally, using the uppercase forms of those codes will send the substituted string through the `string.format("%q", str)` function.
-This adds double quotes around the string and automatically escapes any quotation marks within the string.
-This is not necessary for most mpv commands, but can be very useful when sending commands to the OS with the `run` command.
+This adds double quotes around the string and automatically escapes any characters which would break the string encapsulation.
+This is not necessary for most mpv commands, but can be very useful when sending commands to the OS with the `run` command,
+or when passing values into [expressions](#conditional-command-condition-command).
 
 Example of a command to add an audio track:
 
@@ -88,8 +90,9 @@ Example of a command to add an audio track:
 }
 ```
 
-Any commands that contain codes representing specific items (`%f`, `%n`, etc) will
+Any commands that contain codes representing specific items (`%f`, `%n`, ``%i` etc) will
 not be run if no item is selected (for example in an empty directory).
+The `%j` code will similarly cause keybinds to only be run on multiselections.
 In these cases [passthrough](#passthrough-keybinds) rules will apply.
 
 ## Multiselect Commands
@@ -159,7 +162,7 @@ To avoid conflicts custom keybinds use the format: `file_browser/dynamic/custom/
 
 There are a small number of custom script messages defined by file-browser to support custom keybinds.
 
-### `conditional-command [condition] ...`
+### `conditional-command [condition] <command...>`
 
 Runs the following command only if the condition is `true`. The condition
 is a Lua expression similar to those used for [`profile-cond`](https://mpv.io/manual/master/#conditional-auto-profiles)
@@ -187,7 +190,7 @@ This example only runs if the currently selected item in the browser has a `.mkv
 }
 ```
 
-### `delay-command [delay] ...`
+### `delay-command [delay] <command...>`
 
 Delays the following command by `[delay]` seconds.
 
@@ -200,10 +203,10 @@ The following example will send the `print-text` command after 5 seconds:
 }
 ```
 
-### `evaluate-expressions ...`
+### `evaluate-expressions <command...>`
 
 Evaluates embedded Lua expressions in the following command.
-Expressions have the same behaviour as the [`conditional-command`](#conditional-command-condition) script-message.
+Expressions have the same behaviour as the [`conditional-command`](#conditional-command-condition-command) script-message.
 Expressions must be surrounded by `!{}` characters.
 Additional `!` characters can be placed at the start of the expression to
 escape the evaluation.

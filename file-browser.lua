@@ -303,6 +303,23 @@ if not table.pack then
     end
 end
 
+-- returns true if the given item exists inside the given table
+function API.list.indexOf(t, item, from_index)
+    for i = from_index or 1, #t, 1 do
+        if t[i] == item then return i end
+    end
+    return -1
+end
+
+--returns whether or not the given table contains an entry that
+--causes the given function to evaluate to true
+function API.list.some(t, fn)
+    for i, v in ipairs(t) do
+        if fn(v, i, t) then return true end
+    end
+    return false
+end
+
 --prints an error message and a stack trace
 --accepts an error object and optionally a coroutine
 --can be passed directly to xpcall
@@ -367,14 +384,6 @@ end
 function API.coroutine.run(fn, ...)
     local co = coroutine.create(fn)
     API.coroutine.resume_err(co, ...)
-end
-
---returns whether or not the given table contains the given value
-function API.list.some(t, fn)
-    for i, v in ipairs(t) do
-        if fn(v, i, t) then return true end
-    end
-    return false
 end
 
 --get the full path for the current file
@@ -1517,6 +1526,8 @@ code_fns = {
 
     f = create_item_string(function(_, item, s) return item and API.get_full_path(item, s.directory) or "" end),
     n = create_item_string(function(_, item, _) return item and (item.label or item.name) or "" end),
+    i = create_item_string(function(_, item, s) return API.list.indexOf(s.list, item) end),
+    j = create_item_string(function(_, item, s) return API.list.indexOf( API.sort_keys(s.selection) , item) end),
 
     p = function(_, _, s) return s.directory or "" end,
     d = function(_, _, s) return (s.directory_label or s.directory):match("([^/]+)/?$") or "" end,
@@ -1527,6 +1538,8 @@ code_fns = {
 --hence we need to manually specify the uppercase codes in the table
 code_fns.F = code_fns.f
 code_fns.N = code_fns.n
+code_fns.I = code_fns.i
+code_fns.J = code_fns.j
 
 --programatically creates a pattern that matches any key code
 --this will result in some duplicates but that shouldn't really matter
@@ -1585,11 +1598,16 @@ local function run_custom_keybind(cmd, state, co)
             if state.list[state.selected].type ~= cmd.filter then return false end
         end
 
-        --if the directory is empty, and this command needs to work on an item, then abort and fallback to the next command
-        if cmd.codes and not state.list[state.selected] then
-            for code in pairs(cmd.codes) do
-                --codes that work on specific items need to have both lowercase and uppercase code behaviour defined
-                if code_fns[code:upper()] then return false end
+        if cmd.codes then
+            --the j codes are only for multiselect indexes
+            if cmd.codes.j or cmd.codes.J then return false end
+
+            --if the directory is empty, and this command needs to work on an item, then abort and fallback to the next command
+            if not state.list[state.selected] then
+                for code in pairs(cmd.codes) do
+                    --codes that work on specific items need to have both lowercase and uppercase code behaviour defined
+                    if code_fns[code:upper()] then return false end
+                end 
             end
         end
 
