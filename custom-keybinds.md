@@ -83,7 +83,7 @@ The script will scan every string in the command for the special substitution st
 | %d   | name of the current directory (characters between the last two '/') |
 | %r   | name of the parser for the currently open directory                 |
 | %i   | the 1-based index of the selected item in the list                  |
-| %j   | the 1-based index of the item in a multiselection                   |
+| %j   | the 1-based index of the item in a multiselection - returns 1 for single selections |
 
 Additionally, using the uppercase forms of those codes will send the substituted string through the `string.format("%q", str)` function.
 This adds double quotes around the string and automatically escapes any characters which would break the string encapsulation.
@@ -102,7 +102,6 @@ Example of a command to add an audio track:
 
 Any commands that contain codes representing specific items (`%f`, `%n`, `%i` etc) will
 not be run if no item is selected (for example in an empty directory).
-The `%j` code will similarly cause keybinds to only be run on multiselections.
 In these cases [passthrough](#passthrough-keybinds) rules will apply.
 
 ## Multiselect Commands
@@ -196,7 +195,7 @@ the selected item is a matroska file:
 
 If the `condition` expression contains any item specific codes (`%F`, `%I`, etc) then it will be
 evaluated on each individual item, otherwise it will evaluated once for the whole keybind.
-If a code is invalid (for example using `%j` when not multiselecting) then the expression returns false.
+If a code is invalid (for example using `%i` in empty directories) then the expression returns false.
 
 There are some utility script messages that extend the power of expressions.
 [`conditional-command`](#conditional-command-condition-command) allows one to specify conditions that

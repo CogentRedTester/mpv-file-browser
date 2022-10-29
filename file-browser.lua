@@ -1527,7 +1527,7 @@ code_fns = {
     f = create_item_string(function(_, item, s) return item and API.get_full_path(item, s.directory) or "" end),
     n = create_item_string(function(_, item, _) return item and (item.label or item.name) or "" end),
     i = create_item_string(function(_, item, s) return API.list.indexOf(s.list, item) end),
-    j = create_item_string(function(_, item, s) return API.list.indexOf( API.sort_keys(s.selection) , item) end),
+    j = create_item_string(function(_, item, s) return math.abs(API.list.indexOf( API.sort_keys(s.selection) , item)) end),
 
     p = function(_, _, s) return s.directory or "" end,
     d = function(_, _, s) return (s.directory_label or s.directory):match("([^/]+)/?$") or "" end,
@@ -1631,9 +1631,6 @@ local function run_custom_keybind(cmd, state, co)
         end
 
         if cmd.codes then
-            --the j codes are only for multiselect indexes
-            if cmd.codes.j or cmd.codes.J then return false end
-
             --if the directory is empty, and this command needs to work on an item, then abort and fallback to the next command
             if not state.list[state.selected] and has_item_codes(cmd.codes) then return false end
         end
