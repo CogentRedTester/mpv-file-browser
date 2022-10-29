@@ -66,6 +66,7 @@ The script will scan every string in the command for the special substitution st
 
 | code | description                                                         |
 |------|---------------------------------------------------------------------|
+| %%   | escape code for `%`                                                 |
 | %f   | filepath of the selected item                                       |
 | %n   | filename of the selected item                                       |
 | %p   | currently open directory                                            |
@@ -86,6 +87,10 @@ Example of a command to add an audio track:
     "filter": "file"
 }
 ```
+
+Any commands that contain codes representing specific items (`%f`, `%n`, etc) will
+not be run if no item is selected (for example in an empty directory).
+In these cases [passthrough](#passthrough-keybinds) rules will apply.
 
 ## Multiselect Commands
 
