@@ -1604,7 +1604,7 @@ local function run_custom_keybind(cmd, state, co)
     if cmd["multi-type"] == "concat" then
         run_custom_command(cmd, selection, state)
 
-    elseif cmd["multi-type"] == "repeat" then
+    elseif cmd["multi-type"] == "repeat" or cmd["multi-type"] == nil then
         for i,_ in ipairs(selection) do
             run_custom_command(cmd, {selection[i]}, state)
 
