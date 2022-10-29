@@ -153,6 +153,23 @@ For example to change the scroll buttons from the arrows to the scroll wheel:
 Custom keybinds can be called using the same method, but users must set the `name` value inside the `file-browser-keybinds.json` file.
 To avoid conflicts custom keybinds use the format: `file_browser/dynamic/custom/[name]`.
 
+## Utility Script Messages
+
+There are a small number of custom script messages defined by file-browser to support custom keybinds.
+
+### `delay-command [delay] ...`
+
+Delays the following command by `[delay]` seconds.
+
+The following example will send the `print-text` command after 5 seconds:
+
+```json
+{
+    "key": "KP1",
+    "command": ["script-message", "delay-command", "5", "print-text", "example"],
+}
+```
+
 ## Examples
 
 See [here](file-browser-keybinds.json).

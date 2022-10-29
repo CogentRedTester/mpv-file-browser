@@ -2126,3 +2126,10 @@ mp.register_script_message("get-directory-contents", function(directory, respons
     API.coroutine.run(scan_directory_json, directory, response_str)
 end)
 
+--a helper script message for custom keybinds
+--sends a command after the specified delay
+mp.register_script_message('delay-command', function(delay, ...)
+    local command = table.pack(...)
+    mp.add_timeout(delay, function() mp.commandv(table.unpack(command)) end)
+end)
+
