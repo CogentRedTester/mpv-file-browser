@@ -1547,6 +1547,22 @@ local CUSTOM_KEYBIND_CODES = ""
 for key in pairs(code_fns) do CUSTOM_KEYBIND_CODES = CUSTOM_KEYBIND_CODES..key:lower()..key:upper() end
 local KEYBIND_CODE_PATTERN = ('%%%%([%s])'):format(API.ass_escape(CUSTOM_KEYBIND_CODES))
 
+--substitutes the key codes for the 
+local function substitute_codes(str, cmd, items, state)
+    return string.gsub(str, KEYBIND_CODE_PATTERN, function(code)
+        if type(code_fns[code]) == "string" then return code_fns[code] end
+
+        --encapsulates the string if using an uppercase code
+        if not code_fns[code] then
+            local lower = code_fns[code:lower()]
+            if not lower then return end
+            return string.format("%q", lower(cmd, items, state, code))
+        end
+
+        return code_fns[code](cmd, items, state, code)
+    end)
+end
+
 --iterates through the command table and substitutes special
 --character codes for the correct strings used for custom functions
 local function format_command_table(cmd, items, state)
@@ -1555,18 +1571,7 @@ local function format_command_table(cmd, items, state)
         copy[i] = {}
 
         for j = 1, #cmd.command[i] do
-            copy[i][j] = cmd.command[i][j]:gsub(KEYBIND_CODE_PATTERN, function(code)
-                if type(code_fns[code]) == "string" then return code_fns[code] end
-
-                --encapsulates the string if using an uppercase code
-                if not code_fns[code] then
-                    local lower = code_fns[code:lower()]
-                    if not lower then return end
-                    return string.format("%q", lower(cmd, items, state, code))
-                end
-
-                return code_fns[code](cmd, items, state, code)
-            end)
+            copy[i][j] = substitute_codes(cmd.command[i][j], cmd, items, state)
         end
     end
     return copy
@@ -1578,16 +1583,37 @@ end
 local function run_custom_command(cmd, items, state)
     local custom_cmds = cmd.codes and format_command_table(cmd, items, state) or cmd.command
 
-    for _, cmd in ipairs(custom_cmds) do
-        msg.debug("running command:", utils.to_string(cmd))
-        mp.command_native(cmd)
+    for _, custom_cmd in ipairs(custom_cmds) do
+        msg.debug("running command:", utils.to_string(custom_cmd))
+        mp.command_native(custom_cmd)
     end
+end
+
+--returns true if the given code set has item specific codes (%f, %i, etc)
+local function has_item_codes(codes)
+    for code in pairs(codes) do
+        if code_fns[code:upper()] then return true end
+    end
+    return false
 end
 
 --runs one of the custom commands
 local function run_custom_keybind(cmd, state, co)
+    --evaluates a condition and passes through the correct values
+    local function evaluate_condition(condition, items)
+        local cond = substitute_codes(condition, cmd, items, state)
+        return API.evaluate_string('return '..cond) == true
+    end
+
     -- evaluates the string condition to decide if the keybind should be run
-    if cmd.condition and API.evaluate_string('return '..cmd.condition) ~= true then return false end
+    local do_item_condition
+    if cmd.condition then
+        if has_item_codes(cmd.condition_codes) then
+            do_item_condition = true
+        elseif not evaluate_condition(cmd.condition, {}) then
+            return false
+        end
+    end
 
     if cmd.parser then
        local parser_str = ' '..cmd.parser..' '
@@ -1609,20 +1635,21 @@ local function run_custom_keybind(cmd, state, co)
             if cmd.codes.j or cmd.codes.J then return false end
 
             --if the directory is empty, and this command needs to work on an item, then abort and fallback to the next command
-            if not state.list[state.selected] then
-                for code in pairs(cmd.codes) do
-                    --codes that work on specific items need to have both lowercase and uppercase code behaviour defined
-                    if code_fns[code:upper()] then return false end
-                end 
-            end
+            if not state.list[state.selected] and has_item_codes(cmd.codes) then return false end
         end
 
+        if do_item_condition and not evaluate_condition(cmd.condition, { state.list[state.selected] }) then
+            return false
+        end
         run_custom_command(cmd, { state.list[state.selected] }, state)
         return true
     end
 
     --runs the command on all multi-selected items
-    local selection = API.sort_keys(state.selection, function(item) return not cmd.filter or item.type == cmd.filter end)
+    local selection = API.sort_keys(state.selection, function(item)
+        if do_item_condition and not evaluate_condition(cmd.condition, { item }) then return false end
+        return not cmd.filter or item.type == cmd.filter
+    end)
     if not next(selection) then return false end
 
     if cmd["multi-type"] == "concat" then
@@ -1709,6 +1736,11 @@ local function insert_custom_keybind(keybind)
     keybind.codes = scan_for_codes(keybind.command, {})
     if not next(keybind.codes) then keybind.codes = nil end
     keybind.prev_key = top_level_keys[keybind.key]
+
+    if keybind.condition then
+        keybind.condition_codes = {}
+        for code in string.gmatch(keybind.condition, KEYBIND_CODE_PATTERN) do keybind.condition_codes[code] = true end
+    end
 
     table.insert(state.keybinds, {keybind.key, keybind.name, function() run_keybind_coroutine(keybind) end, keybind.flags or {}})
     top_level_keys[keybind.key] = keybind

@@ -176,19 +176,29 @@ These behave similarly to those used for [`profile-cond`](https://mpv.io/manual/
 values. In an expression the `mp`, `mp.msg`, and `mp.utils` modules are available as `mp`, `msg`, and `utils` respectively.
 Additionally the file-browser [addon API](addons/addons.md#the-api) is available as `fb`.
 
-This example only runs the keybind if the browser is in the Windows C drive.
+This example only runs the keybind if the browser is in the Windows C drive or if
+the selected item is a matroska file:
 
 ```json
-{
-    "key": "KP1",
-    "command": ["print-text", "in my C:/ drive!"],
-    "condition": "fb.get_directory():find('C:/') == 1"
-}
+[
+    {
+        "key": "KP1",
+        "command": ["print-text", "in my C:/ drive!"],
+        "condition": "(%P):find('C:/') == 1"
+    },
+    {
+        "key": "KP2",
+        "command": ["print-text", "Matroska File!"],
+        "condition": "fb.get_extension(%N) == 'mkv'"
+    }
+]
 ```
 
-In this example I have used `fb.get_directory()` because the `condition` option does not have access to
-[substitution codes](#codes). Better support may be added in the future, but for now there are some
-utility script messages that extend the power of expressions and which all work with codes.
+If the `condition` expression contains any item specific codes (`%F`, `%I`, etc) then it will be
+evaluated on each individual item, otherwise it will evaluated once for the whole keybind.
+If a code is invalid (for example using `%j` when not multiselecting) then the expression returns false.
+
+There are some utility script messages that extend the power of expressions.
 [`conditional-command`](#conditional-command-condition-command) allows one to specify conditions that
 can apply to individual items or commands. The tradeoff is that you lose the automated passthrough behaviour.
 There is also [`evaluate-expressions`](#evaluate-expressions-command) which allows one to evaluate expressions inside commands.
