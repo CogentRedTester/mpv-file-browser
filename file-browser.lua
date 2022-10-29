@@ -1586,6 +1586,9 @@ end
 
 --runs one of the custom commands
 local function run_custom_keybind(cmd, state, co)
+    -- evaluates the string condition to decide if the keybind should be run
+    if cmd.condition and API.evaluate_string('return '..cmd.condition) ~= true then return false end
+
     if cmd.parser then
        local parser_str = ' '..cmd.parser..' '
        if not parser_str:find( '%W'..(state.parser.keybind_name or state.parser.name)..'%W' ) then return false end

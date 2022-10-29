@@ -302,7 +302,7 @@ parser.keybinds = {
 ```
 
 There are some limitations however, not all custom-keybind options are supported when using native functions.
-The supported options are: `key`, `name`, `flags`, `parser`, `passthrough`. The other options can be replicated manually (see below).
+The supported options are: `key`, `name`, `condition`, `flags`, `parser`, `passthrough`. The other options can be replicated manually (see below).
 
 ### Keybind Functions
 

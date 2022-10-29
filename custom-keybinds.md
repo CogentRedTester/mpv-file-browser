@@ -11,6 +11,7 @@ Keybinds are declared in the `~~/script-opts/file-browser-keybinds.json` file, t
 | key           | yes      | -          | the key to bind the command to - same syntax as input.conf                                 |
 | command       | yes      | -          | json array of commands and arguments                                                       |
 | name          | no       | numeric id | name of the script-binding - see [modifying default keybinds](#modifying-default-keybinds) |
+| condition     | no       | -          | a Lua [expression](#expressions) - the keybind will only run if this evaluates to true     |
 | flags         | no       | -          | flags to send to the mpv add_keybind function - see [here](https://mpv.io/manual/master/#lua-scripting-[,flags]]\)) |
 | filter        | no       | -          | run the command on just a file (`file`) or folder (`dir`)                                  |
 | parser        | no       | -          | run the command only in directories provided by the specified parser.                      |
@@ -130,6 +131,7 @@ This means the lower an item on the list, the higher preference it has.
 However, file-browser implements a layered passthrough system for its keybinds; if a keybind is blocked from running by user filters, then the next highest preference command will be sent, continuing until a command is sent or there are no more keybinds.
 The default dynamic keybinds are considered the lowest priority.
 
+The `filter`, `parser`, and `condition` options can all trigger passthrough, as well as some [codes](#codes).
 If a multi-select command is run on multiple items then passthrough will occur if any of the selected items fail the filters.
 
 Passthrough can be forcibly disabled or enabled using the passthrough option.
@@ -167,17 +169,37 @@ For example to change the scroll buttons from the arrows to the scroll wheel:
 Custom keybinds can be called using the same method, but users must set the `name` value inside the `file-browser-keybinds.json` file.
 To avoid conflicts custom keybinds use the format: `file_browser/dynamic/custom/[name]`.
 
+## Expressions
+
+Expressions are used to evaluate Lua code into a string that can be used for commands.
+These behave similarly to those used for [`profile-cond`](https://mpv.io/manual/master/#conditional-auto-profiles)
+values. In an expression the `mp`, `mp.msg`, and `mp.utils` modules are available as `mp`, `msg`, and `utils` respectively.
+Additionally the file-browser [addon API](addons/addons.md#the-api) is available as `fb`.
+
+This example only runs the keybind if the browser is in the Windows C drive.
+
+```json
+{
+    "key": "KP1",
+    "command": ["print-text", "in my C:/ drive!"],
+    "condition": "fb.get_directory():find('C:/') == 1"
+}
+```
+
+In this example I have used `fb.get_directory()` because the `condition` option does not have access to
+[substitution codes](#codes). Better support may be added in the future, but for now there are some
+utility script messages that extend the power of expressions and which all work with codes.
+[`conditional-command`](#conditional-command-condition-command) allows one to specify conditions that
+can apply to individual items or commands. The tradeoff is that you lose the automated passthrough behaviour.
+There is also [`evaluate-expressions`](#evaluate-expressions-command) which allows one to evaluate expressions inside commands.
+
 ## Utility Script Messages
 
 There are a small number of custom script messages defined by file-browser to support custom keybinds.
 
 ### `conditional-command [condition] <command...>`
 
-Runs the following command only if the condition is `true`. The condition
-is a Lua expression similar to those used for [`profile-cond`](https://mpv.io/manual/master/#conditional-auto-profiles)
-values.
-The `mp`, `mp.msg`, and `mp.utils` modules are available as `mp`, `msg`, and `utils` respectively.
-Additionally the [file-browser addon API](addons/addons.md#the-api) is available as `fb`.
+Runs the following command only if the condition [expression](#expressions) is `true`.
 
 This example command will only run if the player is currently paused:
 
