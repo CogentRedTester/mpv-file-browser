@@ -1496,46 +1496,43 @@ state.keybinds = {
 local top_level_keys = {}
 
 --format the item string for either single or multiple items
-local function create_item_string(cmd, items, funct)
-    if not items[1] then return end
+local function create_item_string(fn)
+    local quoted_fn = function(...) return ("%q"):format(fn(...)) end
+    return function(cmd, items, state, code)
+        if not items[1] then return end
+        local func = code == code:upper() and quoted_fn or fn
 
-    local str = funct(items[1])
-    for i = 2, #items do
-        str = str .. ( cmd["concat-string"] or " " ) .. funct(items[i])
+        local str = func(cmd, items[1], state, code)
+        for i = 2, #items, 1 do
+            str = str .. ( cmd["concat-string"] or " " ) .. func(cmd, items[i], state, code)
+        end
+        return str
     end
-    return str
 end
 
---characters used for custom keybind codes
-local CUSTOM_KEYBIND_CODES = "%%["..API.pattern_escape("%fFnNpPdDrR").."]"
+--functions to replace custom-keybind codes
 local code_fns
 code_fns = {
-    ["%f"] = function(cmd, items, s)
-        return create_item_string(cmd, items, function(item)
-            return item and API.get_full_path(item, s.directory) or ""
-        end)
-    end,
-    ["%F"] = function(cmd, items, s)
-        return create_item_string(cmd, items, function(item)
-            return ("%q"):format(item and API.get_full_path(item, s.directory) or "")
-        end)
-    end,
-    ["%n"] = function(cmd, items)
-        return create_item_string(cmd, items, function(item)
-            return item and (item.label or item.name) or ""
-        end)
-    end,
-    ["%N"] = function(cmd, items)
-        return create_item_string(cmd, items, function(item)
-            return ("%q"):format(item and (item.label or item.name) or "")
-        end)
-    end,
+    ["%"] = "%",
 
-    ["%%"] = "%",
-    ["%p"] = function(_, _, s) return s.directory or "" end,
-    ["%d"] = function(_, _, s) return (s.directory_label or s.directory):match("([^/]+)/?$") or "" end,
-    ["%r"] = function(_, _, s) return s.parser.keybind_name or s.parser.name or "" end,
+    f = create_item_string(function(_, item, s) return item and API.get_full_path(item, s.directory) or "" end),
+    n = create_item_string(function(_, item, _) return item and (item.label or item.name) or "" end),
+
+    p = function(_, _, s) return s.directory or "" end,
+    d = function(_, _, s) return (s.directory_label or s.directory):match("([^/]+)/?$") or "" end,
+    r = function(_, _, s) return s.parser.keybind_name or s.parser.name or "" end,
 }
+
+--codes that are specific to individual items require custom encapsulation behaviour
+--hence we need to manually specify the uppercase codes in the table
+code_fns.F = code_fns.f
+code_fns.N = code_fns.n
+
+--programatically creates a pattern that matches any key code
+--this will result in some duplicates but that shouldn't really matter
+local CUSTOM_KEYBIND_CODES = ""
+for key in pairs(code_fns) do CUSTOM_KEYBIND_CODES = CUSTOM_KEYBIND_CODES..key:lower()..key:upper() end
+local KEYBIND_CODE_PATTERN = ('%%%%([%s])'):format(API.ass_escape(CUSTOM_KEYBIND_CODES))
 
 --iterates through the command table and substitutes special
 --character codes for the correct strings used for custom functions
@@ -1545,17 +1542,17 @@ local function format_command_table(cmd, items, state)
         copy[i] = {}
 
         for j = 1, #cmd.command[i] do
-            copy[i][j] = cmd.command[i][j]:gsub(CUSTOM_KEYBIND_CODES, function(code)
+            copy[i][j] = cmd.command[i][j]:gsub(KEYBIND_CODE_PATTERN, function(code)
                 if type(code_fns[code]) == "string" then return code_fns[code] end
 
                 --encapsulates the string if using an uppercase code
                 if not code_fns[code] then
                     local lower = code_fns[code:lower()]
                     if not lower then return end
-                    return string.format("%q", lower(cmd, items, state))
+                    return string.format("%q", lower(cmd, items, state, code))
                 end
 
-                return code_fns[code](cmd, items, state)
+                return code_fns[code](cmd, items, state, code)
             end)
         end
     end
@@ -1590,7 +1587,10 @@ local function run_custom_keybind(cmd, state, co)
 
         --if the directory is empty, and this command needs to work on an item, then abort and fallback to the next command
         if cmd.codes and not state.list[state.selected] then
-            if cmd.codes["%f"] or cmd.codes["%F"] or cmd.codes["%n"] or cmd.codes["%N"] then return false end
+            for code in pairs(cmd.codes) do
+                --codes that work on specific items need to have both lowercase and uppercase code behaviour defined
+                if code_fns[code:upper()] then return false end
+            end
         end
 
         run_custom_command(cmd, { state.list[state.selected] }, state)
@@ -1668,7 +1668,7 @@ local function scan_for_codes(command_table, codes)
         if type == "table" then
             scan_for_codes(value, codes)
         elseif type == "string" then
-            value:gsub(CUSTOM_KEYBIND_CODES, function(code) codes[code] = true end)
+            value:gsub(KEYBIND_CODE_PATTERN, function(code) codes[code] = true end)
         end
     end
     return codes
