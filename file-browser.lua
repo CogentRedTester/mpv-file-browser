@@ -2185,7 +2185,7 @@ end)
 --sends a command after the specified delay
 mp.register_script_message('delay-command', function(delay, ...)
     local command = table.pack(...)
-    local success, err = pcall(mp.add_timeout, delay, function() mp.commandv(table.unpack(command)) end)
+    local success, err = pcall(mp.add_timeout, API.evaluate_string('return '..delay), function() mp.commandv(table.unpack(command)) end)
     if not success then return msg.error(err) end
 end)
 

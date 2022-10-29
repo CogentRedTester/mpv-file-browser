@@ -232,7 +232,7 @@ This example only runs if the currently selected item in the browser has a `.mkv
 
 ### `delay-command [delay] <command...>`
 
-Delays the following command by `[delay]` seconds.
+Delays the following command by `[delay]` seconds. Delay is an [expression](#expressions).
 
 The following example will send the `print-text` command after 5 seconds:
 
