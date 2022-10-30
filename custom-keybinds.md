@@ -173,7 +173,8 @@ To avoid conflicts custom keybinds use the format: `file_browser/dynamic/custom/
 Expressions are used to evaluate Lua code into a string that can be used for commands.
 These behave similarly to those used for [`profile-cond`](https://mpv.io/manual/master/#conditional-auto-profiles)
 values. In an expression the `mp`, `mp.msg`, and `mp.utils` modules are available as `mp`, `msg`, and `utils` respectively.
-Additionally the file-browser [addon API](addons/addons.md#the-api) is available as `fb`.
+Additionally the file-browser [addon API](addons/addons.md#the-api) is available as `fb` and if [mpv-user-input](https://github.com/CogentRedTester/mpv-user-input)
+is installed then user-input API will be available in `input`.
 
 This example only runs the keybind if the browser is in the Windows C drive or if
 the selected item is a matroska file:
@@ -281,6 +282,41 @@ This example replaces all `/` characters in the path with `\`
 {
     "key": "KP1",
     "command": ["script-message", "evaluate-expressions", "print-text", "!{ string.gsub(%F, '/', '\\\\') }"],
+}
+```
+
+### `run-statement <statement...>`
+
+Runs the following string a as a Lua statement. This is similar to an [expression](#expressions),
+but instead of the code evaluating to a value it must run a series of statements. Basically it allows
+for function bodies to be embedded into custom keybinds. All the same modules are available.
+If multiple strings are sent to the script-message then they will be concatenated together with newlines.
+
+The following keybind will use [mpv-user-input](https://github.com/CogentRedTester/mpv-user-input) to
+rename items in file-browser:
+
+```json
+{
+    "key": "KP1",
+    "command": ["script-message", "run-statement",
+                    "assert(input, 'install mpv-user-input!')",
+
+                    "local line, err = input.get_user_input_co({",
+                                            "id = 'rename-file',",
+                                            "source = 'custom-keybind',",
+                                            "request_text = 'rename file:',",
+                                            "queueable = true,",
+                                            "default_input = %N,",
+                                            "cursor_pos = #(%N) - #fb.get_extension(%N, '')",
+                                        "})",
+
+                    "if not line then return end",
+                    "os.rename(%F, utils.join_path(%P, line))",
+
+                    "fb.rescan()"
+                ],
+    "parser": "file",
+    "multiselect": true
 }
 ```
 

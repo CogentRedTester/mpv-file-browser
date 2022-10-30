@@ -126,6 +126,10 @@ local o = {
 opt.read_options(o, 'file_browser')
 utils.shared_script_property_set("file_browser-open", "no")
 
+package.path = mp.command_native({"expand-path", o.module_directory}).."/?.lua;"..package.path
+local success, input = pcall(require, "user-input-module")
+if not success then input = nil end
+
 
 
 --------------------------------------------------------------------------------------------------------
@@ -160,8 +164,6 @@ local parse_state_API = {}
 --the osd_overlay API was not added until v0.31. The expand-path command was not added until 0.30
 local ass = mp.create_osd_overlay("ass-events")
 if not ass then return msg.error("Script requires minimum mpv version 0.31") end
-
-package.path = mp.command_native({"expand-path", o.module_directory}).."/?.lua;"..package.path
 
 local style = {
     global = o.alignment == 0 and "" or ([[{\an%d}]]):format(o.alignment),
@@ -579,6 +581,7 @@ function API.evaluate_string(str, name)
     env.msg = API.redirect_table(msg)
     env.utils = API.redirect_table(utils)
     env.fb = API.redirect_table(API)
+    env.input = input and API.redirect_table(input)
 
     local chunk, err
     if setfenv then
@@ -2167,12 +2170,11 @@ local function scan_directory_json(directory, response_str)
     mp.commandv("script-message", response_str, list or "", opts or "")
 end
 
-pcall(function()
-    local input = require "user-input-module"
+if input then
     mp.add_key_binding("Alt+o", "browse-directory/get-user-input", function()
         input.get_user_input(browse_directory, {request_text = "open directory:"})
     end)
-end)
+end
 
 
 
@@ -2226,6 +2228,14 @@ mp.register_script_message('evaluate-expressions', function(...)
 
         mp.commandv(table.unpack(args))
     end)
+end)
+
+--a helper function for custom-keybinds
+--concatenates the command arguments with newlines and runs the
+--string as a statement of code
+mp.register_script_message('run-statement', function(...)
+    local statement = table.concat(table.pack(...), '\n')
+    API.coroutine.run(API.evaluate_string, statement)
 end)
 
 --allows keybinds/other scripts to auto-open specific directories
