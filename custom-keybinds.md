@@ -206,6 +206,19 @@ There is also [`evaluate-expressions`](#evaluate-expressions-command) which allo
 
 There are a small number of custom script messages defined by file-browser to support custom keybinds.
 
+### `=> <command...>`
+
+A basic script message that makes it easier to chain multiple utility script messages together.
+Any `=>` string will be substituted for `script-message`.
+
+```json
+{
+    "key": "KP1",
+    "command": ["script-message", "=>", "delay-command", "%j * 2", "=>", "evaluate-expressions", "print-text", "!{%j * 2}"],
+    "multiselect": true
+}
+```
+
 ### `conditional-command [condition] <command...>`
 
 Runs the following command only if the condition [expression](#expressions) is `true`.
@@ -232,7 +245,8 @@ This example only runs if the currently selected item in the browser has a `.mkv
 
 ### `delay-command [delay] <command...>`
 
-Delays the following command by `[delay]` seconds. Delay is an [expression](#expressions).
+Delays the following command by `[delay]` seconds.
+Delay is an [expression](#expressions).
 
 The following example will send the `print-text` command after 5 seconds:
 

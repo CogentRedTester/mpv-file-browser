@@ -2182,6 +2182,17 @@ end)
 ------------------------------------------------------------------------------------------
 
 --a helper script message for custom keybinds
+--substitutes any '=>' arguments for 'script-message'
+--makes chaining script-messages much easier
+mp.register_script_message('=>', function(...)
+    local command = table.pack('script-message', ...)
+    for i, v in ipairs(command) do
+        if v == '=>' then command[i] = 'script-message' end
+    end
+    mp.commandv(table.unpack(command))
+end)
+
+--a helper script message for custom keybinds
 --sends a command after the specified delay
 mp.register_script_message('delay-command', function(delay, ...)
     local command = table.pack(...)
