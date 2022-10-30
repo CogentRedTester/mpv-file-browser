@@ -1,4 +1,4 @@
-# How to Write an Addon - API v1.4.0
+# How to Write an Addon - API v1.5.0
 
 Addons provide ways for file-browser to parse non-native directory structures. This document describes how one can create their own custom addon.
 
@@ -23,10 +23,13 @@ not be loaded.
 A minor version number denotes a change to the API that is backwards compatible. This includes additional API functions,
 or extra fields in tables that were previously unused. It may also include additional arguments to existing functions that
 add additional behaviour without changing the old behaviour.
-If the parser's minor version number is greater than the API_VERSION, then a warning is printed to the console.
+If the parser's minor version number is greater than the API_VERSION, then an error message will be printed and the parser will
+not be loaded.
 
-Patch numbers denote bug fixes, and are ignored when loading an addon.
-For this reason addon authors are allowed to leave the patch number out of their version tag and just use `MAJOR.MINOR`.
+Patch numbers denote bug fixes, and are mostly ignored when loading an addon.
+However if the addon has a patch number greater than the patch number file-browser uses then a warning will
+be printed just in case the addon uses a bug that has been fixed in the patches.
+Addon authors are allowed to leave the patch number out of their version tag and just use `MAJOR.MINOR`.
 
 ## Overview
 

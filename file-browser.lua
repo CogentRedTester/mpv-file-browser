@@ -138,7 +138,7 @@ if not success then input = nil end
 --------------------------------------------------------------------------------------------------------
 
 --sets the version for the file-browser API
-API_VERSION = "1.4.0"
+API_VERSION = "1.5.0"
 
 --switch the main script to a different environment so that the
 --executed lua code cannot access our global variales
@@ -294,6 +294,29 @@ API.coroutine = {}
 local ABORT_ERROR = {
     msg = "browser is no longer waiting for list - aborting parse"
 }
+
+local API_MAJOR, API_MINOR, API_PATCH = API_VERSION:match("(%d+)%.(%d+)%.(%d+)")
+
+--checks if the given table has a valid version number
+function API.check_version(version)
+    version = version or "1.0.0"
+
+    local major, minor = version:match("(%d+)%.(%d+)")
+    local patch = version:match("%d+%.%d+%.(%d+)")
+
+    if not major or not minor then
+        return false, ("Invalid version number: %s"):format(version)
+    elseif major ~= API_MAJOR then
+        return false, ("wrong major version number - expected v%d.x.x got v%s"):format(API_MAJOR, version)
+        -- return msg.error("parser", parser.name, "has wrong major version number, expected", ("v%d.x.x"):format(API_MAJOR), "got", 'v'..version)
+    elseif minor > API_MINOR then
+        return false,  ("wrong minor version number - expected v%d.0.x - v%d.%d.x got v%s"):format(API_MAJOR, API_MAJOR, API_MINOR, version)
+        -- msg.warn("parser", parser.name, "has newer minor version number than API, expected", ("v%d.%d.x"):format(API_MAJOR, API_MINOR), "got", 'v'..version)
+    elseif patch and patch > API_PATCH then
+        return true, ("wrong patch number - expected v%d.%d.0 - v%d.%d.%d got v%s"):format(API_MAJOR, API_MINOR, API_MAJOR, API_MINOR, API_PATCH, version)
+    end
+    return true
+end
 
 --implements table.pack if on lua 5.1
 if not table.pack then
@@ -1728,6 +1751,15 @@ end
 --inserting the custom keybind into the keybind array for declaration when file-browser is opened
 --custom keybinds with matching names will overwrite eachother
 local function insert_custom_keybind(keybind)
+    local success, err = API.check_version(keybind.version)
+    if not success then
+        msg.warn(utils.to_string(keybind))
+        msg.error(('failed to load keybind %s: %s'):format(keybind.name, err))
+        return
+    elseif err then
+        msg.warn(('%s\nwarning loading keybind %s: %s'):format(utils.to_string(keybind), keybind.name, err))
+    end
+
     --we'll always save the keybinds as either an array of command arrays or a function
     if type(keybind.command) == "table" and type(keybind.command[1]) ~= "table" then
         keybind.command = {keybind.command}
@@ -1945,24 +1977,6 @@ end
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
 
-local API_MAJOR, API_MINOR, API_PATCH = API_VERSION:match("(%d+)%.(%d+)%.(%d+)")
-
---checks if the given parser has a valid version number
-local function check_api_version(parser)
-    local version = parser.version or "1.0.0"
-
-    local major, minor = version:match("(%d+)%.(%d+)")
-
-    if not major or not minor then
-        return msg.error("Invalid version number")
-    elseif major ~= API_MAJOR then
-        return msg.error("parser", parser.name, "has wrong major version number, expected", ("v%d.x.x"):format(API_MAJOR), "got", 'v'..version)
-    elseif minor > API_MINOR then
-        msg.warn("parser", parser.name, "has newer minor version number than API, expected", ("v%d.%d.x"):format(API_MAJOR, API_MINOR), "got", 'v'..version)
-    end
-    return true
-end
-
 --create a unique id for the given parser
 local function set_parser_id(parser)
     local name = parser.name
@@ -2027,7 +2041,13 @@ local function setup_parser(parser, file)
     parser.name = parser.name or file:gsub("%-browser%.lua$", ""):gsub("%.lua$", "")
 
     set_parser_id(parser)
-    if not check_api_version(parser) then return msg.error("aborting load of parser", parser:get_id(), "from", file) end
+    local valid_version, err = API.check_version(parser.version)
+    if not valid_version then
+        msg.error(parser:get_id()..':', err)
+        return msg.error("aborting load of parser", parser:get_id(), "from", file)
+    elseif err then
+        msg.warn(("warning loading parser %s: %s"):format(parser:get_id(), err))
+    end
 
     msg.verbose("imported parser", parser:get_id(), "from", file)
 
