@@ -803,16 +803,20 @@ local function update_ass()
 
         --sets the selection colour scheme
         local multiselected = state.selection[i]
-        if multiselected then append(style.multiselect)
-        elseif i == state.selected then append(style.selected) end
 
-        --prints the currently-playing icon and style
-        if playing_file then append( multiselected and style.playing_selected or style.playing) end
+        --sets the colour for the item
+        local function set_colour()
+            if multiselected then append(style.multiselect)
+            elseif i == state.selected then append(style.selected) end
+
+            if playing_file then append( multiselected and style.playing_selected or style.playing) end
+        end
+        set_colour()
 
         --sets the folder icon
         if v.type == 'dir' then
             append(style.folder..o.folder_icon.."\\h"..style.body)
-            if playing_file then append( multiselected and style.playing_selected or style.playing) end
+            set_colour()
         end
 
         --adds the actual name of the item
