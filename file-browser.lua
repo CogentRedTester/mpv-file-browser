@@ -1098,13 +1098,13 @@ local function update(moving_adjacent)
     state.list = {}
     disable_select_mode()
     update_ass()
-    state.empty_text = "empty directory"
 
     --the directory is always handled within a coroutine to allow addons to
     --pause execution for asynchronous operations
     API.coroutine.run(function()
         state.co = coroutine.running()
         update_list(moving_adjacent)
+        state.empty_text = "empty directory"
         update_ass()
     end)
 end
