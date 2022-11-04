@@ -652,7 +652,7 @@ end
 --handles the read-only table logic
 do
     local references = setmetatable({}, { __mode = 'k' })
-    local newindex = function(t, k, v) error(("attempted to assign %s to key %s in read-only table %s"):format(v, k, t)) end
+    local newindex = function(t, k, v) error(("attempted to assign `%s` to key `%s` in read-only %s"):format(v, k, t)) end
 
     --returns a read-only reference to the table t
     function API.read_only(t)
