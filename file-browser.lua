@@ -252,6 +252,29 @@ local compatible_file_extensions = {
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
 
+--the values table will be made readonly and set as part of the state - do not use values after passing to this function!
+local function update_state(level, values)
+    local new_mt = { level = level }
+    setmetatable(values, new_mt)
+
+    if level == 0 then
+        state = API.read_only(values)
+        return state
+    end
+
+    --bypasses the readonly reference and grabs the original table and metatable
+    local mutable_state = getmetatable(state).__index
+    local mt = getmetatable(mutable_state)
+
+    --travels up the state chain until it finds a mt of the same level as `level`
+    --this mt will be pointing to a state table of one level lower, which is what we want to point to
+    while (mt.level > level ) do mt = getmetatable(mt.__index) end
+    new_mt.__index = mt.__index
+
+    state = API.read_only(values)
+    return state
+end
+
 --metatable of methods to manage the cache
 local __cache = {}
 
