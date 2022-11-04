@@ -626,6 +626,21 @@ function API.copy_table(t, depth)
     return copy_table_recursive(t, {}, depth or math.huge)
 end
 
+--handles the read-only table logic
+do
+    local references = setmetatable({}, { __mode = 'k' })
+    local newindex = function(t, k, v) error(("attempted to assign %s to key %s in read-only table %s"):format(v, k, t)) end
+
+    --returns a read-only reference to the table t
+    function API.read_only(t)
+        if references[t] then return references[t] end
+
+        local ro = setmetatable({}, { __index = t, __newindex = newindex })
+        references[t] = ro
+        return ro
+    end
+end
+
 
 
 --------------------------------------------------------------------------------------------------------
