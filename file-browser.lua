@@ -252,8 +252,44 @@ local compatible_file_extensions = {
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
 
+--this value can be used to remove values when updating the current state
+local NIL_STATE = {}
+
+local function get_state(level)
+    --bypasses the readonly reference and grabs the original table and metatable
+    local s = getmetatable(state).__index
+    local mt = getmetatable(s)
+
+    --travels up the state chain until it finds a mt of the same level as `level`
+    --this mt will be pointing to a state table of one level lower, which is what we want to point to
+    while mt.level > level do
+        s = mt.__index
+        mt = getmetatable(s)
+
+        if not mt or not mt.level then return nil end
+    end
+
+    return s, mt
+end
+
+--prints the current state values
+local function print_state()
+    local i = 0
+    while true do
+        s, mt = get_state(i)
+        if not s then error('failed to get state of level '..i) end
+        if mt.level ~= i then break end
+
+        for k, v in pairs(s) do
+            print(i, k, v)
+        end
+
+        i = i + 1
+    end
+end
+
 --the values table will be made readonly and set as part of the state - do not use values after passing to this function!
-local function update_state(level, values)
+local function set_state(level, values)
     local new_mt = { level = level }
     setmetatable(values, new_mt)
 
@@ -262,16 +298,32 @@ local function update_state(level, values)
         return state
     end
 
-    --bypasses the readonly reference and grabs the original table and metatable
-    local mutable_state = getmetatable(state).__index
-    local mt = getmetatable(mutable_state)
-
-    --travels up the state chain until it finds a mt of the same level as `level`
-    --this mt will be pointing to a state table of one level lower, which is what we want to point to
-    while (mt.level > level ) do mt = getmetatable(mt.__index) end
-    new_mt.__index = mt.__index
+    local s, mt = get_state(level)
+    if not mt then error('failed to get state of level '..level) end
+    new_mt.__index = mt.level == level and mt.__index or s
 
     state = API.read_only(values)
+    return state
+end
+
+--updates the current state values of the particular level
+local function update_state(level, values)
+    local s, mt = get_state(level)
+    if not mt then error('failed to get state of level '..level) end
+
+    if mt.level ~= level then
+        set_state(level, values)
+        return
+    end
+
+    local new_state = API.copy_table(s, 1)
+    for k, v in pairs(values) do
+        if v == NIL_STATE then new_state[k] = nil
+        else new_state[k] = v end
+    end
+
+    setmetatable(new_state, mt)
+    state = API.read_only(new_state)
     return state
 end
 
