@@ -374,6 +374,7 @@ API.coroutine = {}
 local ABORT_ERROR = {
     msg = "browser is no longer waiting for list - aborting parse"
 }
+local newindex = function(t, k, v) error(("attempted to assign `%s` to key `%s` in read-only %s"):format(v, k, t), 2) end
 
 --implements table.pack if on lua 5.1
 if not table.pack then
@@ -685,8 +686,13 @@ local function copy_table_recursive(t, references, depth)
     if type(t) ~= "table" or depth == 0 then return t end
     if references[t] then return references[t] end
 
+    --bypasses the proxy protecting read-only tables
+    local mt = getmetatable(t)
+    local original_t
+    if mt and mt.__newindex == newindex then original_t = mt.__index end
+
     local copy = setmetatable({}, { __original = t })
-    references[t] = copy
+    references[original_t or t] = copy
 
     for key, value in pairs(t) do
         key = copy_table_recursive(key, references, depth - 1)
@@ -704,7 +710,6 @@ end
 --handles the read-only table logic
 do
     local references = setmetatable({}, { __mode = 'k' })
-    local newindex = function(t, k, v) error(("attempted to assign `%s` to key `%s` in read-only %s"):format(v, k, t)) end
 
     --returns a read-only reference to the table t
     function API.read_only(t)
