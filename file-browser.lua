@@ -188,22 +188,27 @@ local style = {
 }
 
 local state = {
+    -- lvl 1 values
     list = {},
-    selected = 1,
-    hidden = true,
-    flag_update = false,
-    keybinds = nil,
-
     parser = nil,
     directory = nil,
     directory_label = nil,
     prev_directory = "",
     co = nil,
 
+    --lvl 2 values
+    selected = 1,
     multiselect_start = nil,
     initial_selection = nil,
     selection = {}
 }
+
+local overlay = {
+    hidden = true,
+    flag_update = false
+}
+
+local keybinds = nil
 
 --the parser table actually contains 3 entries for each parser
 --a numeric entry which represents the priority of the parsers and has the parser object as the value
@@ -739,7 +744,7 @@ end
 
 --refreshes the ass text using the contents of the list
 local function update_ass()
-    if state.hidden then state.flag_update = true ; return end
+    if overlay.hidden then overlay.flag_update = true ; return end
 
     ass.data = style.global
 
@@ -1170,15 +1175,15 @@ end
 
 --opens the browser
 local function open()
-    if not state.hidden then return end
+    if not overlay.hidden then return end
 
-    for _,v in ipairs(state.keybinds) do
+    for _,v in ipairs(keybinds) do
         mp.add_forced_key_binding(v[1], 'dynamic/'..v[2], v[3], v[4])
     end
 
     utils.shared_script_property_set("file_browser-open", "yes")
     if o.toggle_idlescreen then mp.commandv('script-message', 'osc-idlescreen', 'no', 'no_osd') end
-    state.hidden = false
+    overlay.hidden = false
     if state.directory == nil then
         local path = mp.get_property('path')
         update_current_directory(nil, path)
@@ -1186,28 +1191,28 @@ local function open()
         return
     end
 
-    if state.flag_update then update_current_directory(nil, mp.get_property('path')) end
-    if not state.flag_update then ass:update()
-    else state.flag_update = false ; update_ass() end
+    if overlay.flag_update then update_current_directory(nil, mp.get_property('path')) end
+    if not overlay.flag_update then ass:update()
+    else overlay.flag_update = false ; update_ass() end
 end
 
 --closes the list and sets the hidden flag
 local function close()
-    if state.hidden then return end
+    if overlay.hidden then return end
 
-    for _,v in ipairs(state.keybinds) do
+    for _,v in ipairs(keybinds) do
         mp.remove_key_binding('dynamic/'..v[2])
     end
 
     utils.shared_script_property_set("file_browser-open", "no")
     if o.toggle_idlescreen then mp.commandv('script-message', 'osc-idlescreen', 'yes', 'no_osd') end
-    state.hidden = true
+    overlay.hidden = true
     ass:remove()
 end
 
 --toggles the list
 local function toggle()
-    if state.hidden then open()
+    if overlay.hidden then open()
     else close() end
 end
 
@@ -1487,7 +1492,7 @@ end
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-state.keybinds = {
+keybinds = {
     {'ENTER',       'play',         function() open_file('replace', false) end},
     {'Shift+ENTER', 'play_append',  function() open_file('append-play', false) end},
     {'Alt+ENTER',   'play_autoload',function() open_file('replace', true) end},
@@ -1746,7 +1751,7 @@ local function insert_custom_keybind(keybind)
         for code in string.gmatch(keybind.condition, KEYBIND_CODE_PATTERN) do keybind.condition_codes[code] = true end
     end
 
-    table.insert(state.keybinds, {keybind.key, keybind.name, function() run_keybind_coroutine(keybind) end, keybind.flags or {}})
+    table.insert(keybinds, {keybind.key, keybind.name, function() run_keybind_coroutine(keybind) end, keybind.flags or {}})
     top_level_keys[keybind.key] = keybind
 end
 
@@ -1756,7 +1761,7 @@ local function setup_keybinds()
     if not o.custom_keybinds and not o.addons then return end
 
     --this is to make the default keybinds compatible with passthrough from custom keybinds
-    for _, keybind in ipairs(state.keybinds) do
+    for _, keybind in ipairs(keybinds) do
         top_level_keys[keybind[1]] = { key = keybind[1], name = keybind[2], command = keybind[3], flags = keybind[4] }
     end
 
@@ -1885,7 +1890,7 @@ function API.get_current_parser() return state.parser:get_id() end
 function API.get_current_parser_keyname() return state.parser.keybind_name or state.parser.name end
 function API.get_selected_index() return state.selected end
 function API.get_selected_item() return API.copy_table(state.list[state.selected]) end
-function API.get_open_status() return not state.hidden end
+function API.get_open_status() return not overlay.hidden end
 function API.get_parse_state(co) return parse_states[co or coroutine.running() or ""] end
 
 function API.set_empty_text(str)
@@ -2259,10 +2264,10 @@ end)
 
 --we don't want to add any overhead when the browser isn't open
 mp.observe_property('path', 'string', function(_,path)
-    if not state.hidden then 
+    if not overlay.hidden then
         update_current_directory(_,path)
         update_ass()
-    else state.flag_update = true end
+    else overlay.flag_update = true end
 end)
 
 --updates the dvd_device
