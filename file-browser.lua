@@ -473,6 +473,15 @@ function API.coroutine.run(fn, ...)
     API.coroutine.resume_err(co, ...)
 end
 
+--schedules a coroutine to run when next idle.
+--returns the coroutine object
+function API.coroutine.schedule(fn, ...)
+    local co = coroutine.create(fn)
+    local args = table.pack(...)
+    mp.add_timeout(0, function() API.coroutine.resume_err(co, table.unpack(args)) end)
+    return co
+end
+
 --get the full path for the current file
 function API.get_full_path(item, dir)
     if item.path then return item.path end
@@ -951,38 +960,49 @@ end
 
 --disables multiselect
 local function disable_select_mode()
-    state.multiselect_start = nil
-    state.initial_selection = nil
+    -- state.multiselect_start = nil
+    -- state.initial_selection = nil
+    update_state(2, {
+        multiselect_start = NIL_STATE,
+        initial_selection = NIL_STATE
+    })
+    print_state()
 end
 
 --enables multiselect
 local function enable_select_mode()
-    state.multiselect_start = state.selected
-    state.initial_selection = API.copy_table(state.selection)
+    update_state(2, {
+        multiselect_start = state.selected,
+        initial_selection = API.copy_table(state.selection)
+    })
+    print_state()
 end
 
 --calculates what drag behaviour is required for that specific movement
 local function drag_select(original_pos, new_pos)
     if original_pos == new_pos then return end
 
+    local new_selection = API.copy_table(state.selection)
     local setting = state.selection[state.multiselect_start]
     for i = original_pos, new_pos, (new_pos > original_pos and 1 or -1) do
         --if we're moving the cursor away from the starting point then set the selection
         --otherwise restore the original selection
         if i > state.multiselect_start then
             if new_pos > original_pos then
-                state.selection[i] = setting
+                new_selection[i] = setting
             elseif i ~= new_pos then
-                state.selection[i] = state.initial_selection[i]
+                new_selection[i] = state.initial_selection[i]
             end
         elseif i < state.multiselect_start then
             if new_pos < original_pos then
-                state.selection[i] = setting
+                new_selection[i] = setting
             elseif i ~= new_pos then
-                state.selection[i] = state.initial_selection[i]
+                new_selection[i] = state.initial_selection[i]
             end
         end
     end
+
+    return new_selection
 end
 
 --moves the selector up and down the list by the entered amount
@@ -991,31 +1011,43 @@ local function scroll(n, wrap)
     if num_items == 0 then return end
 
     local original_pos = state.selected
+    local new_pos
+    local new_multiselect
 
     if original_pos + n > num_items then
-        state.selected = wrap and 1 or num_items
+        new_pos = wrap and 1 or num_items
     elseif original_pos + n < 1 then
-        state.selected = wrap and num_items or 1
+        new_pos = wrap and num_items or 1
     else
-        state.selected = original_pos + n
+        new_pos = original_pos + n
     end
 
-    if state.multiselect_start then drag_select(original_pos, state.selected) end
+    if state.multiselect_start then
+        new_multiselect = drag_select(original_pos, new_pos)
+    end
+
+    update_state(2, { selected = new_pos, selection = new_multiselect })
     update_ass()
 end
 
 --toggles the selection
 local function toggle_selection()
     if not state.list[state.selected] then return end
-    state.selection[state.selected] = not state.selection[state.selected] or nil
+    -- state.selection[state.selected] = not state.selection[state.selected] or nil
+    local selection = API.copy_table(state.selection)
+    selection[state.selected] = not selection[state.selected] or nil
+    update_state(2, { selection = selection })
     update_ass()
 end
 
 --select all items in the list
 local function select_all()
+    local selection = {}
     for i,_ in ipairs(state.list) do
-        state.selection[i] = true
+        selection[i] = true
     end
+
+    update_state(2, {selection = selection})
     update_ass()
 end
 
@@ -1133,18 +1165,18 @@ end
 local function update_list(moving_adjacent)
     msg.verbose('opening directory: ' .. state.directory)
 
-    state.selected = 1
-    state.selection = {}
+    -- state.selected = 1
+    -- state.selection = {}
 
     --loads the current directry from the cache to save loading time
     --there will be a way to forcibly reload the current directory at some point
     --the cache is in the form of a stack, items are taken off the stack when the dir moves up
-    if cache[1] and cache[#cache].directory == state.directory then
-        msg.verbose('found directory in cache')
-        cache:apply()
-        state.prev_directory = state.directory
-        return
-    end
+    -- if cache[1] and cache[#cache].directory == state.directory then
+    --     msg.verbose('found directory in cache')
+    --     cache:apply()
+    --     state.prev_directory = state.directory
+    --     return
+    -- end
     local directory = state.directory
     local list, opts = parse_directory(state.directory, { source = "browser" })
 
@@ -1157,19 +1189,21 @@ local function update_list(moving_adjacent)
     end
 
     --apply fallbacks if the scan failed
-    if not list and cache[1] then
-        --switches settings back to the previously opened directory
-        --to the user it will be like the directory never changed
-        msg.warn("could not read directory", state.directory)
-        cache:apply()
-        return
-    elseif not list then
+    -- if not list and cache[1] then
+    --     --switches settings back to the previously opened directory
+    --     --to the user it will be like the directory never changed
+    --     msg.warn("could not read directory", state.directory)
+    --     cache:apply()
+    --     return
+    if not list then
         msg.warn("could not read directory", state.directory)
         list, opts = root_parser:parse()
     end
 
-    state.list = list
-    state.parser = opts.parser
+    local finished_state = {}
+
+    finished_state.list = list
+    finished_state.parser = opts.parser
 
     --this only matters when displaying the list on the screen, so it doesn't need to be in the scan function
     if not opts.escaped then
@@ -1179,54 +1213,71 @@ local function update_list(moving_adjacent)
     end
 
     --setting custom options from parsers
-    state.directory_label = opts.directory_label
-    state.empty_text = opts.empty_text or state.empty_text
+    finished_state.directory_label = opts.directory_label
+    finished_state.empty_text = opts.empty_text
 
     --we assume that directory is only changed when redirecting to a different location
     --therefore, the cache should be wiped
     if opts.directory then
-        state.directory = opts.directory
+        finished_state.directory = opts.directory
         cache:clear()
     end
 
     if opts.selected_index then
-        state.selected = opts.selected_index or state.selected
-        if state.selected > #state.list then state.selected = #state.list
-        elseif state.selected < 1 then state.selected = 1 end
+        finished_state.selected = opts.selected_index or state.selected
+        if finished_state.selected > #list then finished_state.selected = #list
+        elseif finished_state.selected < 1 then finished_state.selected = 1 end
     end
 
     if moving_adjacent then select_prev_directory()
     else select_playing_item() end
-    state.prev_directory = state.directory
+    finished_state.prev_directory = finished_state.directory
+
+    print(utils.to_string(finished_state))
+    return finished_state
 end
 
 --rescans the folder and updates the list
-local function update(moving_adjacent)
-    --we can only make assumptions about the directory label when moving from adjacent directories
-    if not moving_adjacent then
-        state.directory_label = nil
-        cache:clear()
-    end
+local function update(new_state, moving_adjacent)
+    if not new_state then new_state = {} end
+    local directory = new_state.directory or state.directory
+    cache:clear()
 
-    state.empty_text = "~"
-    state.list = {}
-    disable_select_mode()
-    update_ass()
+    --we can only make assumptions about the directory label when moving from adjacent directories
+    -- if not moving_adjacent then
+    --     state.directory_label = nil
+    --     cache:clear()
+    -- end
+
+    new_state.directory = directory
+    new_state.empty_text = "~"
+    new_state.list = {}
+
+    -- set_state(1, new_state)
+    -- -- disable_select_mode()
+    -- update_ass()
 
     --the directory is always handled within a coroutine to allow addons to
     --pause execution for asynchronous operations
-    API.coroutine.run(function()
-        state.co = coroutine.running()
-        update_list(moving_adjacent)
-        state.empty_text = "empty directory"
+    new_state.co = API.coroutine.schedule(function()
+        local newer_state = update_list(moving_adjacent)
+        if not newer_state then error() end
+        newer_state.empty_text = newer_state.empty_text or NIL_STATE
+        update_state(1, newer_state)
+        print_state()
+
         update_ass()
     end)
+
+    set_state(1, new_state)
+    print_state()
+    update_ass()
 end
 
 --the base function for moving to a directory
 local function goto_directory(directory)
-    state.directory = directory
-    update(false)
+    -- state.directory = directory
+    update({ directory = directory }, false)
 end
 
 --loads the root list
@@ -1251,13 +1302,14 @@ local function up_dir()
         index = dir:find("[/\\]")
     end
 
-    if index == nil then state.directory = ""
-    else state.directory = dir:sub(index):reverse() end
+    if index == nil then dir = ""
+    else dir = dir:sub(index):reverse() end
 
     --we can make some assumptions about the next directory label when moving up or down
-    if state.directory_label then state.directory_label = state.directory_label:match("^(.+/)[^/]+/$") end
+    local dir_label = nil
+    if state.directory_label then dir_label = state.directory_label:match("^(.+/)[^/]+/$") end
 
-    update(true)
+    update({ directory = dir, directory_label = dir_label } ,true)
     cache:pop()
 end
 
@@ -1268,11 +1320,11 @@ local function down_dir()
 
     cache:push()
     local directory, redirected = API.get_new_directory(current, state.directory)
-    state.directory = directory
 
     --we can make some assumptions about the next directory label when moving up or down
-    if state.directory_label then state.directory_label = state.directory_label..(current.label or current.name) end
-    update(not redirected)
+    local dir_label
+    if state.directory_label then dir_label= state.directory_label..(current.label or current.name) end
+    update({ directory = directory, directory_label = dir_label }, not redirected)
 end
 
 
@@ -1330,7 +1382,7 @@ local function escape()
     --if multiple items are selection cancel the
     --selection instead of closing the browser
     if next(state.selection) or state.multiselect_start then
-        state.selection = {}
+        update_state(2, { selection = {} })
         disable_select_mode()
         update_ass()
         return
@@ -2247,6 +2299,7 @@ local function setup_root()
     end
 end
 
+set_state(0, state)
 setup_root()
 
 setup_parser(file_parser, "file-browser.lua")
