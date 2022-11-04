@@ -195,6 +195,7 @@ local state = {
     directory_label = nil,
     prev_directory = "",
     co = nil,
+    empty_text = 'empty directory',
 
     --lvl 2 values
     selected = 1,
@@ -257,7 +258,7 @@ local NIL_STATE = {}
 
 local function get_state(level)
     --bypasses the readonly reference and grabs the original table and metatable
-    local s = getmetatable(state).__index
+    local s = getmetatable(state).mutable
     local mt = getmetatable(s)
 
     --travels up the state chain until it finds a mt of the same level as `level`
@@ -290,17 +291,20 @@ end
 
 --the values table will be made readonly and set as part of the state - do not use values after passing to this function!
 local function set_state(level, values)
-    local new_mt = { level = level }
-    setmetatable(values, new_mt)
 
     if level == 0 then
+        setmetatable(values, { level = 0 })
         state = API.read_only(values)
         return state
     end
 
     local s, mt = get_state(level)
     if not mt then error('failed to get state of level '..level) end
-    new_mt.__index = mt.level == level and mt.__index or s
+    if mt.level == level then
+        setmetatable(values, mt)
+    else
+        setmetatable(values, { level = level, __index = s })
+    end
 
     state = API.read_only(values)
     return state
@@ -712,10 +716,20 @@ do
     local references = setmetatable({}, { __mode = 'k' })
 
     --returns a read-only reference to the table t
+    --based on https://stackoverflow.com/a/28315547
     function API.read_only(t)
+        if type(t) ~= 'table' then return t end
         if references[t] then return references[t] end
 
-        local ro = setmetatable({}, { __index = t, __newindex = newindex })
+        local ro = setmetatable({}, {
+            __newindex = newindex,
+            mutable = t,
+            __index = function(_, k)
+                return API.read_only( t[k] )
+            end,
+            __len = function () return #t end
+        })
+
         references[t] = ro
         return ro
     end
