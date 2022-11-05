@@ -347,7 +347,7 @@ local function update_state(level, values)
         return
     end
 
-    local new_state = API.copy_table(s, 1)
+    local new_state = API.copy_table(s, 1, false)
     for k, v in pairs(values) do
         if v == NIL_STATE then new_state[k] = nil
         else new_state[k] = v end
@@ -722,7 +722,7 @@ end
 
 --copies a table without leaving any references to the original
 --uses a structured clone algorithm to maintain cyclic references
-local function copy_table_recursive(t, references, depth)
+local function copy_table_recursive(t, references, depth, store_original)
     if type(t) ~= "table" or depth == 0 then return t end
 
     --bypasses the proxy protecting read-only tables
@@ -730,20 +730,20 @@ local function copy_table_recursive(t, references, depth)
     if mt and mt.__newindex == readonly_newindex then t = mt.mutable end
     if references[t] then return references[t] end
 
-    local copy = setmetatable({}, { __original = t })
+    local copy = setmetatable({}, { __original = store_original and t })
     references[t] = copy
 
     for key, value in pairs(t) do
-        key = copy_table_recursive(key, references, depth - 1)
-        copy[key] = copy_table_recursive(value, references, depth - 1)
+        key = copy_table_recursive(key, references, depth - 1, store_original)
+        copy[key] = copy_table_recursive(value, references, depth - 1, store_original)
     end
     return copy
 end
 
 --a wrapper around copy_table to provide the reference table
-function API.copy_table(t, depth)
+function API.copy_table(t, depth, store_original)
     --this is to handle cyclic table references
-    return copy_table_recursive(t, {}, depth or math.huge)
+    return copy_table_recursive(t, {}, depth or math.huge, store_original or true)
 end
 
 --handles the read-only table logic
@@ -1022,7 +1022,7 @@ end
 local function enable_select_mode()
     update_state(2, {
         multiselect_start = state.selected,
-        initial_selection = API.copy_table(state.selection)
+        initial_selection = API.copy_table(state.selection, nil, false)
     })
     print_state()
 end
@@ -1031,7 +1031,7 @@ end
 local function drag_select(original_pos, new_pos)
     if original_pos == new_pos then return end
 
-    local new_selection = API.copy_table(state.selection)
+    local new_selection = API.copy_table(state.selection, nil, false)
     local setting = state.selection[state.multiselect_start]
     for i = original_pos, new_pos, (new_pos > original_pos and 1 or -1) do
         --if we're moving the cursor away from the starting point then set the selection
@@ -1083,7 +1083,7 @@ end
 local function toggle_selection()
     if not state.list[state.selected] then return end
     -- state.selection[state.selected] = not state.selection[state.selected] or nil
-    local selection = API.copy_table(state.selection)
+    local selection = API.copy_table(state.selection, nil, false)
     selection[state.selected] = not selection[state.selected] or nil
     update_state(2, { selection = selection })
     update_ass()
@@ -1282,7 +1282,7 @@ local function update_list(moving_adjacent)
     else select_playing_item() end
     finished_state.prev_directory = finished_state.directory
 
-    print(utils.to_string(finished_state))
+    -- print(utils.to_string(finished_state))
     return finished_state
 end
 
