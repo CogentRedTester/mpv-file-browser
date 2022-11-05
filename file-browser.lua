@@ -748,7 +748,7 @@ end
 
 --handles the read-only table logic
 do
-    local references = setmetatable({}, { __mode = 'k' })
+    local references = setmetatable({}, { __mode = 'kv' })
 
     --returns a read-only reference to the table t
     --based on https://stackoverflow.com/a/28315547
