@@ -697,15 +697,14 @@ end
 --uses a structured clone algorithm to maintain cyclic references
 local function copy_table_recursive(t, references, depth)
     if type(t) ~= "table" or depth == 0 then return t end
-    if references[t] then return references[t] end
 
     --bypasses the proxy protecting read-only tables
     local mt = getmetatable(t)
-    local original_t
-    if mt and mt.__newindex == newindex then original_t = mt.__index end
+    if mt and mt.__newindex == readonly_newindex then t = mt.mutable end
+    if references[t] then return references[t] end
 
     local copy = setmetatable({}, { __original = t })
-    references[original_t or t] = copy
+    references[t] = copy
 
     for key, value in pairs(t) do
         key = copy_table_recursive(key, references, depth - 1)
