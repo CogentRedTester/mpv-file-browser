@@ -748,24 +748,28 @@ end
 
 --handles the read-only table logic
 do
-    local references = setmetatable({}, { __mode = 'kv' })
+    local readonly_cache = setmetatable({}, { __mode = 'kv' })
 
     --returns a read-only reference to the table t
     --based on https://stackoverflow.com/a/28315547
     function API.read_only(t)
         if type(t) ~= 'table' then return t end
-        if references[t] then return references[t] end
+        if readonly_cache[t] then return readonly_cache[t] end
 
+        --this prevents the garbage collector from removing sub-tables from the cache
+        local internal_record = {}
         local ro = setmetatable({}, {
             __newindex = readonly_newindex,
             mutable = t,
             __index = function(_, k)
-                return API.read_only( t[k] )
+                local val = API.read_only( t[k] )
+                if type(val) == 'table' then internal_record[val] = true end
+                return val
             end,
             __len = function () return #t end
         })
 
-        references[t] = ro
+        readonly_cache[t] = ro
         return ro
     end
 end
