@@ -253,6 +253,33 @@ local compatible_file_extensions = {
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
 
+local original_ipairs = _G.ipairs
+local original_next = _G.next
+local original_pairs = _G.pairs
+
+--adds ipairs support for readonly tables
+function ipairs(t)
+    if not API.is_read_only(t) then return original_ipairs(t) end
+
+    local function iter (a, i)
+        i = i + 1
+        if a[i] then return API.read_only_values(i, a[i]) end
+    end
+    return iter, t, 0
+end
+
+--adds next support for readonly tables
+function next(t, ...)
+    if API.is_read_only(t) then return API.read_only_values(original_next(getmetatable(t).mutable, ...))
+    else return original_next(t, ...) end
+end
+
+--this only needs to use the new next function in order to support readonly tables
+function pairs(t)
+    if API.is_read_only(t) then return next, t, nil
+    else return original_pairs(t) end
+end
+
 --this value can be used to remove values when updating the current state
 local NIL_STATE = {}
 
@@ -378,7 +405,7 @@ API.coroutine = {}
 local ABORT_ERROR = {
     msg = "browser is no longer waiting for list - aborting parse"
 }
-local newindex = function(t, k, v) error(("attempted to assign `%s` to key `%s` in read-only %s"):format(v, k, t), 2) end
+local readonly_newindex = function(t, k, v) error(("attempted to assign `%s` to key `%s` in read-only %s"):format(v, k, t), 2) end
 
 --implements table.pack if on lua 5.1
 if not table.pack then
@@ -730,7 +757,7 @@ do
         if references[t] then return references[t] end
 
         local ro = setmetatable({}, {
-            __newindex = newindex,
+            __newindex = readonly_newindex,
             mutable = t,
             __index = function(_, k)
                 return API.read_only( t[k] )
@@ -741,6 +768,19 @@ do
         references[t] = ro
         return ro
     end
+end
+
+--returns read-only references to all given values
+function API.read_only_values(...)
+    local vals = table.pack(...)
+    for i, v in ipairs(vals) do vals[i] = API.read_only(v) end
+    return table.unpack(vals)
+end
+
+--returns true if the given tale is read-only
+function API.is_read_only(t)
+    local mt = getmetatable(t)
+    return mt and mt.__newindex == readonly_newindex
 end
 
 
@@ -1042,7 +1082,7 @@ end
 --select all items in the list
 local function select_all()
     local selection = {}
-    for i,_ in ipairs(state.list) do
+    for i in ipairs(state.list) do
         selection[i] = true
     end
 
