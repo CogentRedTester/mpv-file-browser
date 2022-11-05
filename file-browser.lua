@@ -859,15 +859,22 @@ local file_parser = {
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
 
+local string_buffer = {}
+
 --appends the entered text to the overlay
 local function append(text)
     if text == nil then return end
-    ass.data = ass.data .. text
+    table.insert(string_buffer, text)
 end
 
 --appends a newline character to the osd
 local function newline()
-ass.data = ass.data .. '\\N'
+    table.insert(string_buffer, '\\N')
+end
+
+local function flush_buffer()
+    ass.data = table.concat(string_buffer, '')
+    string_buffer = {}
 end
 
 --detects whether or not to highlight the given entry as being played
@@ -903,7 +910,7 @@ end
 local function update_ass()
     if overlay.hidden then overlay.flag_update = true ; return end
 
-    ass.data = style.global
+    append(style.global)
 
     local dir_name = state.directory_label or state.directory
     if dir_name == "" then dir_name = "ROOT" end
@@ -914,6 +921,7 @@ local function update_ass()
 
     if #state.list < 1 then
         append(state.empty_text)
+        flush_buffer()
         ass:update()
         return
     end
@@ -987,6 +995,8 @@ local function update_ass()
     end
 
     if overflow then append('\\N'..style.footer_header..#state.list-finish..' item(s) remaining') end
+
+    flush_buffer()
     ass:update()
 end
 
