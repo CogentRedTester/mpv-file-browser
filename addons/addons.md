@@ -570,9 +570,11 @@ Returns the success boolean returned by `coroutine.resume`, but drops all other 
 
 Runs the given function in a new coroutine, passing through any additional arguments.
 
-#### `fb.rescan(): void`
+#### `fb.rescan(): coroutine`
 
 Rescans the current directory. Equivalent to Ctrl+r without the cache refresh for higher level directories.
+Returns the coroutine of the upcoming parse operation. The parse is queued and run when the script thread next goes idle,
+allowing one to store this value and use it to identify the triggered parse operation.
 
 #### `fb.redraw(): void`
 

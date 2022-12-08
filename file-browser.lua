@@ -411,6 +411,16 @@ function API.coroutine.run(fn, ...)
     API.coroutine.resume_err(co, ...)
 end
 
+--Runs the given function in a coroutine, passing through any additional arguments.
+--Does not run the coroutine immediately, instead it ques the coroutine to run when the thread is next idle.
+--Returns the coroutine object so that the caller can act on it before it is run.
+function API.coroutine.queue(fn, ...)
+    local co = coroutine.create(fn)
+    local args = table.pack(...)
+    mp.add_timeout(0, function() coroutine.resume(co, table.unpack(args)) end)
+    return co
+end
+
 --get the full path for the current file
 function API.get_full_path(item, dir)
     if item.path then return item.path end
@@ -1121,11 +1131,12 @@ local function update(moving_adjacent)
 
     --the directory is always handled within a coroutine to allow addons to
     --pause execution for asynchronous operations
-    API.coroutine.run(function()
-        state.co = coroutine.running()
+    state.co = API.coroutine.queue(function()
         update_list(moving_adjacent)
         update_ass()
     end)
+
+    return state.co
 end
 
 --the base function for moving to a directory
@@ -1399,9 +1410,7 @@ local function loadlist(item, opts)
 
         --we need the current coroutine to suspend before we run the first parse operation, so
         --we schedule the coroutine to run on the mpv event queue
-        mp.add_timeout(0, function()
-            API.coroutine.run(concurrent_loadlist_wrapper, dir, opts, {}, item)
-        end)
+        API.coroutine.queue(concurrent_loadlist_wrapper, dir, opts, {}, item)
         concurrent_loadlist_append({item, _directory = opts.directory}, opts)
     else
         custom_loadlist_recursive(dir, opts, {})
