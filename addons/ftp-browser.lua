@@ -21,7 +21,7 @@ end
 local function execute(args)
     msg.debug(utils.to_string(args))
     local _, cmd = fb.get_parse_state():yield(
-        mp.command_native({
+        mp.command_native_async({
             name = "subprocess",
             playback_only = false,
             capture_stdout = true,
