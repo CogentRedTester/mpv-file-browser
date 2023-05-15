@@ -32,12 +32,17 @@ local function execute(args)
     return cmd
 end
 
+-- encodes some special characters using the URL percent encoding format
+function urlEncode(url)
+    return url:gsub(' ', '%20')
+end
+
 function ftp:parse(directory)
     msg.verbose(directory)
 
-    local ftp = execute({"curl", "-k", "-g", "--retry", "4", directory})
+    local ftp = execute({"curl", "-k", "-g", "--retry", "4", urlEncode(directory)})
 
-    local entries = execute({"curl", "-k", "-g", "-l", "--retry", "4", directory})
+    local entries = execute({"curl", "-k", "-g", "-l", "--retry", "4", urlEncode(directory)})
 
     if entries.status == 28 then
         msg.error(entries.stderr)
