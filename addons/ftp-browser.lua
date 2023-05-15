@@ -4,6 +4,7 @@
 
 local mp = require 'mp'
 local msg = require 'mp.msg'
+local utils = require 'mp.utils'
 local fb = require 'file-browser'
 
 local ftp = {
@@ -18,6 +19,7 @@ end
 --in my experience curl has been somewhat unreliable when it comes to ftp requests
 --this fuction retries the request a few times just in case
 local function execute(args)
+    msg.debug(utils.to_string(args))
     local _, cmd = fb.get_parse_state():yield(
         mp.command_native({
             name = "subprocess",
@@ -32,7 +34,6 @@ end
 
 function ftp:parse(directory)
     msg.verbose(directory)
-    msg.debug("curl -k -g "..string.format("%q", directory))
 
     local ftp = execute({"curl", "-k", "-g", "--retry", "4", directory})
 
