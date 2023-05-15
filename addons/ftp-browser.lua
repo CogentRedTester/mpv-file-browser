@@ -32,9 +32,16 @@ local function execute(args)
     return cmd
 end
 
--- encodes some special characters using the URL percent encoding format
+-- encodes special characters using the URL percent encoding format
 function urlEncode(url)
-    return url:gsub(' ', '%20')
+    local domain, path = string.match(url, '(ftp://[^/]-/)(.*)')
+
+    -- these are the unreserved URI characters according to RFC 3986
+    -- https://www.rfc-editor.org/rfc/rfc3986#section-2.3
+    path = string.gsub(path, '[^%w.~_%-]', function(c)
+        return ('%%%x'):format(string.byte(c))
+    end)
+    return domain..path
 end
 
 function ftp:parse(directory)
