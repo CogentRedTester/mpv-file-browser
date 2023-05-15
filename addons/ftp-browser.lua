@@ -35,6 +35,7 @@ end
 -- encodes special characters using the URL percent encoding format
 function urlEncode(url)
     local domain, path = string.match(url, '(ftp://[^/]-/)(.*)')
+    if not path then return url end
 
     -- these are the unreserved URI characters according to RFC 3986
     -- https://www.rfc-editor.org/rfc/rfc3986#section-2.3
