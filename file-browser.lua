@@ -2174,7 +2174,7 @@ local function scan_directory_json(directory, response_str)
     msg.verbose(("recieved %q from 'get-directory-contents' script message - returning result to %q"):format(directory, response_str))
 
     local list, opts = parse_directory(directory, { source = "script-message" } )
-    opts.API_VERSION = API_VERSION
+    if opts then opts.API_VERSION = API_VERSION end
 
     local err
     list, err = API.format_json_safe(list)
