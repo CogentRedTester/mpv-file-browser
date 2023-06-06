@@ -1179,6 +1179,7 @@ end
 --opens the browser
 local function open()
     if not state.hidden then return end
+    state.hidden = false
 
     for _,v in ipairs(state.keybinds) do
         mp.add_forced_key_binding(v[1], 'dynamic/'..v[2], v[3], v[4])
@@ -1188,7 +1189,6 @@ local function open()
     mp.set_property('user-data/file_browser/open', 'yes')
 
     if o.toggle_idlescreen then mp.commandv('script-message', 'osc-idlescreen', 'no', 'no_osd') end
-    state.hidden = false
     if state.directory == nil then
         local path = mp.get_property('path')
         update_current_directory(nil, path)
@@ -1204,6 +1204,7 @@ end
 --closes the list and sets the hidden flag
 local function close()
     if state.hidden then return end
+    state.hidden = true
 
     for _,v in ipairs(state.keybinds) do
         mp.remove_key_binding('dynamic/'..v[2])
@@ -1213,7 +1214,6 @@ local function close()
     mp.set_property('user-data/file_browser/open', 'no')
 
     if o.toggle_idlescreen then mp.commandv('script-message', 'osc-idlescreen', 'yes', 'no_osd') end
-    state.hidden = true
     ass:remove()
 end
 
@@ -2268,6 +2268,17 @@ end)
 --------------------------------mpv API Callbacks-----------------------------------------
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
+
+-- Enables/disables file-browser when the user-data property is modified.
+-- file-browser itself actually triggers this whenever the open() or close()
+-- methods are run (meaning this observation will trigger itself).
+-- However, there already exists a guard in the functions to abort if the
+-- browser is already open/closed. The performance impact of this seems negligible
+-- for the added utility.
+mp.observe_property('user-data/file_browser/open', 'native', function(_, open_state)
+    if open_state == 'yes' then open()
+    else close() end
+end)
 
 --we don't want to add any overhead when the browser isn't open
 mp.observe_property('path', 'string', function(_,path)
