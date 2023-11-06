@@ -22,30 +22,33 @@
 ]]
 
 local mp = require 'mp'
+local msg = require 'mp.msg'
 local utils = require 'mp.utils'
 local fb = require 'file-browser'
 
 -- loads the root json file
-local json_path = mp.command_native({'expand-path', '~~/script-opts/file-browser-root.json'})
-local f = assert(io.open(json_path, "r"), 'failed to open '..json_path)
-local root, err = utils.parse_json(f:read("*a"))
-if not root then error(err) end
+local config_path = mp.command_native({'expand-path', '~~/script-opts/file-browser-root.json'})
 
--- deletes any root values set by the root script-opt
-local original_root = getmetatable(fb.get_root()).__original
-for i in ipairs(original_root) do
-    original_root[i] = nil
+local file = io.open(config_path, 'r')
+if not file then
+    msg.error('failed to read file', config_path)
+    return
 end
 
-local parser = {
-    version = '1.4.0',
-    priority = -math.huge
-}
+local root_config = utils.parse_json(file:read("*a"))
+if not root_config then
+    msg.error('failed to parse contents of', config_path, '- Check the syntax is correct.')
+    return
+end
 
-function parser:setup()
-    for i, v in ipairs(root) do
-        fb.register_root_item(v)
+local function setup()
+    for i, item in ipairs(root_config) do
+        fb.register_root_item(item, item.priority)
     end
 end
 
-return parser
+return {
+    version = '1.4.0',
+    setup = setup,
+    priority = -1000,
+}
