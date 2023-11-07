@@ -137,15 +137,23 @@ The file is placed in the `~~/script-opts/` folder.
 ## Conditional Auto-Profiles
 
 file-browser provides a property that can be used with [conditional auto-profiles](https://mpv.io/manual/master/#conditional-auto-profiles)
-to detect when the browser is open. It can be accessed with the `shared_script_properties["file_browser-open"]` key, and it will always
-evaluate to either `yes` or `no`. If you are using a modern version of mpv with the `user-data` property then you can instead use
-`user_data.file_browser.open`.
+to detect when the browser is open.
+On mpv v0.36+ you should use the `user-data` property with the `file_browser/open` boolean.
 
 Here is an example of an auto-profile that hides the OSC logo when using file-browser in an idle window:
 
 ```properties
 [hide-logo]
-profile-cond=shared_script_properties["file_browser-open"] == "yes" and idle_active
+profile-cond= idle_active and user_data.file_browser.open
+profile-restore=copy
+osc=no
+```
+
+On older versions of mpv you can use the `file_browser-open` field of the `shared-script-properties` property:
+
+```properties
+[hide-logo]
+profile-cond= idle_active and shared_script_properties["file_browser-open"] == "yes"
 profile-restore=copy
 osc=no
 ```

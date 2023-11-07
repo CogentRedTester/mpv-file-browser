@@ -136,7 +136,7 @@ opt.read_options(o, 'file_browser')
 
 o.set_shared_script_properties = o.set_shared_script_properties and utils.shared_script_property_set
 if o.set_shared_script_properties then utils.shared_script_property_set('file_browser-open', 'no') end
-if o.set_user_data then mp.set_property('user-data/file_browser/open', 'no') end
+if o.set_user_data then mp.set_property_bool('user-data/file_browser/open', false) end
 
 package.path = mp.command_native({"expand-path", o.module_directory}).."/?.lua;"..package.path
 local success, input = pcall(require, "user-input-module")
@@ -1196,7 +1196,7 @@ local function open()
     end
 
     if o.set_shared_script_properties then utils.shared_script_property_set('file_browser-open', 'yes') end
-    if o.set_user_data then mp.set_property('user-data/file_browser/open', 'yes') end
+    if o.set_user_data then mp.set_property_bool('user-data/file_browser/open', true) end
 
     if o.toggle_idlescreen then mp.commandv('script-message', 'osc-idlescreen', 'no', 'no_osd') end
     state.hidden = false
@@ -1221,7 +1221,7 @@ local function close()
     end
 
     if o.set_shared_script_properties then utils.shared_script_property_set("file_browser-open", "no") end
-    if o.set_user_data then mp.set_property('user-data/file_browser/open', 'no') end
+    if o.set_user_data then mp.set_property_bool('user-data/file_browser/open', false) end
 
     if o.toggle_idlescreen then mp.commandv('script-message', 'osc-idlescreen', 'yes', 'no_osd') end
     state.hidden = true
