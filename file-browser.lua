@@ -200,22 +200,28 @@ local style = {
 }
 
 local state = {
+    -- lvl 1 values
     list = {},
-    selected = 1,
-    hidden = true,
-    flag_update = false,
-    keybinds = nil,
-
     parser = nil,
     directory = nil,
     directory_label = nil,
     prev_directory = "",
     co = nil,
+    empty_text = 'empty directory',
 
+    --lvl 2 values
+    selected = 1,
     multiselect_start = nil,
     initial_selection = nil,
     selection = {}
 }
+
+local overlay = {
+    hidden = true,
+    flag_update = false
+}
+
+local keybinds = nil
 
 --the parser table actually contains 3 entries for each parser
 --a numeric entry which represents the priority of the parsers and has the parser object as the value
@@ -258,6 +264,111 @@ local compatible_file_extensions = {
 --------------------------------------Cache Implementation----------------------------------------------
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
+
+local original_ipairs = _G.ipairs
+local original_next = _G.next
+local original_pairs = _G.pairs
+
+--adds ipairs support for readonly tables
+function ipairs(t)
+    if not API.is_read_only(t) then return original_ipairs(t) end
+
+    local function iter (a, i)
+        i = i + 1
+        if a[i] then return API.read_only_values(i, a[i]) end
+    end
+    return iter, t, 0
+end
+
+--adds next support for readonly tables
+function next(t, ...)
+    if API.is_read_only(t) then return API.read_only_values(original_next(getmetatable(t).mutable, ...))
+    else return original_next(t, ...) end
+end
+
+--this only needs to use the new next function in order to support readonly tables
+function pairs(t)
+    if API.is_read_only(t) then return next, t, nil
+    else return original_pairs(t) end
+end
+
+--this value can be used to remove values when updating the current state
+local NIL_STATE = {}
+
+local function get_state(level)
+    --bypasses the readonly reference and grabs the original table and metatable
+    local s = getmetatable(state).mutable
+    local mt = getmetatable(s)
+
+    --travels up the state chain until it finds a mt of the same level as `level`
+    --this mt will be pointing to a state table of one level lower, which is what we want to point to
+    while mt.level > level do
+        s = mt.__index
+        mt = getmetatable(s)
+
+        if not mt or not mt.level then return nil end
+    end
+
+    return s, mt
+end
+
+--prints the current state values
+local function print_state()
+    local i = 0
+    while true do
+        s, mt = get_state(i)
+        if not s then error('failed to get state of level '..i) end
+        if mt.level ~= i then break end
+
+        for k, v in pairs(s) do
+            print(i, k, v)
+        end
+
+        i = i + 1
+    end
+end
+
+--the values table will be made readonly and set as part of the state - do not use values after passing to this function!
+local function set_state(level, values)
+
+    if level == 0 then
+        setmetatable(values, { level = 0 })
+        state = API.read_only(values)
+        return state
+    end
+
+    local s, mt = get_state(level)
+    if not mt then error('failed to get state of level '..level) end
+    if mt.level == level then
+        setmetatable(values, mt)
+    else
+        setmetatable(values, { level = level, __index = s })
+    end
+
+    state = API.read_only(values)
+    return state
+end
+
+--updates the current state values of the particular level
+local function update_state(level, values)
+    local s, mt = get_state(level)
+    if not mt then error('failed to get state of level '..level) end
+
+    if mt.level ~= level then
+        set_state(level, values)
+        return
+    end
+
+    local new_state = API.copy_table(s, 1, false)
+    for k, v in pairs(values) do
+        if v == NIL_STATE then new_state[k] = nil
+        else new_state[k] = v end
+    end
+
+    setmetatable(new_state, mt)
+    state = API.read_only(new_state)
+    return state
+end
 
 --metatable of methods to manage the cache
 local __cache = {}
@@ -306,6 +417,7 @@ API.coroutine = {}
 local ABORT_ERROR = {
     msg = "browser is no longer waiting for list - aborting parse"
 }
+local readonly_newindex = function(t, k, v) error(("attempted to assign `%s` to key `%s` in read-only %s"):format(v, k, t), 2) end
 
 --implements table.pack if on lua 5.1
 if not table.pack then
@@ -398,6 +510,15 @@ end
 function API.coroutine.run(fn, ...)
     local co = coroutine.create(fn)
     API.coroutine.resume_err(co, ...)
+end
+
+--schedules a coroutine to run when next idle.
+--returns the coroutine object
+function API.coroutine.schedule(fn, ...)
+    local co = coroutine.create(fn)
+    local args = table.pack(...)
+    mp.add_timeout(0, function() API.coroutine.resume_err(co, table.unpack(args)) end)
+    return co
 end
 
 --get the full path for the current file
@@ -620,24 +741,69 @@ end
 
 --copies a table without leaving any references to the original
 --uses a structured clone algorithm to maintain cyclic references
-local function copy_table_recursive(t, references, depth)
+local function copy_table_recursive(t, references, depth, store_original)
     if type(t) ~= "table" or depth == 0 then return t end
+
+    --bypasses the proxy protecting read-only tables
+    local mt = getmetatable(t)
+    if mt and mt.__newindex == readonly_newindex then t = mt.mutable end
     if references[t] then return references[t] end
 
-    local copy = setmetatable({}, { __original = t })
+    local copy = setmetatable({}, { __original = store_original and t })
     references[t] = copy
 
     for key, value in pairs(t) do
-        key = copy_table_recursive(key, references, depth - 1)
-        copy[key] = copy_table_recursive(value, references, depth - 1)
+        key = copy_table_recursive(key, references, depth - 1, store_original)
+        copy[key] = copy_table_recursive(value, references, depth - 1, store_original)
     end
     return copy
 end
 
 --a wrapper around copy_table to provide the reference table
-function API.copy_table(t, depth)
+function API.copy_table(t, depth, store_original)
     --this is to handle cyclic table references
-    return copy_table_recursive(t, {}, depth or math.huge)
+    return copy_table_recursive(t, {}, depth or math.huge, store_original or true)
+end
+
+--handles the read-only table logic
+do
+    local readonly_cache = setmetatable({}, { __mode = 'kv' })
+
+    --returns a read-only reference to the table t
+    --based on https://stackoverflow.com/a/28315547
+    function API.read_only(t)
+        if type(t) ~= 'table' then return t end
+        if readonly_cache[t] then return readonly_cache[t] end
+
+        --this prevents the garbage collector from removing sub-tables from the cache
+        local internal_record = {}
+        local ro = setmetatable({}, {
+            __newindex = readonly_newindex,
+            mutable = t,
+            __index = function(_, k)
+                local val = API.read_only( t[k] )
+                if type(val) == 'table' then internal_record[val] = true end
+                return val
+            end,
+            __len = function () return #t end
+        })
+
+        readonly_cache[t] = ro
+        return ro
+    end
+end
+
+--returns read-only references to all given values
+function API.read_only_values(...)
+    local vals = table.pack(...)
+    for i, v in ipairs(vals) do vals[i] = API.read_only(v) end
+    return table.unpack(vals)
+end
+
+--returns true if the given tale is read-only
+function API.is_read_only(t)
+    local mt = getmetatable(t)
+    return mt and mt.__newindex == readonly_newindex
 end
 
 
@@ -716,15 +882,22 @@ local file_parser = {
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
 
+local string_buffer = {}
+
 --appends the entered text to the overlay
 local function append(text)
     if text == nil then return end
-    ass.data = ass.data .. text
+    table.insert(string_buffer, text)
 end
 
 --appends a newline character to the osd
 local function newline()
-ass.data = ass.data .. '\\N'
+    table.insert(string_buffer, '\\N')
+end
+
+local function flush_buffer()
+    ass.data = table.concat(string_buffer, '')
+    string_buffer = {}
 end
 
 --detects whether or not to highlight the given entry as being played
@@ -758,9 +931,9 @@ end
 
 --refreshes the ass text using the contents of the list
 local function update_ass()
-    if state.hidden then state.flag_update = true ; return end
+    if overlay.hidden then overlay.flag_update = true ; return end
 
-    ass.data = style.global
+    append(style.global)
 
     local dir_name = state.directory_label or state.directory
     if dir_name == "" then dir_name = "ROOT" end
@@ -771,6 +944,7 @@ local function update_ass()
 
     if #state.list < 1 then
         append(state.empty_text)
+        flush_buffer()
         ass:update()
         return
     end
@@ -844,6 +1018,8 @@ local function update_ass()
     end
 
     if overflow then append('\\N'..style.footer_header..#state.list-finish..' item(s) remaining') end
+
+    flush_buffer()
     ass:update()
 end
 
@@ -856,38 +1032,49 @@ end
 
 --disables multiselect
 local function disable_select_mode()
-    state.multiselect_start = nil
-    state.initial_selection = nil
+    -- state.multiselect_start = nil
+    -- state.initial_selection = nil
+    update_state(2, {
+        multiselect_start = NIL_STATE,
+        initial_selection = NIL_STATE
+    })
+    print_state()
 end
 
 --enables multiselect
 local function enable_select_mode()
-    state.multiselect_start = state.selected
-    state.initial_selection = API.copy_table(state.selection)
+    update_state(2, {
+        multiselect_start = state.selected,
+        initial_selection = API.copy_table(state.selection, nil, false)
+    })
+    print_state()
 end
 
 --calculates what drag behaviour is required for that specific movement
 local function drag_select(original_pos, new_pos)
     if original_pos == new_pos then return end
 
+    local new_selection = API.copy_table(state.selection, nil, false)
     local setting = state.selection[state.multiselect_start]
     for i = original_pos, new_pos, (new_pos > original_pos and 1 or -1) do
         --if we're moving the cursor away from the starting point then set the selection
         --otherwise restore the original selection
         if i > state.multiselect_start then
             if new_pos > original_pos then
-                state.selection[i] = setting
+                new_selection[i] = setting
             elseif i ~= new_pos then
-                state.selection[i] = state.initial_selection[i]
+                new_selection[i] = state.initial_selection[i]
             end
         elseif i < state.multiselect_start then
             if new_pos < original_pos then
-                state.selection[i] = setting
+                new_selection[i] = setting
             elseif i ~= new_pos then
-                state.selection[i] = state.initial_selection[i]
+                new_selection[i] = state.initial_selection[i]
             end
         end
     end
+
+    return new_selection
 end
 
 --moves the selector up and down the list by the entered amount
@@ -896,31 +1083,43 @@ local function scroll(n, wrap)
     if num_items == 0 then return end
 
     local original_pos = state.selected
+    local new_pos
+    local new_multiselect
 
     if original_pos + n > num_items then
-        state.selected = wrap and 1 or num_items
+        new_pos = wrap and 1 or num_items
     elseif original_pos + n < 1 then
-        state.selected = wrap and num_items or 1
+        new_pos = wrap and num_items or 1
     else
-        state.selected = original_pos + n
+        new_pos = original_pos + n
     end
 
-    if state.multiselect_start then drag_select(original_pos, state.selected) end
+    if state.multiselect_start then
+        new_multiselect = drag_select(original_pos, new_pos)
+    end
+
+    update_state(2, { selected = new_pos, selection = new_multiselect })
     update_ass()
 end
 
 --toggles the selection
 local function toggle_selection()
     if not state.list[state.selected] then return end
-    state.selection[state.selected] = not state.selection[state.selected] or nil
+    -- state.selection[state.selected] = not state.selection[state.selected] or nil
+    local selection = API.copy_table(state.selection, nil, false)
+    selection[state.selected] = not selection[state.selected] or nil
+    update_state(2, { selection = selection })
     update_ass()
 end
 
 --select all items in the list
 local function select_all()
-    for i,_ in ipairs(state.list) do
-        state.selection[i] = true
+    local selection = {}
+    for i in ipairs(state.list) do
+        selection[i] = true
     end
+
+    update_state(2, {selection = selection})
     update_ass()
 end
 
@@ -1038,18 +1237,18 @@ end
 local function update_list(moving_adjacent)
     msg.verbose('opening directory: ' .. state.directory)
 
-    state.selected = 1
-    state.selection = {}
+    -- state.selected = 1
+    -- state.selection = {}
 
     --loads the current directry from the cache to save loading time
     --there will be a way to forcibly reload the current directory at some point
     --the cache is in the form of a stack, items are taken off the stack when the dir moves up
-    if cache[1] and cache[#cache].directory == state.directory then
-        msg.verbose('found directory in cache')
-        cache:apply()
-        state.prev_directory = state.directory
-        return
-    end
+    -- if cache[1] and cache[#cache].directory == state.directory then
+    --     msg.verbose('found directory in cache')
+    --     cache:apply()
+    --     state.prev_directory = state.directory
+    --     return
+    -- end
     local directory = state.directory
     local list, opts = parse_directory(state.directory, { source = "browser" })
 
@@ -1062,19 +1261,21 @@ local function update_list(moving_adjacent)
     end
 
     --apply fallbacks if the scan failed
-    if not list and cache[1] then
-        --switches settings back to the previously opened directory
-        --to the user it will be like the directory never changed
-        msg.warn("could not read directory", state.directory)
-        cache:apply()
-        return
-    elseif not list then
+    -- if not list and cache[1] then
+    --     --switches settings back to the previously opened directory
+    --     --to the user it will be like the directory never changed
+    --     msg.warn("could not read directory", state.directory)
+    --     cache:apply()
+    --     return
+    if not list then
         msg.warn("could not read directory", state.directory)
         list, opts = root_parser:parse()
     end
 
-    state.list = list
-    state.parser = opts.parser
+    local finished_state = {}
+
+    finished_state.list = list
+    finished_state.parser = opts.parser
 
     --this only matters when displaying the list on the screen, so it doesn't need to be in the scan function
     if not opts.escaped then
@@ -1084,54 +1285,71 @@ local function update_list(moving_adjacent)
     end
 
     --setting custom options from parsers
-    state.directory_label = opts.directory_label
-    state.empty_text = opts.empty_text or state.empty_text
+    finished_state.directory_label = opts.directory_label
+    finished_state.empty_text = opts.empty_text
 
     --we assume that directory is only changed when redirecting to a different location
     --therefore, the cache should be wiped
     if opts.directory then
-        state.directory = opts.directory
+        finished_state.directory = opts.directory
         cache:clear()
     end
 
     if opts.selected_index then
-        state.selected = opts.selected_index or state.selected
-        if state.selected > #state.list then state.selected = #state.list
-        elseif state.selected < 1 then state.selected = 1 end
+        finished_state.selected = opts.selected_index or state.selected
+        if finished_state.selected > #list then finished_state.selected = #list
+        elseif finished_state.selected < 1 then finished_state.selected = 1 end
     end
 
     if moving_adjacent then select_prev_directory()
     else select_playing_item() end
-    state.prev_directory = state.directory
+    finished_state.prev_directory = finished_state.directory
+
+    -- print(utils.to_string(finished_state))
+    return finished_state
 end
 
 --rescans the folder and updates the list
-local function update(moving_adjacent)
-    --we can only make assumptions about the directory label when moving from adjacent directories
-    if not moving_adjacent then
-        state.directory_label = nil
-        cache:clear()
-    end
+local function update(new_state, moving_adjacent)
+    if not new_state then new_state = {} end
+    local directory = new_state.directory or state.directory
+    cache:clear()
 
-    state.empty_text = "~"
-    state.list = {}
-    disable_select_mode()
-    update_ass()
+    --we can only make assumptions about the directory label when moving from adjacent directories
+    -- if not moving_adjacent then
+    --     state.directory_label = nil
+    --     cache:clear()
+    -- end
+
+    new_state.directory = directory
+    new_state.empty_text = "~"
+    new_state.list = {}
+
+    -- set_state(1, new_state)
+    -- -- disable_select_mode()
+    -- update_ass()
 
     --the directory is always handled within a coroutine to allow addons to
     --pause execution for asynchronous operations
-    API.coroutine.run(function()
-        state.co = coroutine.running()
-        update_list(moving_adjacent)
-        state.empty_text = "empty directory"
+    new_state.co = API.coroutine.schedule(function()
+        local newer_state = update_list(moving_adjacent)
+        if not newer_state then error() end
+        newer_state.empty_text = newer_state.empty_text or NIL_STATE
+        update_state(1, newer_state)
+        print_state()
+
         update_ass()
     end)
+
+    set_state(1, new_state)
+    print_state()
+    update_ass()
 end
 
 --the base function for moving to a directory
 local function goto_directory(directory)
-    state.directory = directory
-    update(false)
+    -- state.directory = directory
+    update({ directory = directory }, false)
 end
 
 --loads the root list
@@ -1156,13 +1374,14 @@ local function up_dir()
         index = dir:find("[/\\]")
     end
 
-    if index == nil then state.directory = ""
-    else state.directory = dir:sub(index):reverse() end
+    if index == nil then dir = ""
+    else dir = dir:sub(index):reverse() end
 
     --we can make some assumptions about the next directory label when moving up or down
-    if state.directory_label then state.directory_label = state.directory_label:match("^(.+/)[^/]+/$") end
+    local dir_label = nil
+    if state.directory_label then dir_label = state.directory_label:match("^(.+/)[^/]+/$") end
 
-    update(true)
+    update({ directory = dir, directory_label = dir_label } ,true)
     cache:pop()
 end
 
@@ -1173,11 +1392,11 @@ local function down_dir()
 
     cache:push()
     local directory, redirected = API.get_new_directory(current, state.directory)
-    state.directory = directory
 
     --we can make some assumptions about the next directory label when moving up or down
-    if state.directory_label then state.directory_label = state.directory_label..(current.label or current.name) end
-    update(not redirected)
+    local dir_label
+    if state.directory_label then dir_label= state.directory_label..(current.label or current.name) end
+    update({ directory = directory, directory_label = dir_label }, not redirected)
 end
 
 
@@ -1189,9 +1408,9 @@ end
 
 --opens the browser
 local function open()
-    if not state.hidden then return end
+    if not overlay.hidden then return end
 
-    for _,v in ipairs(state.keybinds) do
+    for _,v in ipairs(keybinds) do
         mp.add_forced_key_binding(v[1], 'dynamic/'..v[2], v[3], v[4])
     end
 
@@ -1199,7 +1418,7 @@ local function open()
     if o.set_user_data then mp.set_property_bool('user-data/file_browser/open', true) end
 
     if o.toggle_idlescreen then mp.commandv('script-message', 'osc-idlescreen', 'no', 'no_osd') end
-    state.hidden = false
+    overlay.hidden = false
     if state.directory == nil then
         local path = mp.get_property('path')
         update_current_directory(nil, path)
@@ -1207,16 +1426,16 @@ local function open()
         return
     end
 
-    if state.flag_update then update_current_directory(nil, mp.get_property('path')) end
-    if not state.flag_update then ass:update()
-    else state.flag_update = false ; update_ass() end
+    if overlay.flag_update then update_current_directory(nil, mp.get_property('path')) end
+    if not overlay.flag_update then ass:update()
+    else overlay.flag_update = false ; update_ass() end
 end
 
 --closes the list and sets the hidden flag
 local function close()
-    if state.hidden then return end
+    if overlay.hidden then return end
 
-    for _,v in ipairs(state.keybinds) do
+    for _,v in ipairs(keybinds) do
         mp.remove_key_binding('dynamic/'..v[2])
     end
 
@@ -1224,13 +1443,13 @@ local function close()
     if o.set_user_data then mp.set_property_bool('user-data/file_browser/open', false) end
 
     if o.toggle_idlescreen then mp.commandv('script-message', 'osc-idlescreen', 'yes', 'no_osd') end
-    state.hidden = true
+    overlay.hidden = true
     ass:remove()
 end
 
 --toggles the list
 local function toggle()
-    if state.hidden then open()
+    if overlay.hidden then open()
     else close() end
 end
 
@@ -1239,7 +1458,7 @@ local function escape()
     --if multiple items are selection cancel the
     --selection instead of closing the browser
     if next(state.selection) or state.multiselect_start then
-        state.selection = {}
+        update_state(2, { selection = {} })
         disable_select_mode()
         update_ass()
         return
@@ -1510,7 +1729,7 @@ end
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-state.keybinds = {
+keybinds = {
     {'ENTER',       'play',         function() open_file('replace', false) end},
     {'Shift+ENTER', 'play_append',  function() open_file('append-play', false) end},
     {'Alt+ENTER',   'play_autoload',function() open_file('replace', true) end},
@@ -1769,7 +1988,7 @@ local function insert_custom_keybind(keybind)
         for code in string.gmatch(keybind.condition, KEYBIND_CODE_PATTERN) do keybind.condition_codes[code] = true end
     end
 
-    table.insert(state.keybinds, {keybind.key, keybind.name, function() run_keybind_coroutine(keybind) end, keybind.flags or {}})
+    table.insert(keybinds, {keybind.key, keybind.name, function() run_keybind_coroutine(keybind) end, keybind.flags or {}})
     top_level_keys[keybind.key] = keybind
 end
 
@@ -1779,7 +1998,7 @@ local function setup_keybinds()
     if not o.custom_keybinds and not o.addons then return end
 
     --this is to make the default keybinds compatible with passthrough from custom keybinds
-    for _, keybind in ipairs(state.keybinds) do
+    for _, keybind in ipairs(keybinds) do
         top_level_keys[keybind[1]] = { key = keybind[1], name = keybind[2], command = keybind[3], flags = keybind[4] }
     end
 
@@ -1908,7 +2127,7 @@ function API.get_current_parser() return state.parser:get_id() end
 function API.get_current_parser_keyname() return state.parser.keybind_name or state.parser.name end
 function API.get_selected_index() return state.selected end
 function API.get_selected_item() return API.copy_table(state.list[state.selected]) end
-function API.get_open_status() return not state.hidden end
+function API.get_open_status() return not overlay.hidden end
 function API.get_parse_state(co) return parse_states[co or coroutine.running() or ""] end
 
 function API.set_empty_text(str)
@@ -2156,6 +2375,7 @@ local function setup_root()
     end
 end
 
+set_state(0, state)
 setup_root()
 
 setup_parser(file_parser, "file-browser.lua")
@@ -2282,10 +2502,10 @@ end)
 
 --we don't want to add any overhead when the browser isn't open
 mp.observe_property('path', 'string', function(_,path)
-    if not state.hidden then 
+    if not overlay.hidden then
         update_current_directory(_,path)
         update_ass()
-    else state.flag_update = true end
+    else overlay.flag_update = true end
 end)
 
 --updates the dvd_device
