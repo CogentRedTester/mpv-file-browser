@@ -52,86 +52,26 @@ local parse_state_API = {}
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
 
---the osd_overlay API was not added until v0.31. The expand-path command was not added until 0.30
-local ass = mp.create_osd_overlay("ass-events")
-if not ass then return msg.error("Script requires minimum mpv version 0.31") end
+local g = require 'modules.globals'
 
-local style = {
-    global = o.alignment == 0 and "" or ([[{\an%d}]]):format(o.alignment),
+local ass = g.ass
+local style = g.style
+local state = g.state
 
-    -- full line styles
-    header = ([[{\r\q2\b%s\fs%d\fn%s\c&H%s&}]]):format((o.font_bold_header and "1" or "0"), o.font_size_header, o.font_name_header, o.font_colour_header),
-    body = ([[{\r\q2\fs%d\fn%s\c&H%s&}]]):format(o.font_size_body, o.font_name_body, o.font_colour_body),
-    footer_header = ([[{\r\q2\fs%d\fn%s\c&H%s&}]]):format(o.font_size_wrappers, o.font_name_wrappers, o.font_colour_wrappers),
+local parsers = g.parsers
+local parse_states = g.parse_states
 
-    --small section styles (for colours)
-    multiselect = ([[{\c&H%s&}]]):format(o.font_colour_multiselect),
-    selected = ([[{\c&H%s&}]]):format(o.font_colour_selected),
-    playing = ([[{\c&H%s&}]]):format(o.font_colour_playing),
-    playing_selected = ([[{\c&H%s&}]]):format(o.font_colour_playing_multiselected),
+local extensions = g.extensions
+local sub_extensions = g.sub_extensions
+local audio_extensions = g.audio_extensions
+local parseable_extensions = g.parseable_extensions
 
-    --icon styles
-    cursor = ([[{\fn%s\c&H%s&}]]):format(o.font_name_cursor, o.font_colour_cursor),
-    cursor_select = ([[{\fn%s\c&H%s&}]]):format(o.font_name_cursor, o.font_colour_multiselect),
-    cursor_deselect = ([[{\fn%s\c&H%s&}]]):format(o.font_name_cursor, o.font_colour_selected),
-    folder = ([[{\fn%s}]]):format(o.font_name_folder),
-    selection_marker = ([[{\alpha&H%s}]]):format(o.font_opacity_selection_marker),
-}
+local dvd_device = g.dvd_device
+local current_file = g.current_file
 
-local state = {
-    list = {},
-    selected = 1,
-    hidden = true,
-    flag_update = false,
-    keybinds = nil,
+local root = g.root
 
-    parser = nil,
-    directory = nil,
-    directory_label = nil,
-    prev_directory = "",
-    co = nil,
-
-    multiselect_start = nil,
-    initial_selection = nil,
-    selection = {}
-}
-
---the parser table actually contains 3 entries for each parser
---a numeric entry which represents the priority of the parsers and has the parser object as the value
---a string entry representing the id of each parser and with the parser object as the value
---and a table entry with the parser itself as the key and a table value in the form { id = %s, index = %d }
-local parsers = {}
-
---this table contains the parse_state tables for every parse operation indexed with the coroutine used for the parse
---this table has weakly referenced keys, meaning that once the coroutine for a parse is no-longer used by anything that
---field in the table will be removed by the garbage collector
-local parse_states = setmetatable({}, { __mode = "k"})
-
-local extensions = {}
-local sub_extensions = {}
-local audio_extensions = {}
-local parseable_extensions = {}
-
-local dvd_device = nil
-local current_file = {
-    directory = nil,
-    name = nil,
-    path = nil
-}
-
-local root = nil
-
---default list of compatible file extensions
---adding an item to this list is a valid request on github
-local compatible_file_extensions = {
-    "264","265","3g2","3ga","3ga2","3gp","3gp2","3gpp","3iv","a52","aac","adt","adts","ahn","aif","aifc","aiff","amr","ape","asf","au","avc","avi","awb","ay",
-    "bmp","cue","divx","dts","dtshd","dts-hd","dv","dvr","dvr-ms","eac3","evo","evob","f4a","flac","flc","fli","flic","flv","gbs","gif","gxf","gym",
-    "h264","h265","hdmov","hdv","hes","hevc","jpeg","jpg","kss","lpcm","m1a","m1v","m2a","m2t","m2ts","m2v","m3u","m3u8","m4a","m4v","mk3d","mka","mkv",
-    "mlp","mod","mov","mp1","mp2","mp2v","mp3","mp4","mp4v","mp4v","mpa","mpe","mpeg","mpeg2","mpeg4","mpg","mpg4","mpv","mpv2","mts","mtv","mxf","nsf",
-    "nsfe","nsv","nut","oga","ogg","ogm","ogv","ogx","opus","pcm","pls","png","qt","ra","ram","rm","rmvb","sap","snd","spc","spx","svg","thd","thd+ac3",
-    "tif","tiff","tod","trp","truehd","true-hd","ts","tsa","tsv","tta","tts","vfw","vgm","vgz","vob","vro","wav","weba","webm","webp","wm","wma","wmv","wtv",
-    "wv","x264","x265","xvid","y4m","yuv"
-}
+local compatible_file_extensions = g.compatible_file_extensions
 
 --------------------------------------------------------------------------------------------------------
 --------------------------------------Cache Implementation----------------------------------------------
@@ -1039,7 +979,7 @@ local function up_dir()
     else state.directory = dir:sub(index):reverse() end
 
     --we can make some assumptions about the next directory label when moving up or down
-    if state.directory_label then state.directory_label = state.directory_label:match("^(.+/)[^/]+/$") end
+    if state.directory_label then state.directory_label = string.match(state.directory_label, "^(.+/)[^/]+/$") end
 
     update(true)
     cache:pop()
