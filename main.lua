@@ -48,8 +48,6 @@ local parse_state_API = {}
 
 local g = require 'modules.globals'
 
-local ass = g.ass
-local style = g.style
 local state = g.state
 
 local parsers = g.parsers
@@ -191,26 +189,7 @@ local file_parser = {
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
 
---appends the entered text to the overlay
-local function append(text)
-    if text == nil then return end
-    ass.data = ass.data .. text
-end
-
---appends a newline character to the osd
-local function newline()
-ass.data = ass.data .. '\\N'
-end
-
---detects whether or not to highlight the given entry as being played
-local function highlight_entry(v)
-    if current_file.name == nil then return false end
-    if API.parseable_item(v) then
-        return current_file.directory:find(API.get_full_path(v), 1, true)
-    else
-        return current_file.path == API.get_full_path(v)
-    end
-end
+local ass = require 'modules.ass'
 
 --saves the directory and name of the currently playing file
 local function update_current_directory(_, filepath)
@@ -229,97 +208,6 @@ local function update_current_directory(_, filepath)
     exact_path = API.fix_path(exact_path, false)
     current_file.directory, current_file.name = utils.split_path(exact_path)
     current_file.path = exact_path
-end
-
---refreshes the ass text using the contents of the list
-local function update_ass()
-    if state.hidden then state.flag_update = true ; return end
-
-    ass.data = style.global
-
-    local dir_name = state.directory_label or state.directory
-    if dir_name == "" then dir_name = "ROOT" end
-    append(style.header)
-    append(API.ass_escape(dir_name, style.cursor.."\\\239\187\191n"..style.header))
-    append('\\N ----------------------------------------------------')
-    newline()
-
-    if #state.list < 1 then
-        append(state.empty_text)
-        ass:update()
-        return
-    end
-
-    local start = 1
-    local finish = start+o.num_entries-1
-
-    --handling cursor positioning
-    local mid = math.ceil(o.num_entries/2)+1
-    if state.selected+mid > finish then
-        local offset = state.selected - finish + mid
-
-        --if we've overshot the end of the list then undo some of the offset
-        if finish + offset > #state.list then
-            offset = offset - ((finish+offset) - #state.list)
-        end
-
-        start = start + offset
-        finish = finish + offset
-    end
-
-    --making sure that we don't overstep the boundaries
-    if start < 1 then start = 1 end
-    local overflow = finish < #state.list
-    --this is necessary when the number of items in the dir is less than the max
-    if not overflow then finish = #state.list end
-
-    --adding a header to show there are items above in the list
-    if start > 1 then append(style.footer_header..(start-1)..' item(s) above\\N\\N') end
-
-    for i=start, finish do
-        local v = state.list[i]
-        local playing_file = highlight_entry(v)
-        append(style.body)
-
-        --handles custom styles for different entries
-        if i == state.selected or i == state.multiselect_start then
-            if not (i == state.selected) then append(style.selection_marker) end
-
-            if not state.multiselect_start then append(style.cursor)
-            else
-                if state.selection[state.multiselect_start] then append(style.cursor_select)
-                else append(style.cursor_deselect) end
-            end
-            append(o.cursor_icon.."\\h"..style.body)
-        else
-            append(o.indent_icon.."\\h"..style.body)
-        end
-
-        --sets the selection colour scheme
-        local multiselected = state.selection[i]
-
-        --sets the colour for the item
-        local function set_colour()
-            if multiselected then append(style.multiselect)
-            elseif i == state.selected then append(style.selected) end
-
-            if playing_file then append( multiselected and style.playing_selected or style.playing) end
-        end
-        set_colour()
-
-        --sets the folder icon
-        if v.type == 'dir' then
-            append(style.folder..o.folder_icon.."\\h"..style.body)
-            set_colour()
-        end
-
-        --adds the actual name of the item
-        append(v.ass or API.ass_escape(v.label or v.name, true))
-        newline()
-    end
-
-    if overflow then append('\\N'..style.footer_header..#state.list-finish..' item(s) remaining') end
-    ass:update()
 end
 
 
@@ -381,14 +269,14 @@ local function scroll(n, wrap)
     end
 
     if state.multiselect_start then drag_select(original_pos, state.selected) end
-    update_ass()
+    ass.update_ass()
 end
 
 --toggles the selection
 local function toggle_selection()
     if not state.list[state.selected] then return end
     state.selection[state.selected] = not state.selection[state.selected] or nil
-    update_ass()
+    ass.update_ass()
 end
 
 --select all items in the list
@@ -396,7 +284,7 @@ local function select_all()
     for i,_ in ipairs(state.list) do
         state.selection[i] = true
     end
-    update_ass()
+    ass.update_ass()
 end
 
 --toggles select mode
@@ -406,7 +294,7 @@ local function toggle_select_mode()
         toggle_selection()
     else
         disable_select_mode()
-        update_ass()
+        ass.update_ass()
     end
 end
 
@@ -420,7 +308,7 @@ end
 --selects the first item in the list which is highlighted as playing
 local function select_playing_item()
     for i,item in ipairs(state.list) do
-        if highlight_entry(item) then
+        if ass.highlight_entry(item) then
             state.selected = i
             return
         end
@@ -591,7 +479,7 @@ local function update(moving_adjacent)
     state.empty_text = "~"
     state.list = {}
     disable_select_mode()
-    update_ass()
+    ass.update_ass()
 
     --the directory is always handled within a coroutine to allow addons to
     --pause execution for asynchronous operations
@@ -599,7 +487,7 @@ local function update(moving_adjacent)
         state.co = coroutine.running()
         update_list(moving_adjacent)
         state.empty_text = "empty directory"
-        update_ass()
+        ass.update_ass()
     end)
 end
 
@@ -683,8 +571,8 @@ local function open()
     end
 
     if state.flag_update then update_current_directory(nil, mp.get_property('path')) end
-    if not state.flag_update then ass:update()
-    else state.flag_update = false ; update_ass() end
+    if not state.flag_update then ass.draw()
+    else state.flag_update = false ; ass.update_ass() end
 end
 
 --closes the list and sets the hidden flag
@@ -700,7 +588,7 @@ local function close()
 
     if o.toggle_idlescreen then mp.commandv('script-message', 'osc-idlescreen', 'yes', 'no_osd') end
     state.hidden = true
-    ass:remove()
+    ass.remove()
 end
 
 --toggles the list
@@ -716,7 +604,7 @@ local function escape()
     if next(state.selection) or state.multiselect_start then
         state.selection = {}
         disable_select_mode()
-        update_ass()
+        ass.update_ass()
         return
     end
     close()
@@ -951,7 +839,7 @@ local function open_file_coroutine(opts)
         state.selection = {}
 
         disable_select_mode()
-        update_ass()
+        ass.update_ass()
 
         --the currently selected file will be loaded according to the flag
         --the flag variable will be switched to append once a file is loaded
@@ -1303,7 +1191,7 @@ end
 --------------------------------------------------------------------------------------------------------
 
 --these functions we'll provide as-is
-API.redraw = update_ass
+API.redraw = ass.update_ass
 API.rescan = update
 API.browse_directory = browse_directory
 
@@ -1759,7 +1647,7 @@ end)
 mp.observe_property('path', 'string', function(_,path)
     if not state.hidden then 
         update_current_directory(_,path)
-        update_ass()
+        ass.update_ass()
     else state.flag_update = true end
 end)
 
