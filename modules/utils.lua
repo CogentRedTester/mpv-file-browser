@@ -16,7 +16,6 @@ if not success then input = nil end
 --creates a table for the API functions
 --adds one metatable redirect to prevent addon authors from accidentally breaking file-browser
 local API = { API_VERSION = g.API_VERSION }
-package.loaded["file-browser"] = setmetatable({}, { __index = API })
 
 API.list = {}
 API.coroutine = {}

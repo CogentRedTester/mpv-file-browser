@@ -36,6 +36,8 @@ else
     _ENV = setmetatable({}, { __index = _G })
 end
 
+local API = require 'modules.utils'
+package.loaded["file-browser"] = setmetatable({}, { __index = API })
 local parser_API = setmetatable({}, { __index = package.loaded["file-browser"] })
 local parse_state_API = {}
 
@@ -112,7 +114,6 @@ local cache = setmetatable({}, { __index = __cache })
 ---------------------------------------Part of the addon API--------------------------------------------
 --------------------------------------------------------------------------------------------------------
 
-local API = require 'modules.utils'
 
 
 
