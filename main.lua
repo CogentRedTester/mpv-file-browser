@@ -58,7 +58,6 @@ local sub_extensions = g.sub_extensions
 local audio_extensions = g.audio_extensions
 local parseable_extensions = g.parseable_extensions
 
-local dvd_device = g.dvd_device
 local current_file = g.current_file
 
 local root = g.root
@@ -167,7 +166,7 @@ local function update_current_directory(_, filepath)
         current_file.path = nil
         return
     elseif filepath:find("dvd://") == 1 then
-        filepath = dvd_device..filepath:match("dvd://(.*)")
+        filepath = g.dvd_device..filepath:match("dvd://(.*)")
     end
 
     local workingDirectory = mp.get_property('working-directory', '')
@@ -586,7 +585,7 @@ local function browse_directory(directory)
     if directory ~= "" then directory = API.fix_path(directory, true) end
     msg.verbose('recieved directory from script message: '..directory)
 
-    if directory == "dvd://" then directory = dvd_device end
+    if directory == "dvd://" then directory = g.dvd_device end
     goto_directory(directory)
     open()
 end
@@ -1228,7 +1227,7 @@ function API.get_sub_extensions() return API.copy_table(sub_extensions) end
 function API.get_audio_extensions() return API.copy_table(audio_extensions) end
 function API.get_parseable_extensions() return API.copy_table(parseable_extensions) end
 function API.get_state() return API.copy_table(state) end
-function API.get_dvd_device() return dvd_device end
+function API.get_dvd_device() return g.dvd_device end
 function API.get_parsers() return API.copy_table(parsers) end
 function API.get_root() return API.copy_table(root) end
 function API.get_directory() return state.directory end
@@ -1475,7 +1474,6 @@ end
 
 --splits the string into a table on the semicolons
 local function setup_root()
-    root = {}
     for str in API.iterate_opt(o.root) do
         local path = mp.command_native({'expand-path', str})
         path = API.fix_path(path, true)
@@ -1621,7 +1619,7 @@ end)
 --updates the dvd_device
 mp.observe_property('dvd-device', 'string', function(_, device)
     if not device or device == "" then device = "/dev/dvd/" end
-    dvd_device = API.fix_path(device, true)
+    g.dvd_device = API.fix_path(device, true)
 end)
 
 --declares the keybind to open the browser

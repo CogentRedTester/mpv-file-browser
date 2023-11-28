@@ -79,7 +79,7 @@ globals.current_file = {
     path = nil
 }
 
-globals.root = nil
+globals.root = {}
 
 --default list of compatible file extensions
 --adding an item to this list is a valid request on github
