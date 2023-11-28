@@ -17,10 +17,10 @@ Copy `file_browser.conf` into `~~/script-opts/` and customise the [`root` option
 system. The file contains all the default settings for the script, but I would recommend deleting any
 options from the file that you don't understand so as to not override any future changes I make to the defaults.
 
-To setup [custom keybinds](custom-keybinds.md) enable the `custom_keybinds` option in `file_browser.conf` and
+To setup [custom keybinds](docs/custom-keybinds.md) enable the `custom_keybinds` option in `file_browser.conf` and
 create a `~~/script-opts/file-browser-keybinds.json` file. Do **not** copy the `file-browser-keybinds.json` file
 stored in this repository, that file is a collection of random examples, many of which are for completely different
-operating systems. Use them and the [docs](custom-keybinds.md) to create your own collection of keybinds.
+operating systems. Use them and the [docs](docs/custom-keybinds.md) to create your own collection of keybinds.
 
 To setup [addons](addons/README.md) enable the `addons` option in `file_browser.conf` and place the addon files
 in the `~~/script-modules/file-browser-addons/` directory.
@@ -92,7 +92,7 @@ The currently selected (with the cursor) file will be ignored, instead the first
 File-browser also supports custom keybinds. These keybinds send normal input commands, but the script will substitute characters in the command strings for specific values depending on the currently open directory, and currently selected item.
 This allows for a wide range of customised behaviour, such as loading additional audio tracks from the browser, or copying the path of the selected item to the clipboard.
 
-To see how to enable and use custom keybinds, see [custom-keybinds.md](custom-keybinds.md).
+To see how to enable and use custom keybinds, see [custom-keybinds.md](docs/custom-keybinds.md).
 
 ## Add-ons
 
@@ -100,7 +100,7 @@ Add-ons are ways to add extra features to file-browser, for example adding suppo
 They can be enabled by setting `addon` script-opt to yes, and placing the addon file into the `~~/script-modules/file-browser-addons/` directory.
 
 For a list of existing addons see the [wiki](https://github.com/CogentRedTester/mpv-file-browser/wiki/Addon-List).
-For instructions on writing your own addons see [addons.md](addons/addons.md).
+For instructions on writing your own addons see [addons.md](docs/addons.md).
 
 ## Script Messages
 
@@ -120,10 +120,10 @@ Reads the given directory, and sends the resulting tables to the specified scrip
 
 `script-message [response-string] [list] [opts]`
 
-The [list](https://github.com/CogentRedTester/mpv-file-browser/blob/master/addons/addons.md#the-list-array)
-and [opts](https://github.com/CogentRedTester/mpv-file-browser/blob/master/addons/addons.md#the-opts-table)
+The [list](docs/addons.md#the-list-array)
+and [opts](docs/addons.md#the-opts-table)
 tables are formatted as json strings through the `mp.utils.format_json` function.
-See [addons.md](addons/addons.md) for how the tables are structured, and what each field means.
+See [addons.md](docs/addons.md) for how the tables are structured, and what each field means.
 The API_VERSION field of the `opts` table refers to what version of the addon API file browser is using.
 The `response-string` refers to an arbitrary script-message that the tables should be sent to.
 
@@ -131,7 +131,7 @@ This script-message allows other scripts to utilise file-browser's directory par
 
 ## Configuration
 
-See [file_browser.conf](file_browser.conf) for the full list of options and their default values.
+See [file_browser.conf](docs/file_browser.conf) for the full list of options and their default values.
 The file is placed in the `~~/script-opts/` folder.
 
 ## Conditional Auto-Profiles

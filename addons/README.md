@@ -7,6 +7,6 @@ Browsing filesystems provided by add-ons should feel identical to the normal han
 but they may require extra commandline tools be installed.
 
 Since addons are loaded programatically from the addon directory it is possible for anyone to write their own addon.
-Instructions on how to do this are available [here](addons.md).
+Instructions on how to do this are available [here](../docs/addons.md).
 
 For a list of available addons see the [wiki](https://github.com/CogentRedTester/mpv-file-browser/wiki/Addon-List).
