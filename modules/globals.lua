@@ -9,6 +9,9 @@ local msg = require 'mp.msg'
 local globals = {}
 local o = require 'modules.options'
 
+--sets the version for the file-browser API
+globals.API_VERSION = "1.4.0"
+
 --the osd_overlay API was not added until v0.31. The expand-path command was not added until 0.30
 globals.ass = mp.create_osd_overlay("ass-events")
 if not globals.ass then return msg.error("Script requires minimum mpv version 0.31") end
