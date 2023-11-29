@@ -129,86 +129,7 @@ end
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
 
---disables multiselect
-local function disable_select_mode()
-    state.multiselect_start = nil
-    state.initial_selection = nil
-end
-
---enables multiselect
-local function enable_select_mode()
-    state.multiselect_start = state.selected
-    state.initial_selection = API.copy_table(state.selection)
-end
-
---calculates what drag behaviour is required for that specific movement
-local function drag_select(original_pos, new_pos)
-    if original_pos == new_pos then return end
-
-    local setting = state.selection[state.multiselect_start]
-    for i = original_pos, new_pos, (new_pos > original_pos and 1 or -1) do
-        --if we're moving the cursor away from the starting point then set the selection
-        --otherwise restore the original selection
-        if i > state.multiselect_start then
-            if new_pos > original_pos then
-                state.selection[i] = setting
-            elseif i ~= new_pos then
-                state.selection[i] = state.initial_selection[i]
-            end
-        elseif i < state.multiselect_start then
-            if new_pos < original_pos then
-                state.selection[i] = setting
-            elseif i ~= new_pos then
-                state.selection[i] = state.initial_selection[i]
-            end
-        end
-    end
-end
-
---moves the selector up and down the list by the entered amount
-local function scroll(n, wrap)
-    local num_items = #state.list
-    if num_items == 0 then return end
-
-    local original_pos = state.selected
-
-    if original_pos + n > num_items then
-        state.selected = wrap and 1 or num_items
-    elseif original_pos + n < 1 then
-        state.selected = wrap and num_items or 1
-    else
-        state.selected = original_pos + n
-    end
-
-    if state.multiselect_start then drag_select(original_pos, state.selected) end
-    ass.update_ass()
-end
-
---toggles the selection
-local function toggle_selection()
-    if not state.list[state.selected] then return end
-    state.selection[state.selected] = not state.selection[state.selected] or nil
-    ass.update_ass()
-end
-
---select all items in the list
-local function select_all()
-    for i,_ in ipairs(state.list) do
-        state.selection[i] = true
-    end
-    ass.update_ass()
-end
-
---toggles select mode
-local function toggle_select_mode()
-    if state.multiselect_start == nil then
-        enable_select_mode()
-        toggle_selection()
-    else
-        disable_select_mode()
-        ass.update_ass()
-    end
-end
+local cursor = require 'modules.navigation.cursor'
 
 
 
@@ -390,7 +311,7 @@ local function update(moving_adjacent)
 
     state.empty_text = "~"
     state.list = {}
-    disable_select_mode()
+    cursor.disable_select_mode()
     ass.update_ass()
 
     --the directory is always handled within a coroutine to allow addons to
@@ -515,7 +436,7 @@ local function escape()
     --selection instead of closing the browser
     if next(state.selection) or state.multiselect_start then
         state.selection = {}
-        disable_select_mode()
+        cursor.disable_select_mode()
         ass.update_ass()
         return
     end
@@ -750,7 +671,7 @@ local function open_file_coroutine(opts)
         --reset the selection after
         state.selection = {}
 
-        disable_select_mode()
+        cursor.disable_select_mode()
         ass.update_ass()
 
         --the currently selected file will be loaded according to the flag
@@ -792,18 +713,18 @@ state.keybinds = {
     {'ESC',         'close',        escape},
     {'RIGHT',       'down_dir',     down_dir},
     {'LEFT',        'up_dir',       up_dir},
-    {'DOWN',        'scroll_down',  function() scroll(1, o.wrap) end,           {repeatable = true}},
-    {'UP',          'scroll_up',    function() scroll(-1, o.wrap) end,          {repeatable = true}},
-    {'PGDWN',       'page_down',    function() scroll(o.num_entries) end,       {repeatable = true}},
-    {'PGUP',        'page_up',      function() scroll(-o.num_entries) end,      {repeatable = true}},
-    {'Shift+PGDWN', 'list_bottom',  function() scroll(math.huge) end},
-    {'Shift+PGUP',  'list_top',     function() scroll(-math.huge) end},
+    {'DOWN',        'scroll_down',  function() cursor.scroll(1, o.wrap) end,           {repeatable = true}},
+    {'UP',          'scroll_up',    function() cursor.scroll(-1, o.wrap) end,          {repeatable = true}},
+    {'PGDWN',       'page_down',    function() cursor.scroll(o.num_entries) end,       {repeatable = true}},
+    {'PGUP',        'page_up',      function() cursor.scroll(-o.num_entries) end,      {repeatable = true}},
+    {'Shift+PGDWN', 'list_bottom',  function() cursor.scroll(math.huge) end},
+    {'Shift+PGUP',  'list_top',     function() cursor.scroll(-math.huge) end},
     {'HOME',        'goto_current', goto_current_dir},
     {'Shift+HOME',  'goto_root',    goto_root},
     {'Ctrl+r',      'reload',       function() cache:clear(); update() end},
-    {'s',           'select_mode',  toggle_select_mode},
-    {'S',           'select_item',  toggle_selection},
-    {'Ctrl+a',      'select_all',   select_all}
+    {'s',           'select_mode',  cursor.toggle_select_mode},
+    {'S',           'select_item',  cursor.toggle_selection},
+    {'Ctrl+a',      'select_all',   cursor.select_all}
 }
 
 --a map of key-keybinds - only saves the latest keybind if multiple have the same key code
