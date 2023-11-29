@@ -1,7 +1,9 @@
 # Custom Keybinds
 
-File-browser also supports custom keybinds. These keybinds send normal input commands, but the script will substitute characters in the command strings for specific values depending on the currently open directory, and currently selected item.
+File-browser supports custom keybinds. These keybinds send normal input commands, but the script will substitute characters in the command strings for specific values depending on the currently open directory, and currently selected item.
 This allows for a wide range of customised behaviour, such as loading additional audio tracks from the browser, or copying the path of the selected item to the clipboard.
+
+The custom-keybind API shares a version number with the [addon API](addons/addons.md#api-version).
 
 The feature is disabled by default, but is enabled with the `custom_keybinds` script-opt.
 Keybinds are declared in the `~~/script-opts/file-browser-keybinds.json` file, the config takes the form of an array of json objects, with the following keys:
@@ -11,6 +13,7 @@ Keybinds are declared in the `~~/script-opts/file-browser-keybinds.json` file, t
 | key           | yes      | -          | the key to bind the command to - same syntax as input.conf                                 |
 | command       | yes      | -          | json array of commands and arguments                                                       |
 | name          | no       | numeric id | name of the script-binding - see [modifying default keybinds](#modifying-default-keybinds) |
+| version       | no       | `1.0.0`    | the minimum API version required for the keybind - will warn the user if they are using an invalid keybind for their file-browser version |
 | condition     | no       | -          | a Lua [expression](#expressions) - the keybind will only run if this evaluates to true     |
 | flags         | no       | -          | flags to send to the mpv add_keybind function - see [here](https://mpv.io/manual/master/#lua-scripting-[,flags]]\)) |
 | filter        | no       | -          | run the command on just a file (`file`) or folder (`dir`)                                  |
@@ -55,7 +58,8 @@ You can set the filter to match multiple parsers by separating the names with sp
 {
     "key": "KP2",
     "command": [ ["print-text", "example3"] ],
-    "parser": "ftp file"
+    "parser": "ftp file",
+    "version": "1.5.0"
 }
 ```
 
@@ -184,12 +188,14 @@ the selected item is a matroska file:
     {
         "key": "KP1",
         "command": ["print-text", "in my C:/ drive!"],
-        "condition": "(%P):find('C:/') == 1"
+        "condition": "(%P):find('C:/') == 1",
+        "version": "1.5.0"
     },
     {
         "key": "KP2",
         "command": ["print-text", "Matroska File!"],
-        "condition": "fb.get_extension(%N) == 'mkv'"
+        "condition": "fb.get_extension(%N) == 'mkv'",
+        "version": "1.5.0"
     }
 ]
 ```
@@ -216,7 +222,8 @@ Any `=>` string will be substituted for `script-message`.
 {
     "key": "KP1",
     "command": ["script-message", "=>", "delay-command", "%j * 2", "=>", "evaluate-expressions", "print-text", "!{%j * 2}"],
-    "multiselect": true
+    "multiselect": true,
+    "version": "1.5.0"
 }
 ```
 
@@ -230,6 +237,7 @@ This example command will only run if the player is currently paused:
 {
     "key": "KP1",
     "command": ["script-message", "conditional-command", "mp.get_property_bool('pause')", "print-text", "is paused"],
+    "version": "1.5.0"
 }
 ```
 
@@ -241,6 +249,7 @@ This example only runs if the currently selected item in the browser has a `.mkv
 {
     "key": "KP1",
     "command": ["script-message", "conditional-command", "fb.get_extension(%N) == 'mkv'", "print-text", "a matroska file"],
+    "version": "1.5.0"
 }
 ```
 
@@ -255,6 +264,7 @@ The following example will send the `print-text` command after 5 seconds:
 {
     "key": "KP1",
     "command": ["script-message", "delay-command", "5", "print-text", "example"],
+    "version": "1.5.0"
 }
 ```
 
@@ -272,6 +282,7 @@ For example the following keybind will print 3 to the console:
 {
     "key": "KP1",
     "command": ["script-message", "evaluate-expressions", "print-text", "!{1 + 2}"],
+    "version": "1.5.0"
 }
 ```
 
@@ -282,6 +293,7 @@ This example replaces all `/` characters in the path with `\`
 {
     "key": "KP1",
     "command": ["script-message", "evaluate-expressions", "print-text", "!{ string.gsub(%F, '/', '\\\\') }"],
+    "version": "1.5.0"
 }
 ```
 
@@ -316,7 +328,8 @@ rename items in file-browser:
                     "fb.rescan()"
                 ],
     "parser": "file",
-    "multiselect": true
+    "multiselect": true,
+    "version": "1.5.0"
 }
 ```
 
