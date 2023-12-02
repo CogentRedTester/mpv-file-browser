@@ -139,58 +139,7 @@ local cursor = require 'modules.navigation.cursor'
 --------------------------------------------------------------------------------------------------------
 
 local scanning = require 'modules.navigation.scanning'
-
---the base function for moving to a directory
-local function goto_directory(directory)
-    state.directory = directory
-    scanning.rescan(false)
-end
-
---loads the root list
-local function goto_root()
-    msg.verbose('jumping to root')
-    goto_directory("")
-end
-
---switches to the directory of the currently playing file
-local function goto_current_dir()
-    msg.verbose('jumping to current directory')
-    goto_directory(current_file.directory)
-end
-
---moves up a directory
-local function up_dir()
-    local dir = state.directory:reverse()
-    local index = dir:find("[/\\]")
-
-    while index == 1 do
-        dir = dir:sub(2)
-        index = dir:find("[/\\]")
-    end
-
-    if index == nil then state.directory = ""
-    else state.directory = dir:sub(index):reverse() end
-
-    --we can make some assumptions about the next directory label when moving up or down
-    if state.directory_label then state.directory_label = string.match(state.directory_label, "^(.+/)[^/]+/$") end
-
-    scanning.rescan(true)
-    cache:pop()
-end
-
---moves down a directory
-local function down_dir()
-    local current = state.list[state.selected]
-    if not current or not API.parseable_item(current) then return end
-
-    cache:push()
-    local directory, redirected = API.get_new_directory(current, state.directory)
-    state.directory = directory
-
-    --we can make some assumptions about the next directory label when moving up or down
-    if state.directory_label then state.directory_label = state.directory_label..(current.label or current.name) end
-    scanning.rescan(not redirected)
-end
+local movement = require 'modules.navigation.directory-movement'
 
 
 
@@ -215,7 +164,7 @@ local function open()
     if state.directory == nil then
         local path = mp.get_property('path')
         update_current_directory(nil, path)
-        if path or o.default_to_working_directory then goto_current_dir() else goto_root() end
+        if path or o.default_to_working_directory then movement.goto_current_dir() else movement.goto_root() end
         return
     end
 
@@ -269,7 +218,7 @@ local function browse_directory(directory)
     msg.verbose('recieved directory from script message: '..directory)
 
     if directory == "dvd://" then directory = g.dvd_device end
-    goto_directory(directory)
+    directory.goto_directory(directory)
     open()
 end
 
@@ -498,7 +447,7 @@ local function open_file_coroutine(opts)
 
     else
         local item = state.list[state.selected]
-        if opts.flag == "replace" then down_dir() end
+        if opts.flag == "replace" then movement.down_dir() end
         open_item(item, opts)
     end
 
@@ -527,16 +476,16 @@ state.keybinds = {
     {'Shift+ENTER', 'play_append',  function() open_file('append-play', false) end},
     {'Alt+ENTER',   'play_autoload',function() open_file('replace', true) end},
     {'ESC',         'close',        escape},
-    {'RIGHT',       'down_dir',     down_dir},
-    {'LEFT',        'up_dir',       up_dir},
+    {'RIGHT',       'down_dir',     movement.down_dir},
+    {'LEFT',        'up_dir',       movement.up_dir},
     {'DOWN',        'scroll_down',  function() cursor.scroll(1, o.wrap) end,           {repeatable = true}},
     {'UP',          'scroll_up',    function() cursor.scroll(-1, o.wrap) end,          {repeatable = true}},
     {'PGDWN',       'page_down',    function() cursor.scroll(o.num_entries) end,       {repeatable = true}},
     {'PGUP',        'page_up',      function() cursor.scroll(-o.num_entries) end,      {repeatable = true}},
     {'Shift+PGDWN', 'list_bottom',  function() cursor.scroll(math.huge) end},
     {'Shift+PGUP',  'list_top',     function() cursor.scroll(-math.huge) end},
-    {'HOME',        'goto_current', goto_current_dir},
-    {'Shift+HOME',  'goto_root',    goto_root},
+    {'HOME',        'goto_current', movement.goto_current_dir},
+    {'Shift+HOME',  'goto_root',    movement.goto_root},
     {'Ctrl+r',      'reload',       function() cache:clear(); scanning.rescan() end},
     {'s',           'select_mode',  cursor.toggle_select_mode},
     {'S',           'select_item',  cursor.toggle_selection},
