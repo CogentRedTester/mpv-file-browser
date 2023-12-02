@@ -129,79 +129,7 @@ local movement = require 'modules.navigation.directory-movement'
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
---opens the browser
-local function open()
-    if not state.hidden then return end
-
-    for _,v in ipairs(state.keybinds) do
-        mp.add_forced_key_binding(v[1], 'dynamic/'..v[2], v[3], v[4])
-    end
-
-    if o.set_shared_script_properties then utils.shared_script_property_set('file_browser-open', 'yes') end
-    if o.set_user_data then mp.set_property_bool('user-data/file_browser/open', true) end
-
-    if o.toggle_idlescreen then mp.commandv('script-message', 'osc-idlescreen', 'no', 'no_osd') end
-    state.hidden = false
-    if state.directory == nil then
-        local path = mp.get_property('path')
-        update_current_directory(nil, path)
-        if path or o.default_to_working_directory then movement.goto_current_dir() else movement.goto_root() end
-        return
-    end
-
-    if state.flag_update then update_current_directory(nil, mp.get_property('path')) end
-    if not state.flag_update then ass.draw()
-    else state.flag_update = false ; ass.update_ass() end
-end
-
---closes the list and sets the hidden flag
-local function close()
-    if state.hidden then return end
-
-    for _,v in ipairs(state.keybinds) do
-        mp.remove_key_binding('dynamic/'..v[2])
-    end
-
-    if o.set_shared_script_properties then utils.shared_script_property_set("file_browser-open", "no") end
-    if o.set_user_data then mp.set_property_bool('user-data/file_browser/open', false) end
-
-    if o.toggle_idlescreen then mp.commandv('script-message', 'osc-idlescreen', 'yes', 'no_osd') end
-    state.hidden = true
-    ass.remove()
-end
-
---toggles the list
-local function toggle()
-    if state.hidden then open()
-    else close() end
-end
-
---run when the escape key is used
-local function escape()
-    --if multiple items are selection cancel the
-    --selection instead of closing the browser
-    if next(state.selection) or state.multiselect_start then
-        state.selection = {}
-        cursor.disable_select_mode()
-        ass.update_ass()
-        return
-    end
-    close()
-end
-
---opens a specific directory
-local function browse_directory(directory)
-    if not directory then return end
-    directory = mp.command_native({"expand-path", directory}, "")
-    -- directory = join_path( mp.get_property("working-directory", ""), directory )
-
-    if directory ~= "" then directory = API.fix_path(directory, true) end
-    msg.verbose('recieved directory from script message: '..directory)
-
-    if directory == "dvd://" then directory = g.dvd_device end
-    directory.goto_directory(directory)
-    open()
-end
+local controls = require 'modules.controls'
 
 
 
@@ -404,7 +332,7 @@ end
 --therefore, we must ensure that any state values that could be used after a loadfile call are saved beforehand
 local function open_file_coroutine(opts)
     if not state.list[state.selected] then return end
-    if opts.flag == 'replace' then close() end
+    if opts.flag == 'replace' then controls.close() end
 
     --we want to set the idle option to yes to ensure that if the first item
     --fails to load then the player has a chance to attempt to load further items (for async append operations)
@@ -456,7 +384,7 @@ state.keybinds = {
     {'ENTER',       'play',         function() open_file('replace', false) end},
     {'Shift+ENTER', 'play_append',  function() open_file('append-play', false) end},
     {'Alt+ENTER',   'play_autoload',function() open_file('replace', true) end},
-    {'ESC',         'close',        escape},
+    {'ESC',         'close',        controls.escape},
     {'RIGHT',       'down_dir',     movement.down_dir},
     {'LEFT',        'up_dir',       movement.up_dir},
     {'DOWN',        'scroll_down',  function() cursor.scroll(1, o.wrap) end,           {repeatable = true}},
@@ -772,7 +700,7 @@ end
 --these functions we'll provide as-is
 API.redraw = ass.update_ass
 API.rescan = scanning.rescan
-API.browse_directory = browse_directory
+API.browse_directory = controls.browse_directory
 
 function API.clear_cache()
     cache:clear()
@@ -1116,7 +1044,7 @@ end
 
 if input then
     mp.add_key_binding("Alt+o", "browse-directory/get-user-input", function()
-        input.get_user_input(browse_directory, {request_text = "open directory:"})
+        input.get_user_input(controls.browse_directory, {request_text = "open directory:"})
     end)
 end
 
@@ -1183,7 +1111,7 @@ mp.register_script_message('run-statement', function(...)
 end)
 
 --allows keybinds/other scripts to auto-open specific directories
-mp.register_script_message('browse-directory', browse_directory)
+mp.register_script_message('browse-directory', controls.browse_directory)
 
 --allows other scripts to request directory contents from file-browser
 mp.register_script_message("get-directory-contents", function(directory, response_str)
@@ -1206,6 +1134,6 @@ mp.observe_property('path', 'string', observers.current_directory)
 mp.observe_property('dvd-device', 'string', observers.dvd_device)
 
 --declares the keybind to open the browser
-mp.add_key_binding('MENU','browse-files', toggle)
-mp.add_key_binding('Ctrl+o','open-browser', open)
+mp.add_key_binding('MENU','browse-files', controls.toggle)
+mp.add_key_binding('Ctrl+o','open-browser', controls.open)
 
