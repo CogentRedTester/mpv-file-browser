@@ -15,7 +15,7 @@ local parse_state_API = require 'modules.apis.parse-state'
 local function choose_and_parse(directory, index)
     msg.debug("finding parser for", directory)
     local parser, list, opts
-    local parse_state = API.get_parse_state()
+    local parse_state = g.parse_states[coroutine.running() or ""]
     while list == nil and not parse_state.already_deferred and index <= #g.parsers do
         parser = g.parsers[index]
         if parser:can_parse(directory, parse_state) then

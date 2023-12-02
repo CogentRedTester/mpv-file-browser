@@ -37,9 +37,6 @@ else
 end
 
 local API = require 'modules.utils'
-package.loaded["file-browser"] = setmetatable({}, { __index = API })
-local parser_API = setmetatable({}, { __index = package.loaded["file-browser"] })
-local parse_state_API = {}
 
 --------------------------------------------------------------------------------------------------------
 ------------------------------------------Variable Setup------------------------------------------------
@@ -156,119 +153,8 @@ local keybinds = require 'modules.keybinds'
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
 
---these functions we'll provide as-is
-API.redraw = ass.update_ass
-API.rescan = scanning.rescan
-API.browse_directory = controls.browse_directory
-
-function API.clear_cache()
-    cache:clear()
-end
-
---a wrapper around scan_directory for addon API
-function API.parse_directory(directory, parse_state)
-    if not parse_state then parse_state = { source = "addon" }
-    elseif not parse_state.source then parse_state.source = "addon" end
-    return scanning.scan_directory(directory, parse_state)
-end
-
---register file extensions which can be opened by the browser
-function API.register_parseable_extension(ext)
-    parseable_extensions[string.lower(ext)] = true
-end
-function API.remove_parseable_extension(ext)
-    parseable_extensions[string.lower(ext)] = nil
-end
-
---add a compatible extension to show through the filter, only applies if run during the setup() method
-function API.add_default_extension(ext)
-    table.insert(compatible_file_extensions, ext)
-end
-
---add item to root at position pos
-function API.insert_root_item(item, pos)
-    msg.debug("adding item to root", item.label or item.name, pos)
-    item.ass = item.ass or API.ass_escape(item.label or item.name)
-    item.type = "dir"
-    table.insert(root, pos or (#root + 1), item)
-end
-
---a newer API for adding items to the root
---only adds the item if the same item does not already exist in the root
---the priority variable is a number that specifies the insertion location
---a lower priority is placed higher in the list and the default is 100
-function API.register_root_item(item, priority)
-    msg.verbose('registering root item:', utils.to_string(item))
-    if type(item) == 'string' then
-        item = {name = item}
-    end
-
-    -- if the item is already in the list then do nothing
-    if API.list.some(root, function(r)
-        return API.get_full_path(r, '') == API.get_full_path(item, '')
-    end) then return false end
-
-    item._priority = priority
-    for i, v in ipairs(root) do
-        if (v._priority or 100) > (priority or 100) then
-            API.insert_root_item(item, i)
-            return true
-        end
-    end
-    API.insert_root_item(item)
-    return true
-end
-
---providing getter and setter functions so that addons can't modify things directly
-function API.get_script_opts() return API.copy_table(o) end
-function API.get_opt(key) return o[key] end
-function API.get_extensions() return API.copy_table(extensions) end
-function API.get_sub_extensions() return API.copy_table(sub_extensions) end
-function API.get_audio_extensions() return API.copy_table(audio_extensions) end
-function API.get_parseable_extensions() return API.copy_table(parseable_extensions) end
-function API.get_state() return API.copy_table(state) end
-function API.get_dvd_device() return g.dvd_device end
-function API.get_parsers() return API.copy_table(parsers) end
-function API.get_root() return API.copy_table(root) end
-function API.get_directory() return state.directory end
-function API.get_list() return API.copy_table(state.list) end
-function API.get_current_file() return API.copy_table(current_file) end
-function API.get_current_parser() return state.parser:get_id() end
-function API.get_current_parser_keyname() return state.parser.keybind_name or state.parser.name end
-function API.get_selected_index() return state.selected end
-function API.get_selected_item() return API.copy_table(state.list[state.selected]) end
-function API.get_open_status() return not state.hidden end
-function API.get_parse_state(co) return parse_states[co or coroutine.running() or ""] end
-
-function API.set_empty_text(str)
-    state.empty_text = str
-    API.redraw()
-end
-
-function API.set_selected_index(index)
-    if type(index) ~= "number" then return false end
-    if index < 1 then index = 1 end
-    if index > #state.list then index = #state.list end
-    state.selected = index
-    API.redraw()
-    return index
-end
-
-function parser_API:get_index() return parsers[self].index end
-function parser_API:get_id() return parsers[self].id end
-
---a wrapper that passes the parsers priority value if none other is specified
-function parser_API:register_root_item(item, priority)
-    return API.register_root_item(item, priority or parsers[self:get_id()].priority)
-end
-
---runs choose_and_parse starting from the next parser
-function parser_API:defer(directory)
-    msg.trace("deferring to other parsers...")
-    local list, opts = scanning.choose_and_parse(directory, self:get_index() + 1)
-    API.get_parse_state().already_deferred = true
-    return list, opts
-end
+local fb = require 'modules.apis.fb'
+local parser_API = require 'modules.apis.parser'
 
 
 
@@ -394,6 +280,8 @@ end
 
 --loading external addons
 local function setup_addons()
+    package.loaded["file-browser"] = setmetatable({}, { __index = fb })
+
     local addon_dir = mp.command_native({"expand-path", o.addon_directory..'/'})
     local files = utils.readdir(addon_dir)
     if not files then error("could not read addon directory") end
