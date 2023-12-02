@@ -138,196 +138,12 @@ local cursor = require 'modules.navigation.cursor'
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
 
---selects the first item in the list which is highlighted as playing
-local function select_playing_item()
-    for i,item in ipairs(state.list) do
-        if ass.highlight_entry(item) then
-            state.selected = i
-            return
-        end
-    end
-end
-
---scans the list for which item to select by default
---chooses the folder that the script just moved out of
---or, otherwise, the item highlighted as currently playing
-local function select_prev_directory()
-    if state.prev_directory:find(state.directory, 1, true) == 1 then
-        local i = 1
-        while (state.list[i] and API.parseable_item(state.list[i])) do
-            if state.prev_directory:find(API.get_full_path(state.list[i]), 1, true) then
-                state.selected = i
-                return
-            end
-            i = i+1
-        end
-    end
-
-    select_playing_item()
-end
-
---parses the given directory or defers to the next parser if nil is returned
-local function choose_and_parse(directory, index)
-    msg.debug("finding parser for", directory)
-    local parser, list, opts
-    local parse_state = API.get_parse_state()
-    while list == nil and not parse_state.already_deferred and index <= #parsers do
-        parser = parsers[index]
-        if parser:can_parse(directory, parse_state) then
-            msg.debug("attempting parser:", parser:get_id())
-            list, opts = parser:parse(directory, parse_state)
-        end
-        index = index + 1
-    end
-    if not list then return nil, {} end
-
-    msg.debug("list returned from:", parser:get_id())
-    opts = opts or {}
-    if list then opts.id = opts.id or parser:get_id() end
-    return list, opts
-end
-
---sets up the parse_state table and runs the parse operation
-local function run_parse(directory, parse_state)
-    msg.verbose("scanning files in", directory)
-    parse_state.directory = directory
-
-    local co = coroutine.running()
-    parse_states[co] = setmetatable(parse_state, { __index = parse_state_API })
-
-    if directory == "" then return root_parser:parse() end
-    local list, opts = choose_and_parse(directory, 1)
-
-    if list == nil then return msg.debug("no successful parsers found") end
-    opts.parser = parsers[opts.id]
-
-    if not opts.filtered then API.filter(list) end
-    if not opts.sorted then API.sort(list) end
-    return list, opts
-end
-
---returns the contents of the given directory using the given parse state
---if a coroutine has already been used for a parse then create a new coroutine so that
---the every parse operation has a unique thread ID
-local function parse_directory(directory, parse_state)
-    local co = API.coroutine.assert("scan_directory must be executed from within a coroutine - aborting scan "..utils.to_string(parse_state))
-    if not parse_states[co] then return run_parse(directory, parse_state) end
-
-    --if this coroutine is already is use by another parse operation then we create a new
-    --one and hand execution over to that
-    local new_co = coroutine.create(function()
-        API.coroutine.resume_err(co, run_parse(directory, parse_state))
-    end)
-
-    --queue the new coroutine on the mpv event queue
-    mp.add_timeout(0, function()
-        local success, err = coroutine.resume(new_co)
-        if not success then
-            API.traceback(err, new_co)
-            API.coroutine.resume_err(co)
-        end
-    end)
-    return parse_states[co]:yield()
-end
-
---sends update requests to the different parsers
-local function update_list(moving_adjacent)
-    msg.verbose('opening directory: ' .. state.directory)
-
-    state.selected = 1
-    state.selection = {}
-
-    --loads the current directry from the cache to save loading time
-    --there will be a way to forcibly reload the current directory at some point
-    --the cache is in the form of a stack, items are taken off the stack when the dir moves up
-    if cache[1] and cache[#cache].directory == state.directory then
-        msg.verbose('found directory in cache')
-        cache:apply()
-        state.prev_directory = state.directory
-        return
-    end
-    local directory = state.directory
-    local list, opts = parse_directory(state.directory, { source = "browser" })
-
-    --if the running coroutine isn't the one stored in the state variable, then the user
-    --changed directories while the coroutine was paused, and this operation should be aborted
-    if coroutine.running() ~= state.co then
-        msg.verbose(g.ABORT_ERROR.msg)
-        msg.debug("expected:", state.directory, "received:", directory)
-        return
-    end
-
-    --apply fallbacks if the scan failed
-    if not list and cache[1] then
-        --switches settings back to the previously opened directory
-        --to the user it will be like the directory never changed
-        msg.warn("could not read directory", state.directory)
-        cache:apply()
-        return
-    elseif not list then
-        msg.warn("could not read directory", state.directory)
-        list, opts = root_parser:parse()
-    end
-
-    state.list = list
-    state.parser = opts.parser
-
-    --this only matters when displaying the list on the screen, so it doesn't need to be in the scan function
-    if not opts.escaped then
-        for i = 1, #list do
-            list[i].ass = list[i].ass or API.ass_escape(list[i].label or list[i].name, true)
-        end
-    end
-
-    --setting custom options from parsers
-    state.directory_label = opts.directory_label
-    state.empty_text = opts.empty_text or state.empty_text
-
-    --we assume that directory is only changed when redirecting to a different location
-    --therefore, the cache should be wiped
-    if opts.directory then
-        state.directory = opts.directory
-        cache:clear()
-    end
-
-    if opts.selected_index then
-        state.selected = opts.selected_index or state.selected
-        if state.selected > #state.list then state.selected = #state.list
-        elseif state.selected < 1 then state.selected = 1 end
-    end
-
-    if moving_adjacent then select_prev_directory()
-    else select_playing_item() end
-    state.prev_directory = state.directory
-end
-
---rescans the folder and updates the list
-local function update(moving_adjacent)
-    --we can only make assumptions about the directory label when moving from adjacent directories
-    if not moving_adjacent then
-        state.directory_label = nil
-        cache:clear()
-    end
-
-    state.empty_text = "~"
-    state.list = {}
-    cursor.disable_select_mode()
-    ass.update_ass()
-
-    --the directory is always handled within a coroutine to allow addons to
-    --pause execution for asynchronous operations
-    API.coroutine.run(function()
-        state.co = coroutine.running()
-        update_list(moving_adjacent)
-        state.empty_text = "empty directory"
-        ass.update_ass()
-    end)
-end
+local scanning = require 'modules.navigation.scanning'
 
 --the base function for moving to a directory
 local function goto_directory(directory)
     state.directory = directory
-    update(false)
+    scanning.rescan(false)
 end
 
 --loads the root list
@@ -358,7 +174,7 @@ local function up_dir()
     --we can make some assumptions about the next directory label when moving up or down
     if state.directory_label then state.directory_label = string.match(state.directory_label, "^(.+/)[^/]+/$") end
 
-    update(true)
+    scanning.rescan(true)
     cache:pop()
 end
 
@@ -373,7 +189,7 @@ local function down_dir()
 
     --we can make some assumptions about the next directory label when moving up or down
     if state.directory_label then state.directory_label = state.directory_label..(current.label or current.name) end
-    update(not redirected)
+    scanning.rescan(not redirected)
 end
 
 
@@ -486,7 +302,7 @@ local function concurrent_loadlist_parse(directory, load_opts, prev_dirs, item_t
     if prev_dirs[directory] then return end
     prev_dirs[directory] = true
 
-    local list, list_opts = parse_directory(directory, { source = "loadlist" })
+    local list, list_opts = scanning.scan_directory(directory, { source = "loadlist" })
     if list == root then return end
 
     --if we can't parse the directory then append it and hope mpv fares better
@@ -559,7 +375,7 @@ local function custom_loadlist_recursive(directory, load_opts, prev_dirs)
     if prev_dirs[directory] then return end
     prev_dirs[directory] = true
 
-    local list, opts = parse_directory(directory, { source = "loadlist" })
+    local list, opts = scanning.scan_directory(directory, { source = "loadlist" })
     if list == root then return end
 
     --if we can't parse the directory then append it and hope mpv fares better
@@ -721,7 +537,7 @@ state.keybinds = {
     {'Shift+PGUP',  'list_top',     function() cursor.scroll(-math.huge) end},
     {'HOME',        'goto_current', goto_current_dir},
     {'Shift+HOME',  'goto_root',    goto_root},
-    {'Ctrl+r',      'reload',       function() cache:clear(); update() end},
+    {'Ctrl+r',      'reload',       function() cache:clear(); scanning.rescan() end},
     {'s',           'select_mode',  cursor.toggle_select_mode},
     {'S',           'select_item',  cursor.toggle_selection},
     {'Ctrl+a',      'select_all',   cursor.select_all}
@@ -1025,7 +841,7 @@ end
 
 --these functions we'll provide as-is
 API.redraw = ass.update_ass
-API.rescan = update
+API.rescan = scanning.rescan
 API.browse_directory = browse_directory
 
 function API.clear_cache()
@@ -1036,7 +852,7 @@ end
 function API.parse_directory(directory, parse_state)
     if not parse_state then parse_state = { source = "addon" }
     elseif not parse_state.source then parse_state.source = "addon" end
-    return parse_directory(directory, parse_state)
+    return scanning.scan_directory(directory, parse_state)
 end
 
 --register file extensions which can be opened by the browser
@@ -1132,33 +948,9 @@ end
 --runs choose_and_parse starting from the next parser
 function parser_API:defer(directory)
     msg.trace("deferring to other parsers...")
-    local list, opts = choose_and_parse(directory, self:get_index() + 1)
+    local list, opts = scanning.choose_and_parse(directory, self:get_index() + 1)
     API.get_parse_state().already_deferred = true
     return list, opts
-end
-
---a wrapper around coroutine.yield that aborts the coroutine if
---the parse request was cancelled by the user
---the coroutine is 
-function parse_state_API:yield(...)
-    local co = coroutine.running()
-    local is_browser = co == state.co
-    if self.source == "browser" and not is_browser then
-        msg.error("current coroutine does not match browser's expected coroutine - did you unsafely yield before this?")
-        error("current coroutine does not match browser's expected coroutine - aborting the parse")
-    end
-
-    local result = table.pack(coroutine.yield(...))
-    if is_browser and co ~= state.co then
-        msg.verbose("browser no longer waiting for list - aborting parse for", self.directory)
-        error(g.ABORT_ERROR)
-    end
-    return unpack(result, 1, result.n)
-end
-
---checks if the current coroutine is the one handling the browser's request
-function parse_state_API:is_coroutine_current()
-    return coroutine.running() == state.co
 end
 
 
@@ -1379,7 +1171,7 @@ local function scan_directory_json(directory, response_str)
     if directory ~= "" then directory = API.fix_path(directory, true) end
     msg.verbose(("recieved %q from 'get-directory-contents' script message - returning result to %q"):format(directory, response_str))
 
-    local list, opts = parse_directory(directory, { source = "script-message" } )
+    local list, opts = scanning.scan_directory(directory, { source = "script-message" } )
     if opts then opts.API_VERSION = g.API_VERSION end
 
     local err

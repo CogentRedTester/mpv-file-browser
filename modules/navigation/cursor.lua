@@ -64,6 +64,34 @@ function cursor.scroll(n, wrap)
     ass.update_ass()
 end
 
+--selects the first item in the list which is highlighted as playing
+function cursor.select_playing_item()
+    for i,item in ipairs(g.state.list) do
+        if ass.highlight_entry(item) then
+            g.state.selected = i
+            return
+        end
+    end
+end
+
+--scans the list for which item to select by default
+--chooses the folder that the script just moved out of
+--or, otherwise, the item highlighted as currently playing
+function cursor.select_prev_directory()
+    if g.state.prev_directory:find(g.state.directory, 1, true) == 1 then
+        local i = 1
+        while (g.state.list[i] and API.parseable_item(g.state.list[i])) do
+            if g.state.prev_directory:find(API.get_full_path(g.state.list[i]), 1, true) then
+                g.state.selected = i
+                return
+            end
+            i = i+1
+        end
+    end
+
+    cursor.select_playing_item()
+end
+
 --toggles the selection
 function cursor.toggle_selection()
     if not g.state.list[g.state.selected] then return end
