@@ -103,25 +103,6 @@ local file_parser = require 'modules.parsers.file'
 
 local ass = require 'modules.ass'
 
---saves the directory and name of the currently playing file
-local function update_current_directory(_, filepath)
-    --if we're in idle mode then we want to open the working directory
-    if filepath == nil then 
-        current_file.directory = API.fix_path( mp.get_property("working-directory", ""), true)
-        current_file.name = nil
-        current_file.path = nil
-        return
-    elseif filepath:find("dvd://") == 1 then
-        filepath = g.dvd_device..filepath:match("dvd://(.*)")
-    end
-
-    local workingDirectory = mp.get_property('working-directory', '')
-    local exact_path = API.join_path(workingDirectory, filepath)
-    exact_path = API.fix_path(exact_path, false)
-    current_file.directory, current_file.name = utils.split_path(exact_path)
-    current_file.path = exact_path
-end
-
 
 
 --------------------------------------------------------------------------------------------------------
@@ -1216,19 +1197,13 @@ end)
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
+local observers = require 'modules.observers'
+
 --we don't want to add any overhead when the browser isn't open
-mp.observe_property('path', 'string', function(_,path)
-    if not state.hidden then 
-        update_current_directory(_,path)
-        ass.update_ass()
-    else state.flag_update = true end
-end)
+mp.observe_property('path', 'string', observers.current_directory)
 
 --updates the dvd_device
-mp.observe_property('dvd-device', 'string', function(_, device)
-    if not device or device == "" then device = "/dev/dvd/" end
-    g.dvd_device = API.fix_path(device, true)
-end)
+mp.observe_property('dvd-device', 'string', observers.dvd_device)
 
 --declares the keybind to open the browser
 mp.add_key_binding('MENU','browse-files', toggle)
