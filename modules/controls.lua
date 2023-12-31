@@ -71,14 +71,14 @@ end
 --opens a specific directory
 function controls.browse_directory(directory)
     if not directory then return end
-    directory = mp.command_native({"expand-path", directory}, "")
+    directory = mp.command_native({"expand-path", directory}) or ''
     -- directory = join_path( mp.get_property("working-directory", ""), directory )
 
     if directory ~= "" then directory = API.fix_path(directory, true) end
     msg.verbose('recieved directory from script message: '..directory)
 
     if directory == "dvd://" then directory = g.dvd_device end
-    directory.goto_directory(directory)
+    movement.goto_directory(directory)
     controls.open()
 end
 
