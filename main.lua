@@ -186,27 +186,6 @@ keybinds.setup_keybinds()
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-local function scan_directory_json(directory, response_str)
-    if not directory then msg.error("did not receive a directory string"); return end
-    if not response_str then msg.error("did not receive a response string"); return end
-
-    directory = mp.command_native({"expand-path", directory}, "")
-    if directory ~= "" then directory = API.fix_path(directory, true) end
-    msg.verbose(("recieved %q from 'get-directory-contents' script message - returning result to %q"):format(directory, response_str))
-
-    local list, opts = scanning.scan_directory(directory, { source = "script-message" } )
-    if opts then opts.API_VERSION = g.API_VERSION end
-
-    local err
-    list, err = API.format_json_safe(list)
-    if not list then msg.error(err) end
-
-    opts, err = API.format_json_safe(opts)
-    if not opts then msg.error(err) end
-
-    mp.commandv("script-message", response_str, list or "", opts or "")
-end
-
 if input then
     mp.add_key_binding("Alt+o", "browse-directory/get-user-input", function()
         input.get_user_input(controls.browse_directory, {request_text = "open directory:"})
@@ -220,83 +199,23 @@ end
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
---a helper script message for custom keybinds
---substitutes any '=>' arguments for 'script-message'
---makes chaining script-messages much easier
-mp.register_script_message('=>', function(...)
-    local command = table.pack('script-message', ...)
-    for i, v in ipairs(command) do
-        if v == '=>' then command[i] = 'script-message' end
-    end
-    mp.commandv(table.unpack(command))
-end)
-
---a helper script message for custom keybinds
---sends a command after the specified delay
-mp.register_script_message('delay-command', function(delay, ...)
-    local command = table.pack(...)
-    local success, err = pcall(mp.add_timeout, API.evaluate_string('return '..delay), function() mp.commandv(table.unpack(command)) end)
-    if not success then return msg.error(err) end
-end)
-
---a helper script message for custom keybinds
---sends a command only if the given expression returns true
-mp.register_script_message('conditional-command', function(condition, ...)
-    local command = table.pack(...)
-    API.coroutine.run(function()
-        if API.evaluate_string('return '..condition) == true then mp.commandv(table.unpack(command)) end
-    end)
-end)
-
---a helper script message for custom keybinds
---extracts lua expressions from the command and evaluates them
---expressions must be surrounded by !{}. Another ! before the { will escape the evaluation
-mp.register_script_message('evaluate-expressions', function(...)
-    local args = table.pack(...)
-    API.coroutine.run(function()
-        for i, arg in ipairs(args) do
-            args[i] = arg:gsub('(!+)(%b{})', function(lead, expression)
-                if #lead % 2 == 0 then return string.rep('!', #lead/2)..expression end
-
-                local eval = API.evaluate_string('return '..expression:sub(2, -2))
-                return type(eval) == "table" and utils.to_string(eval) or tostring(eval)
-            end)
-        end
-
-        mp.commandv(table.unpack(args))
-    end)
-end)
-
---a helper function for custom-keybinds
---concatenates the command arguments with newlines and runs the
---string as a statement of code
-mp.register_script_message('run-statement', function(...)
-    local statement = table.concat(table.pack(...), '\n')
-    API.coroutine.run(API.evaluate_string, statement)
-end)
-
---allows keybinds/other scripts to auto-open specific directories
-mp.register_script_message('browse-directory', controls.browse_directory)
-
---allows other scripts to request directory contents from file-browser
-mp.register_script_message("get-directory-contents", function(directory, response_str)
-    API.coroutine.run(scan_directory_json, directory, response_str)
-end)
-
-
-
-------------------------------------------------------------------------------------------
---------------------------------mpv API Callbacks-----------------------------------------
-------------------------------------------------------------------------------------------
-------------------------------------------------------------------------------------------
-
 local observers = require 'modules.observers'
+local script_messages = require 'modules.script-messages'
 
 --we don't want to add any overhead when the browser isn't open
 mp.observe_property('path', 'string', observers.current_directory)
 
 --updates the dvd_device
 mp.observe_property('dvd-device', 'string', observers.dvd_device)
+
+mp.register_script_message('=>', script_messages.chain)
+mp.register_script_message('delay-command', script_messages.delay_command)
+mp.register_script_message('conditional-command', script_messages.conditional_command)
+mp.register_script_message('evaluate-expressions', script_messages.evaluate_expressions)
+mp.register_script_message('run-statement', script_messages.run_statement)
+
+mp.register_script_message('browse-directory', controls.browse_directory)
+mp.register_script_message("get-directory-contents", script_messages.get_directory_contents)
 
 --declares the keybind to open the browser
 mp.add_key_binding('MENU','browse-files', controls.toggle)
