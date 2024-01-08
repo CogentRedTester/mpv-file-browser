@@ -1,5 +1,7 @@
 
+local mp = require 'mp'
 local msg = require 'mp.msg'
+local utils = require 'mp.utils'
 
 local o = require 'modules.options'
 local g = require 'modules.globals'

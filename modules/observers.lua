@@ -1,4 +1,5 @@
 
+local mp = require 'mp'
 local utils = require 'mp.utils'
 
 local g = require 'modules.globals'
