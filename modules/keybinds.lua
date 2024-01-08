@@ -17,9 +17,7 @@ local scanning = require 'modules.navigation.scanning'
 local cursor = require 'modules.navigation.cursor'
 local cache = require 'modules.cache'
 
-local state = g.state
-
-state.keybinds = {
+g.state.keybinds = {
     {'ENTER',       'play',         function() playlist.add_files('replace', false) end},
     {'Shift+ENTER', 'play_append',  function() playlist.add_files('append-play', false) end},
     {'Alt+ENTER',   'play_autoload',function() playlist.add_files('replace', true) end},
@@ -233,12 +231,12 @@ local function run_keybind_coroutine(key)
     local co = coroutine.create(run_keybind_recursive)
 
     local state_copy = {
-        directory = state.directory,
-        directory_label = state.directory_label,
-        list = state.list,                      --the list should remain unchanged once it has been saved to the global state, new directories get new tables
-        selected = state.selected,
-        selection = API.copy_table(state.selection),
-        parser = state.parser,
+        directory = g.state.directory,
+        directory_label = g.state.directory_label,
+        list = g.state.list,                      --the list should remain unchanged once it has been saved to the global state, new directories get new tables
+        selected = g.state.selected,
+        selection = API.copy_table(g.state.selection),
+        parser = g.state.parser,
     }
     local success, err = coroutine.resume(co, key, state_copy, co)
     if not success then
@@ -278,7 +276,7 @@ local function insert_custom_keybind(keybind)
         for code in string.gmatch(keybind.condition, KEYBIND_CODE_PATTERN) do keybind.condition_codes[code] = true end
     end
 
-    table.insert(state.keybinds, {keybind.key, keybind.name, function() run_keybind_coroutine(keybind) end, keybind.flags or {}})
+    table.insert(g.state.keybinds, {keybind.key, keybind.name, function() run_keybind_coroutine(keybind) end, keybind.flags or {}})
     top_level_keys[keybind.key] = keybind
 end
 
@@ -288,7 +286,7 @@ local function setup_keybinds()
     if not o.custom_keybinds and not o.addons then return end
 
     --this is to make the default keybinds compatible with passthrough from custom keybinds
-    for _, keybind in ipairs(state.keybinds) do
+    for _, keybind in ipairs(g.state.keybinds) do
         top_level_keys[keybind[1]] = { key = keybind[1], name = keybind[2], command = keybind[3], flags = keybind[4] }
     end
 
