@@ -23,10 +23,9 @@ API.coroutine = {}
 --implements table.pack if on lua 5.1
 if not table.pack then
     table.unpack = unpack
+---@diagnostic disable-next-line: duplicate-set-field
     function table.pack(...)
-        local t = {...}
----@diagnostic disable-next-line: inject-field
-        t.n = select("#", ...)
+        local t = {n = select("#", ...), ...}
         return t
     end
 end
