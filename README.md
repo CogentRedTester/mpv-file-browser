@@ -6,16 +6,26 @@ This script allows users to browse and open files and folders entirely from with
 
 By default only file types compatible with mpv will be shown, but this can be changed in the config file.
 
-This script requires at least mpv v0.31.
+This script requires at least **mpv v0.33**.
+
+Originally, file-browser worked with versions of mpv going back to
+v0.31, you can find those (now unsupported) older versions of file-browser
+[here](https://github.com/CogentRedTester/mpv-file-browser/tree/mpv-v0.31)
 
 ## Installation
 
-Place the `file-browser.lua` file into the mpv `~~/scripts/` directory. `~~/` is the mpv config directory
-which is typically `~/.config/mpv/` on linux and `%APPDATA%/mpv/` on windows.
+### Basic
 
-Copy `file_browser.conf` into `~~/script-opts/` and customise the [`root` option](#root-directory) for your
-system. The file contains all the default settings for the script, but I would recommend deleting any
-options from the file that you don't understand so as to not override any future changes I make to the defaults.
+Clone this git repository into the mpv `~~/scripts` directory and
+change the name of the folder from `mpv-file-browser` to `file-browser`.
+You can then pull to receive updates.
+Alternatively, you can download the zip and extract the contents to `~~/scripts/file-browser`.
+`~~/` is the mpv config directory which is typically `~/.config/mpv/` on linux and `%APPDATA%/mpv/` on windows.
+
+Create a `file_browser.conf` file in the `~~/script-opts/` directory and customise the [`root` option](#root-directory) for your
+system. The [`docs/file_browser.conf`](docs/file_browser.conf) file contains the full list of options and their defaults.
+
+### Advanced
 
 To setup [custom keybinds](docs/custom-keybinds.md) enable the `custom_keybinds` option in `file_browser.conf` and
 create a `~~/script-opts/file-browser-keybinds.json` file. Do **not** copy the `file-browser-keybinds.json` file
