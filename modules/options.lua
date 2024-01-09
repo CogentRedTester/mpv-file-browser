@@ -97,6 +97,7 @@ local o = {
     font_opacity_selection_marker = "99",
 
     scaling_factor_base = 1,
+    scaling_factor_body = 1,
     scaling_factor_header = 1.4,
     scaling_factor_wrappers = 0.64,
 
