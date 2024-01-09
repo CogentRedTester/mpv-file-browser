@@ -96,9 +96,9 @@ local o = {
     font_bold_header = true,
     font_opacity_selection_marker = "99",
 
-    font_size_header = 35,
-    font_size_body = 25,
-    font_size_wrappers = 16,
+    scaling_factor_base = 1,
+    scaling_factor_header = 1.4,
+    scaling_factor_wrappers = 0.64,
 
     font_name_header = "",
     font_name_body = "",

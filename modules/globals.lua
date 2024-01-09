@@ -4,7 +4,6 @@
 --------------------------------------------------------------------------------------------------------
 
 local mp = require 'mp'
-local msg = require 'mp.msg'
 
 local globals = {}
 local o = require 'modules.options'
@@ -13,16 +12,20 @@ local o = require 'modules.options'
 globals.API_VERSION = "1.4.0"
 
 --the osd_overlay API was not added until v0.31. The expand-path command was not added until 0.30
+assert(mp.create_osd_overlay, "Script requires minimum mpv version 0.33")
+
 globals.ass = mp.create_osd_overlay("ass-events")
-if not globals.ass then return msg.error("Script requires minimum mpv version 0.31") end
+globals.ass.res_y = 720 / o.scaling_factor_base
+
+local BASE_FONT_SIZE = 25
 
 globals.style = {
     global = o.alignment == 0 and "" or ([[{\an%d}]]):format(o.alignment),
 
     -- full line styles
-    header = ([[{\r\q2\b%s\fs%d\fn%s\c&H%s&}]]):format((o.font_bold_header and "1" or "0"), o.font_size_header, o.font_name_header, o.font_colour_header),
-    body = ([[{\r\q2\fs%d\fn%s\c&H%s&}]]):format(o.font_size_body, o.font_name_body, o.font_colour_body),
-    footer_header = ([[{\r\q2\fs%d\fn%s\c&H%s&}]]):format(o.font_size_wrappers, o.font_name_wrappers, o.font_colour_wrappers),
+    header = ([[{\r\q2\b%s\fs%d\fn%s\c&H%s&}]]):format((o.font_bold_header and "1" or "0"), o.scaling_factor_header*BASE_FONT_SIZE, o.font_name_header, o.font_colour_header),
+    body = ([[{\r\q2\fs%d\fn%s\c&H%s&}]]):format(BASE_FONT_SIZE, o.font_name_body, o.font_colour_body),
+    footer_header = ([[{\r\q2\fs%d\fn%s\c&H%s&}]]):format(o.scaling_factor_wrappers*BASE_FONT_SIZE, o.font_name_wrappers, o.font_colour_wrappers),
 
     --small section styles (for colours)
     multiselect = ([[{\c&H%s&}]]):format(o.font_colour_multiselect),
