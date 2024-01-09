@@ -110,7 +110,7 @@ local function update_ass()
             end
             append(o.cursor_icon, "\\h", style.body)
         else
-            append(o.indent_icon, "\\h", style.body)
+            append(g.style.indent, o.cursor_icon, "\\h", style.body)
         end
 
         --sets the selection colour scheme

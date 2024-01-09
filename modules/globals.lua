@@ -31,6 +31,7 @@ globals.style = {
     playing_selected = ([[{\c&H%s&}]]):format(o.font_colour_playing_multiselected),
 
     --icon styles
+    indent = ([[{\alpha&H%s}]]):format('ff'),
     cursor = ([[{\fn%s\c&H%s&}]]):format(o.font_name_cursor, o.font_colour_cursor),
     cursor_select = ([[{\fn%s\c&H%s&}]]):format(o.font_name_cursor, o.font_colour_multiselect),
     cursor_deselect = ([[{\fn%s\c&H%s&}]]):format(o.font_name_cursor, o.font_colour_selected),

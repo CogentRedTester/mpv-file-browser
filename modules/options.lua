@@ -68,7 +68,6 @@ local o = {
     --the `\h` character is a hard space to add padding between the symbol and the text
     folder_icon = "🖿",
     cursor_icon = "➤",
-    indent_icon = [[\h\h\h]],
 
     --enable addons
     addons = false,
