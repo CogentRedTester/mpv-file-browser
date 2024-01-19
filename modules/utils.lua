@@ -383,8 +383,8 @@ API.code_fns = {
     r = function(_, s) return s.parser.keybind_name or s.parser.name or "" end,
 }
 
---programatically creates a pattern that matches any key code
---this will result in some duplicates but that shouldn't really matter
+-- programatically creates a pattern that matches any key code
+-- this will result in some duplicates but that shouldn't really matter
 function API.get_code_pattern(codes)
     local CUSTOM_KEYBIND_CODES = ""
     for key in pairs(codes) do CUSTOM_KEYBIND_CODES = CUSTOM_KEYBIND_CODES..key:lower()..key:upper() end
@@ -392,23 +392,32 @@ function API.get_code_pattern(codes)
     return('%%%%([%s])'):format(API.pattern_escape(CUSTOM_KEYBIND_CODES))
 end
 
-function API.substitute_codes(str, overrides, item, state)
+-- substitutes codes in the given string for other substrings
+-- overrides is a map of characters->strings|functions that determines the replacement string is
+-- item and state are values passed to functions in the map
+-- modifier_fn is given the replacement substrings before they are placed in the main string (the return value is the new replacement string)
+function API.substitute_codes(str, overrides, item, state, modifier_fn)
     local replacers = overrides and setmetatable(API.copy_table(overrides), {__index = API.code_fns}) or API.code_fns
     item = item or g.state.list[g.state.selected]
     state = state or g.state
 
-    return string.gsub(str, API.get_code_pattern(replacers), function(code)
-        if type(replacers[code]) == "string" then return API.code_fns[code] end
+    return (string.gsub(str, API.get_code_pattern(replacers), function(code)
+        local result
 
+        if type(replacers[code]) == "string" then
+            result = replacers[code]
         --encapsulates the string if using an uppercase code
-        if not replacers[code] then
+        elseif not replacers[code] then
             local lower_fn = replacers[code:lower()]
             if not lower_fn then return end
-            return string.format("%q", lower_fn(item, state))
+            result = string.format("%q", lower_fn(item, state))
+        else
+            result = replacers[code](item, state)
         end
 
-        return replacers[code](item, state)
-    end)
+        if modifier_fn then return modifier_fn(result) end
+        return result
+    end))
 end
 
 
