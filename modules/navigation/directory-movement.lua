@@ -39,6 +39,10 @@ function directory_movement.up_dir()
     if index == nil then g.state.directory = ""
     else g.state.directory = dir:sub(index):reverse() end
 
+    if string.match(g.state.directory, "^%w+://$") then
+        g.state.directory = ""
+    end
+
     --we can make some assumptions about the next directory label when moving up or down
     if g.state.directory_label then g.state.directory_label = string.match(g.state.directory_label, "^(.+/)[^/]+/$") end
 
