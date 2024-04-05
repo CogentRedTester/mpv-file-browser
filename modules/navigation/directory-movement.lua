@@ -39,7 +39,7 @@ function directory_movement.up_dir()
     if index == nil then g.state.directory = ""
     else g.state.directory = dir:sub(index):reverse() end
 
-    if string.match(g.state.directory, "^%w+://$") then
+    if #cache > 0 and cache[#cache]["directory"] == "" then
         g.state.directory = ""
     end
 
