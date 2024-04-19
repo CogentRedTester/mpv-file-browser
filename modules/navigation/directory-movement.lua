@@ -28,19 +28,11 @@ end
 
 --moves up a directory
 function directory_movement.up_dir()
-    local dir = g.state.directory:reverse()
-    local index = dir:find("[/\\]")
-
-    while index == 1 do
-        dir = dir:sub(2)
-        index = dir:find("[/\\]")
-    end
-
-    if index == nil then g.state.directory = ""
-    else g.state.directory = dir:sub(index):reverse() end
+    local parent_dir = g.state.directory:match("^(.-/+)[^/]+/*$") or ""
+    g.state.directory = parent_dir
 
     --we can make some assumptions about the next directory label when moving up or down
-    if g.state.directory_label then g.state.directory_label = string.match(g.state.directory_label, "^(.+/)[^/]+/$") end
+    if g.state.directory_label then g.state.directory_label = string.match(g.state.directory_label, "^(.-/+)[^/]+/*$") end
 
     scanning.rescan(true)
     cache:pop()
