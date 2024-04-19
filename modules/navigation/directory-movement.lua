@@ -1,6 +1,7 @@
 
 local msg = require 'mp.msg'
 
+local o = require 'modules.options'
 local g = require 'modules.globals'
 local cache = require 'modules.cache'
 local scanning = require 'modules.navigation.scanning'
@@ -29,6 +30,12 @@ end
 --moves up a directory
 function directory_movement.up_dir()
     local parent_dir = g.state.directory:match("^(.-/+)[^/]+/*$") or ""
+
+    if o.skip_protocol_schemes and parent_dir:find("^(%a[%w+-.]*)://$") then
+        directory_movement.goto_root()
+        return;
+    end
+
     g.state.directory = parent_dir
 
     --we can make some assumptions about the next directory label when moving up or down
