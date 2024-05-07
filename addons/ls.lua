@@ -6,6 +6,7 @@
 ]]--
 
 local mp = require "mp"
+local msg = require "mp.msg"
 local fb = require "file-browser"
 
 local ls = {
@@ -35,12 +36,13 @@ end
 
 function ls:parse(directory, parse_state)
     local list = {}
-    local files = command({"ls", "-1", "-p", "-A", "-N", directory}, parse_state)
+    local files = command({"ls", "-1", "-p", "-A", "-N", "--zero", directory}, parse_state)
 
     if not files then return nil end
 
-    for str in files:gmatch("[^\n\r]+") do
+    for str in files:gmatch("%Z+") do
         local is_dir = str:sub(-1) == "/"
+        msg.trace(str)
 
         if is_dir and fb.valid_dir(str) then
             table.insert(list, {name = str, type = "dir"})
