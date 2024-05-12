@@ -1,10 +1,12 @@
+-- This file is an internal file-browser addon.
+-- It should not be imported like a normal module.
 
 local msg = require 'mp.msg'
 local utils = require 'mp.utils'
 
-local fb_utils = require 'modules.utils'
+local fb = require 'file-browser'
 
---parser ofject for native filesystems
+--parser object for native filesystems
 local file_parser = {
     name = "file",
     priority = 110,
@@ -40,7 +42,7 @@ local file_parser = {
                 table.insert(new_list, {name = item, type = 'file'})
             end
         end
-        return fb_utils.sort(new_list), {filtered = true, sorted = true}
+        return fb.sort(new_list), {filtered = true, sorted = true}
     end
 }
 

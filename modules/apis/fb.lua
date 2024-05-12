@@ -10,6 +10,7 @@ local cache = require 'modules.cache'
 local controls = require 'modules.controls'
 
 local fb = setmetatable({}, { __index = setmetatable({}, { __index = fb_utils }) })
+package.loaded["file-browser"] = setmetatable({}, { __index = fb })
 
 --these functions we'll provide as-is
 fb.redraw = ass.update_ass

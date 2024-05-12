@@ -44,8 +44,8 @@ local function set_parser_id(parser)
     g.parsers[parser] = { id = name }
 end
 
---loads an addon in a separate environment
-local function load_addon(path)
+--runs an addon in a separate environment
+local function run_addon(path)
     local name_sqbr = string.format("[%s]", path:match("/([^/]*)%.lua$"))
     local addon_environment = fb_utils.redirect_table(_G)
     addon_environment._G = addon_environment
@@ -114,7 +114,7 @@ end
 local function setup_addon(file, path)
     if file:sub(-4) ~= ".lua" then return msg.verbose(path, "is not a lua file - aborting addon setup") end
 
-    local addon_parsers = load_addon(path)
+    local addon_parsers = run_addon(path)
     if not addon_parsers or type(addon_parsers) ~= "table" then return msg.error("addon", path, "did not return a table") end
 
     --if the table contains a priority key then we assume it isn't an array of parsers
@@ -126,15 +126,14 @@ local function setup_addon(file, path)
 end
 
 --loading external addons
-local function setup_addons()
-    package.loaded["file-browser"] = setmetatable({}, { __index = fb })
+local function load_addons(directory)
+    directory = fb_utils.fix_path(directory, true)
 
-    local addon_dir = mp.command_native({"expand-path", o.addon_directory..'/'})
-    local files = utils.readdir(addon_dir)
+    local files = utils.readdir(directory)
     if not files then error("could not read addon directory") end
 
     for _, file in ipairs(files) do
-        setup_addon(file, addon_dir..file)
+        setup_addon(file, directory..file)
     end
     table.sort(g.parsers, function(a, b) return a.priority < b.priority end)
 
@@ -153,7 +152,17 @@ local function setup_addons()
     end
 end
 
+local function load_internal_parsers()
+    local internal_addon_dir = mp.get_script_directory()..'/modules/parsers/'
+    load_addons(internal_addon_dir)
+end
+
+local function load_external_addons()
+    local addon_dir = mp.command_native({"expand-path", o.addon_directory..'/'})
+    load_addons(addon_dir)
+end
+
 return {
-    setup_parser = setup_parser,
-    setup_addons = setup_addons,
+    load_internal_parsers = load_internal_parsers,
+    load_external_addons = load_external_addons
 }
