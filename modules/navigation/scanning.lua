@@ -17,7 +17,7 @@ end
 
 --parses the given directory or defers to the next parser if nil is returned
 local function choose_and_parse(directory, index)
-    msg.debug("finding parser for", directory)
+    msg.debug(("finding parser for %q"):format(directory))
     local parser, list, opts
     local parse_state = g.parse_states[coroutine.running() or ""]
     while list == nil and not parse_state.already_deferred and index <= #g.parsers do
@@ -38,7 +38,7 @@ end
 
 --sets up the parse_state table and runs the parse operation
 local function run_parse(directory, parse_state)
-    msg.verbose("scanning files in", directory)
+    msg.verbose(("scanning files in %q"):format(directory))
     parse_state.directory = directory
 
     local co = coroutine.running()
