@@ -5,7 +5,7 @@ local utils = require 'mp.utils'
 local o = require 'modules.options'
 local g = require 'modules.globals'
 local fb = require 'modules.apis.fb'
-local API = require 'modules.utils'
+local fb_utils = require 'modules.utils'
 local parser_API = require 'modules.apis.parser'
 
 local root_parser = require 'modules.parsers.root'
@@ -47,12 +47,12 @@ end
 --loads an addon in a separate environment
 local function load_addon(path)
     local name_sqbr = string.format("[%s]", path:match("/([^/]*)%.lua$"))
-    local addon_environment = API.redirect_table(_G)
+    local addon_environment = fb_utils.redirect_table(_G)
     addon_environment._G = addon_environment
 
     --gives each addon custom debug messages
-    addon_environment.package = API.redirect_table(addon_environment.package)
-    addon_environment.package.loaded = API.redirect_table(addon_environment.package.loaded)
+    addon_environment.package = fb_utils.redirect_table(addon_environment.package)
+    addon_environment.package.loaded = fb_utils.redirect_table(addon_environment.package.loaded)
     local msg_module = {
         log = function(level, ...) msg.log(level, name_sqbr, ...) end,
         fatal = function(...) return msg.fatal(name_sqbr, ...) end,
@@ -82,7 +82,7 @@ local function load_addon(path)
         if not chunk then return msg.error(err) end
     end
 
-    local success, result = xpcall(chunk, API.traceback)
+    local success, result = xpcall(chunk, fb_utils.traceback)
     return success and result or nil
 end
 
@@ -144,7 +144,7 @@ local function setup_addons()
     --we want to run the setup functions for each addon
     for index, parser in ipairs(g.parsers) do
         if parser.setup then
-            local success = xpcall(function() parser:setup() end, API.traceback)
+            local success = xpcall(function() parser:setup() end, fb_utils.traceback)
             if not success then
                 msg.error("parser", parser:get_id(), "threw an error in the setup method - removing from list of parsers")
                 table.remove(g.parsers, index)

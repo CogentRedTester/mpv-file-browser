@@ -3,7 +3,7 @@ local msg = require 'mp.msg'
 local utils = require 'mp.utils'
 
 local g = require 'modules.globals'
-local API = require 'modules.utils'
+local fb_utils = require 'modules.utils'
 local root_parser = require 'modules.parsers.root'
 local cache = require 'modules.cache'
 local cursor = require 'modules.navigation.cursor'
@@ -46,8 +46,8 @@ local function run_parse(directory, parse_state)
     if list == nil then return msg.debug("no successful parsers found") end
     opts.parser = g.parsers[opts.id]
 
-    if not opts.filtered then API.filter(list) end
-    if not opts.sorted then API.sort(list) end
+    if not opts.filtered then fb_utils.filter(list) end
+    if not opts.sorted then fb_utils.sort(list) end
     return list, opts
 end
 
@@ -55,21 +55,21 @@ end
 --if a coroutine has already been used for a parse then create a new coroutine so that
 --the every parse operation has a unique thread ID
 local function parse_directory(directory, parse_state)
-    local co = API.coroutine.assert("scan_directory must be executed from within a coroutine - aborting scan "..utils.to_string(parse_state))
+    local co = fb_utils.coroutine.assert("scan_directory must be executed from within a coroutine - aborting scan "..utils.to_string(parse_state))
     if not g.parse_states[co] then return run_parse(directory, parse_state) end
 
     --if this coroutine is already is use by another parse operation then we create a new
     --one and hand execution over to that
     local new_co = coroutine.create(function()
-        API.coroutine.resume_err(co, run_parse(directory, parse_state))
+        fb_utils.coroutine.resume_err(co, run_parse(directory, parse_state))
     end)
 
     --queue the new coroutine on the mpv event queue
     mp.add_timeout(0, function()
         local success, err = coroutine.resume(new_co)
         if not success then
-            API.traceback(err, new_co)
-            API.coroutine.resume_err(co)
+            fb_utils.traceback(err, new_co)
+            fb_utils.coroutine.resume_err(co)
         end
     end)
     return g.parse_states[co]:yield()
@@ -120,7 +120,7 @@ local function update_list(moving_adjacent)
     --this only matters when displaying the list on the screen, so it doesn't need to be in the scan function
     if not opts.escaped then
         for i = 1, #list do
-            list[i].ass = list[i].ass or API.ass_escape(list[i].label or list[i].name, true)
+            list[i].ass = list[i].ass or fb_utils.ass_escape(list[i].label or list[i].name, true)
         end
     end
 
@@ -161,7 +161,7 @@ local function update(moving_adjacent)
 
     --the directory is always handled within a coroutine to allow addons to
     --pause execution for asynchronous operations
-    API.coroutine.run(function()
+    fb_utils.coroutine.run(function()
         g.state.co = coroutine.running()
         update_list(moving_adjacent)
         g.state.empty_text = "empty directory"

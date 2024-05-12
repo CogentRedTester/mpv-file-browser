@@ -2,7 +2,7 @@
 local msg = require 'mp.msg'
 local utils = require 'mp.utils'
 
-local API = require 'modules.utils'
+local fb_utils = require 'modules.utils'
 
 --parser ofject for native filesystems
 local file_parser = {
@@ -40,7 +40,7 @@ local file_parser = {
                 table.insert(new_list, {name = item, type = 'file'})
             end
         end
-        return API.sort(new_list), {filtered = true, sorted = true}
+        return fb_utils.sort(new_list), {filtered = true, sorted = true}
     end
 }
 
