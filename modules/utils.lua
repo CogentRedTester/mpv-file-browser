@@ -174,6 +174,7 @@ end
 
 --standardises filepaths across systems
 function fb_utils.fix_path(str, is_directory)
+    if str == '' then return str end
     if o.normalise_backslash == 'yes' or (o.normalise_backslash == 'auto' and g.PLATFORM == 'windows') then
         str = string.gsub(str, [[\]],[[/]])
     end
