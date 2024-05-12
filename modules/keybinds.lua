@@ -222,7 +222,9 @@ local function scan_for_codes(command_table, codes)
         if type == "table" then
             scan_for_codes(value, codes)
         elseif type == "string" then
-            value:gsub(KEYBIND_CODE_PATTERN, function(code) codes[code] = true end)
+            for code in value:gmatch(KEYBIND_CODE_PATTERN) do
+                codes[code] = true
+            end
         end
     end
     return codes
