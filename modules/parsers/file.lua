@@ -10,9 +10,9 @@ local file_parser = {
     priority = 110,
 }
 
---as the default parser we'll always attempt to use it if all others fail
-function file_parser:can_parse()
-    return true
+--try to parse any directory except for the root
+function file_parser:can_parse(directory)
+    return directory ~= ''
 end
 
 --scans the given directory using the mp.utils.readdir function

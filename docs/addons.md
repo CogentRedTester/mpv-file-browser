@@ -84,7 +84,7 @@ The first parser for which `can_parse` returns true will be selected as the pars
 
 The `parse` method will then be called on the selected parser, which is expected to return either a table of list items, or nil.
 If an empty table is returned then file-browser will treat the directory as empty, otherwise if the list_table is nil then file-browser will attempt to run `parse` on the next parser for which `can_parse` returns true.
-This continues until a parser returns a list_table, or until there are no more parsers, after which the root is loaded instead.
+This continues until a parser returns a list_table, or until there are no more parsers.
 
 The entire parse operation is run inside of a coroutine, this allows parsers to pause execution to handle asynchronous operations.
 Please read [coroutines](#coroutines) for all the details.

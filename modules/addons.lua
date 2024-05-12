@@ -8,8 +8,6 @@ local fb = require 'modules.apis.fb'
 local fb_utils = require 'modules.utils'
 local parser_API = require 'modules.apis.parser'
 
-local root_parser = require 'modules.parsers.root'
-
 local API_MAJOR, API_MINOR, API_PATCH = g.API_VERSION:match("(%d+)%.(%d+)%.(%d+)")
 
 --checks if the given parser has a valid version number
@@ -105,8 +103,6 @@ local function setup_parser(parser, file)
     if parser.priority == nil then parser.priority = 0 end
     if type(parser.priority) ~= "number" then return msg.error("parser", parser:get_id(), "needs a numeric priority") end
 
-    --the root parser has special behaviour, so it should not be in the list of parsers
-    if parser == root_parser then return end
     table.insert(g.parsers, parser)
 end
 

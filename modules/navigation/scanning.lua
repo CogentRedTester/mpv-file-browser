@@ -4,12 +4,16 @@ local utils = require 'mp.utils'
 
 local g = require 'modules.globals'
 local fb_utils = require 'modules.utils'
-local root_parser = require 'modules.parsers.root'
 local cache = require 'modules.cache'
 local cursor = require 'modules.navigation.cursor'
 local ass = require 'modules.ass'
 
 local parse_state_API = require 'modules.apis.parse-state'
+
+local function clear_non_adjacent_state()
+    g.state.directory_label = nil
+    cache:clear()
+end
 
 --parses the given directory or defers to the next parser if nil is returned
 local function choose_and_parse(directory, index)
@@ -40,7 +44,6 @@ local function run_parse(directory, parse_state)
     local co = coroutine.running()
     g.parse_states[co] = setmetatable(parse_state, { __index = parse_state_API })
 
-    if directory == "" then return root_parser:parse() end
     local list, opts = choose_and_parse(directory, 1)
 
     if list == nil then return msg.debug("no successful parsers found") end
@@ -74,6 +77,9 @@ local function parse_directory(directory, parse_state)
     end)
     return g.parse_states[co]:yield()
 end
+
+-- declare the variable here so it can be used in the following function
+local update
 
 --sends update requests to the different parsers
 local function update_list(moving_adjacent)
@@ -110,8 +116,12 @@ local function update_list(moving_adjacent)
         cache:apply()
         return
     elseif not list then
-        msg.warn("could not read directory", g.state.directory)
-        list, opts = root_parser:parse()
+        --opens the root instead
+        msg.warn("could not read directory", g.state.directory, "redirecting to root")
+        list, opts = parse_directory("", { source = "browser" })
+
+        -- sets the directory redirect flag
+        opts.directory = ''
     end
 
     g.state.list = list
@@ -129,10 +139,11 @@ local function update_list(moving_adjacent)
     g.state.empty_text = opts.empty_text or g.state.empty_text
 
     --we assume that directory is only changed when redirecting to a different location
-    --therefore, the cache should be wiped
+    --therefore we need to change the `moving_adjacent` flag and clear some state values
     if opts.directory then
         g.state.directory = opts.directory
-        cache:clear()
+        moving_adjacent = false
+        clear_non_adjacent_state()
     end
 
     if opts.selected_index then
@@ -144,15 +155,14 @@ local function update_list(moving_adjacent)
     if moving_adjacent then cursor.select_prev_directory()
     else cursor.select_playing_item() end
     g.state.prev_directory = g.state.directory
+
+    return true
 end
 
 --rescans the folder and updates the list
-local function update(moving_adjacent)
+update = function(moving_adjacent)
     --we can only make assumptions about the directory label when moving from adjacent directories
-    if not moving_adjacent then
-        g.state.directory_label = nil
-        cache:clear()
-    end
+    if not moving_adjacent then clear_non_adjacent_state() end
 
     g.state.empty_text = "~"
     g.state.list = {}
@@ -163,8 +173,8 @@ local function update(moving_adjacent)
     --pause execution for asynchronous operations
     fb_utils.coroutine.run(function()
         g.state.co = coroutine.running()
-        update_list(moving_adjacent)
-        g.state.empty_text = "empty directory"
+        local success = update_list(moving_adjacent)
+        if success then g.state.empty_text = "empty directory" end
         ass.update_ass()
     end)
 end

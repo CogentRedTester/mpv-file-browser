@@ -9,9 +9,8 @@ local root_parser = {
     priority = math.huge,
 }
 
---if this is being called then all other parsers have failed and we've fallen back to root
-function root_parser:can_parse()
-    return true 
+function root_parser:can_parse(directory)
+    return directory == ''
 end
 
 --we return the root directory exactly as setup
@@ -20,8 +19,6 @@ function root_parser:parse()
         sorted = true,
         filtered = true,
         escaped = true,
-        parser = self,
-        directory = "",
     }
 end
 
