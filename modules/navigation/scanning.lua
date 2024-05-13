@@ -78,9 +78,6 @@ local function parse_directory(directory, parse_state)
     return g.parse_states[co]:yield()
 end
 
--- declare the variable here so it can be used in the following function
-local update
-
 --sends update requests to the different parsers
 local function update_list(moving_adjacent)
     msg.verbose('opening directory: ' .. g.state.directory)
@@ -155,12 +152,10 @@ local function update_list(moving_adjacent)
     if moving_adjacent then cursor.select_prev_directory()
     else cursor.select_playing_item() end
     g.state.prev_directory = g.state.directory
-
-    return true
 end
 
 --rescans the folder and updates the list
-update = function(moving_adjacent)
+local function update(moving_adjacent)
     --we can only make assumptions about the directory label when moving from adjacent directories
     if not moving_adjacent then clear_non_adjacent_state() end
 
@@ -173,8 +168,8 @@ update = function(moving_adjacent)
     --pause execution for asynchronous operations
     fb_utils.coroutine.run(function()
         g.state.co = coroutine.running()
-        local success = update_list(moving_adjacent)
-        if success then g.state.empty_text = "empty directory" end
+        update_list(moving_adjacent)
+        if g.state.empty_text == "~" then g.state.empty_text = "empty directory" end
         ass.update_ass()
     end)
 end
