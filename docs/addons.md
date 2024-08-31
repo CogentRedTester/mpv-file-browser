@@ -1,4 +1,4 @@
-# How to Write an Addon - API v1.4.0
+# How to Write an Addon - API v1.5.0
 
 Addons provide ways for file-browser to parse non-native directory structures. This document describes how one can create their own custom addon.
 
@@ -149,14 +149,15 @@ if the request came from a script-message, or from a loadlist command there are 
 The list array must be made up of item_tables, which contain details about each item in the directory.
 Each item has the following members:
 
-| key         | type   | required | description                                                                                          |
-|-------------|--------|----------|------------------------------------------------------------------------------------------------------|
-| name        | string | yes      | name of the item, and the string to append after the directory when opening a file/folder            |
-| type        | string | yes      | determines whether the item is a file ("file") or directory ("dir")                                  |
-| label       | string | no       | an alternative string to print to the screen instead of name                                         |
-| ass         | string | no       | a string to print to the screen without escaping ass styling - overrides label and name              |
-| path        | string | no       | opening the item uses this full path instead of appending directory and name                         |
-| redirect    | bool   | no       | whether path should redirect the browser when opening a directory - default yes (nil counts as true) |
+| key         | type            | required | description                                                                                                                                       |
+|-------------|-----------------|----------|---------------------------------------------------------------------------------------------------------------------------------------------------|
+| name        | string          | yes      | name of the item, and the string to append after the directory when opening a file/folder                                                         |
+| type        | string          | yes      | determines whether the item is a file ("file") or directory ("dir")                                                                               |
+| label       | string          | no       | an alternative string to print to the screen instead of name                                                                                      |
+| ass         | string          | no       | a string to print to the screen without escaping ass styling - overrides label and name                                                           |
+| path        | string          | no       | opening the item uses this full path instead of appending directory and name                                                                      |
+| redirect    | bool            | no       | whether `path` should redirect the browser when opening a directory - default yes (nil counts as true)                                            |
+| mpv_options | string or table | no       | a list of options to be sent to mpv when loading the file - can be in the form `opt1=value1,opt2=value2,...` or a table of string keys and values |
 
 File-browser expects that `type` and `name` will be set for each item, so leaving these out will probably crash the script.
 File-browser also assumes that all directories end in a `/` when appending name, and that there will be no backslashes.
