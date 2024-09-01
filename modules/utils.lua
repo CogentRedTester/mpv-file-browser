@@ -225,6 +225,28 @@ function fb_utils.parseable_item(item)
     return item.type == "dir" or g.parseable_extensions[fb_utils.get_extension(item.name, "")]
 end
 
+-- Takes a directory string and resolves any directory aliases,
+-- returning the resolved directory.
+function fb_utils.resolve_directory_alias(directory)
+    if not directory then return directory end
+
+    for alias, target in pairs(g.directory_aliases) do
+        local start, finish  = string.find(directory, alias)
+        if start then
+            msg.debug('alias', alias, 'found for directory', directory, 'changing to', target)
+
+            -- if the alias is an exact match then return the target as is
+            if finish == #directory then return target end
+
+            -- else make sure the path is correctly formatted
+            target = fb_utils.fix_path(target, true)
+            return string.gsub(directory, alias, target)
+        end
+    end
+
+    return directory
+end
+
 --removes items and folders from the list
 --this is for addons which can't filter things during their normal processing
 function fb_utils.filter(t)

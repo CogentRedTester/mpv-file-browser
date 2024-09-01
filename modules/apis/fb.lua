@@ -49,6 +49,25 @@ function fb.insert_root_item(item, pos)
     table.insert(g.root, pos or (#g.root + 1), item)
 end
 
+function fb.register_directory_alias(directory, alias, pattern)
+    if not pattern then alias = '^'..fb_utils.pattern_escape(alias) end
+    g.directory_aliases[alias] = directory
+    msg.verbose('registering directory alias', alias, directory)
+
+    return alias
+end
+
+function fb.remove_all_aliases(directory)
+    local removed = {}
+    for alias, target in pairs(g.directory_aliases) do
+        if target == directory then
+            g.directory_aliases[alias] = nil
+            table.insert(removed, alias)
+        end
+    end
+    return removed
+end
+
 --a newer API for adding items to the root
 --only adds the item if the same item does not already exist in the root
 --the priority variable is a number that specifies the insertion location

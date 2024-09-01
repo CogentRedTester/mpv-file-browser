@@ -78,6 +78,7 @@ globals.extensions = {}
 globals.sub_extensions = {}
 globals.audio_extensions = {}
 globals.parseable_extensions = {}
+globals.directory_aliases = {}
 
 globals.dvd_device = nil
 globals.current_file = {
