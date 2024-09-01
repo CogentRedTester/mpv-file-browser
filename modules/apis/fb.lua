@@ -5,6 +5,7 @@ local o = require 'modules.options'
 local g = require 'modules.globals'
 local fb_utils = require 'modules.utils'
 local ass = require 'modules.ass'
+local directory_movement = require 'modules.navigation.directory-movement'
 local scanning = require 'modules.navigation.scanning'
 local cache = require 'modules.cache'
 local controls = require 'modules.controls'
@@ -54,6 +55,7 @@ function fb.register_directory_alias(directory, alias, pattern)
     g.directory_aliases[alias] = directory
     msg.verbose('registering directory alias', alias, directory)
 
+    directory_movement.set_current_file(g.current_file.original_path)
     return alias
 end
 

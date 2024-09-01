@@ -84,7 +84,8 @@ globals.dvd_device = nil
 globals.current_file = {
     directory = nil,
     name = nil,
-    path = nil
+    path = nil,
+    original_path = nil,
 }
 
 globals.root = {}
