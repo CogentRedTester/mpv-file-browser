@@ -33,12 +33,9 @@ keybinds.setup_keybinds()
 
 -- property observers
 mp.observe_property('path', 'string', observers.current_directory)
-
-if o.map_optical_devices then
-    mp.observe_property('dvd-device', 'string', observers.dvd_device)
-    mp.observe_property('bluray-device', 'string', observers.bd_device)
-    mp.observe_property('cdda-device', 'string', observers.cd_device) 
-end
+if o.map_dvd_device then mp.observe_property('dvd-device', 'string', observers.dvd_device) end
+if o.map_bd_device then mp.observe_property('bluray-device', 'string', observers.bd_device) end
+if o.map_cdda_device then mp.observe_property('cdda-device', 'string', observers.cd_device) end
 
 -- scripts messages
 mp.register_script_message('=>', script_messages.chain)

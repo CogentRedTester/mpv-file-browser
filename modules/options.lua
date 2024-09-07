@@ -78,7 +78,9 @@ local o = {
 
     --map optical device paths to their respective file paths,
     --e.g. mapping bd:// to the value of the bluray-device property
-    map_optical_devices = true,
+    map_bd_device = true,
+    map_dvd_device = true,
+    map_cdda_device = true,
 
     --allows custom icons be set for the folder and cursor
     --the `\h` character is a hard space to add padding between the symbol and the text
