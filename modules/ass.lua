@@ -47,9 +47,8 @@ local function highlight_entry(v)
 
     if fb_utils.parseable_item(v) then
         return string.find(g.current_file.directory, full_path, 1, true)
-            or string.find(utils.split_path(g.current_file.original_path), full_path, 1, true)
     else
-        return g.current_file.path == full_path or g.current_file.original_path == full_path
+        return g.current_file.path == full_path
     end
 end
 
