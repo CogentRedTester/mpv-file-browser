@@ -76,6 +76,10 @@ local o = {
     --e.g. moving up from `ftp://localhost/` will move straight to the root instead of `ftp://`
     skip_protocol_schemes = true,
 
+    --map optical device paths to their respective file paths,
+    --e.g. mapping bd:// to the value of the bluray-device property
+    map_optical_devices = true,
+
     --allows custom icons be set for the folder and cursor
     --the `\h` character is a hard space to add padding between the symbol and the text
     folder_icon = [[{\p1}m 6.52 0 l 1.63 0 b 0.73 0 0.01 0.73 0.01 1.63 l 0 11.41 b 0 12.32 0.73 13.05 1.63 13.05 l 14.68 13.05 b 15.58 13.05 16.31 12.32 16.31 11.41 l 16.31 3.26 b 16.31 2.36 15.58 1.63 14.68 1.63 l 8.15 1.63{\p0}\h]],
