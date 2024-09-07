@@ -188,6 +188,12 @@ function fb_utils.join_path(working, relative)
     return fb_utils.get_protocol(relative) and relative or utils.join_path(working, relative)
 end
 
+--converts the given path into an absolute path and normalises it using fb_utils.fix_path
+function fb_utils.absolute_path(path)
+    local absolute_path = fb_utils.join_path(mp.get_property('working-directory', ''), path)
+    return fb_utils.fix_path(absolute_path)
+end
+
 --sorts the table lexicographically ignoring case and accounting for leading/non-leading zeroes
 --the number format functionality was proposed by github user twophyro, and was presumably taken
 --from here: http://notebook.kulchenko.com/algorithms/alphanumeric-natural-sorting-for-humans-in-lua

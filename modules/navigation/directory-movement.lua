@@ -21,14 +21,11 @@ function directory_movement.set_current_file(filepath)
         return
     end
 
-    local workingDirectory = mp.get_property('working-directory', '')
-    local exact_path = fb_utils.join_path(workingDirectory, filepath)
-    exact_path = fb_utils.fix_path(exact_path, false)
-
-    local resolved_path = fb_utils.resolve_directory_mapping(exact_path)
+    local absolute_path = fb_utils.absolute_path(filepath)
+    local resolved_path = fb_utils.resolve_directory_mapping(absolute_path)
 
     g.current_file.directory, g.current_file.name = utils.split_path(resolved_path)
-    g.current_file.original_path = exact_path
+    g.current_file.original_path = absolute_path
     g.current_file.path = resolved_path
 
     if not g.state.hidden then ass.update_ass()
