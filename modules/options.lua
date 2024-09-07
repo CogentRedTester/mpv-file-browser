@@ -97,7 +97,7 @@ local o = {
 
     --Set the current open status of the browser in the `file_browser-open` field of the `shared-script-properties` property.
     --This property is deprecated. When it is removed in mpv v0.37 file-browser will automatically ignore this option.
-    set_shared_script_properties = true,
+    set_shared_script_properties = false,
 
     --force file-browser to use a specific text alignment (default: top-left)
     --uses ass tag alignment numbers: https://aegi.vmoe.info/docs/3.0/ASS_Tags/#index23h3
