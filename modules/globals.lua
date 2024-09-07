@@ -78,7 +78,7 @@ globals.extensions = {}
 globals.sub_extensions = {}
 globals.audio_extensions = {}
 globals.parseable_extensions = {}
-globals.directory_aliases = {}
+globals.directory_mappings = {}
 
 globals.current_file = {
     directory = nil,

@@ -1,6 +1,4 @@
 
-local g = require 'modules.globals'
-local fb_utils = require 'modules.utils'
 local directory_movement = require 'modules.navigation.directory-movement'
 local fb = require 'modules.apis.fb'
 
@@ -13,17 +11,17 @@ end
 
 function observers.dvd_device(_, device)
     if not device or device == "" then device = "/dev/dvd/" end
-    fb.register_directory_alias(device, 'dvd://')
+    fb.register_directory_mapping(device, 'dvd://')
 end
 
 function observers.bd_device(_, device)
     if not device or device == '' then device = '/dev/bd' end
-    fb.register_directory_alias(device, 'bd://')
+    fb.register_directory_mapping(device, 'bd://')
 end
 
 function observers.cd_device(_, device)
     if not device or device == '' then device = '/dev/cdrom' end
-    fb.register_directory_alias(device, 'cdda://')
+    fb.register_directory_mapping(device, 'cdda://')
 end
 
 return observers

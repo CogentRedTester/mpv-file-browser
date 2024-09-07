@@ -25,7 +25,7 @@ function directory_movement.set_current_file(filepath)
     local exact_path = fb_utils.join_path(workingDirectory, filepath)
     exact_path = fb_utils.fix_path(exact_path, false)
 
-    local resolved_path = fb_utils.resolve_directory_alias(exact_path)
+    local resolved_path = fb_utils.resolve_directory_mapping(exact_path)
 
     g.current_file.directory, g.current_file.name = utils.split_path(resolved_path)
     g.current_file.original_path = exact_path

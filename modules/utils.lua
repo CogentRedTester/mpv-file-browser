@@ -227,10 +227,10 @@ end
 
 -- Takes a directory string and resolves any directory aliases,
 -- returning the resolved directory.
-function fb_utils.resolve_directory_alias(directory)
+function fb_utils.resolve_directory_mapping(directory)
     if not directory then return directory end
 
-    for alias, target in pairs(g.directory_aliases) do
+    for alias, target in pairs(g.directory_mappings) do
         local start, finish  = string.find(directory, alias)
         if start then
             msg.debug('alias', alias, 'found for directory', directory, 'changing to', target)

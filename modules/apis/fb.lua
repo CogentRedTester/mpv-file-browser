@@ -50,20 +50,22 @@ function fb.insert_root_item(item, pos)
     table.insert(g.root, pos or (#g.root + 1), item)
 end
 
-function fb.register_directory_alias(directory, alias, pattern)
-    if not pattern then alias = '^'..fb_utils.pattern_escape(alias) end
-    g.directory_aliases[alias] = directory
-    msg.verbose('registering directory alias', alias, directory)
+-- add a new mapping to the given directory
+function fb.register_directory_mapping(directory, mapping, pattern)
+    if not pattern then mapping = '^'..fb_utils.pattern_escape(mapping) end
+    g.directory_mappings[mapping] = directory
+    msg.verbose('registering directory alias', mapping, directory)
 
     directory_movement.set_current_file(g.current_file.original_path)
-    return alias
+    return mapping
 end
 
-function fb.remove_all_aliases(directory)
+-- remove all directory mappings that map to the given directory
+function fb.remove_all_mappings(directory)
     local removed = {}
-    for alias, target in pairs(g.directory_aliases) do
+    for alias, target in pairs(g.directory_mappings) do
         if target == directory then
-            g.directory_aliases[alias] = nil
+            g.directory_mappings[alias] = nil
             table.insert(removed, alias)
         end
     end
