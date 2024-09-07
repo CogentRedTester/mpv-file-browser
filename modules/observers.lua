@@ -11,17 +11,17 @@ end
 
 function observers.dvd_device(_, device)
     if not device or device == "" then device = "/dev/dvd/" end
-    fb.register_directory_mapping(device, 'dvd://')
+    fb.register_directory_mapping(device, '^dvd://.*', true)
 end
 
 function observers.bd_device(_, device)
     if not device or device == '' then device = '/dev/bd' end
-    fb.register_directory_mapping(device, 'bd://')
+    fb.register_directory_mapping(device, '^bd://.*', true)
 end
 
 function observers.cd_device(_, device)
     if not device or device == '' then device = '/dev/cdrom' end
-    fb.register_directory_mapping(device, 'cdda://')
+    fb.register_directory_mapping(device, '^cdda://.*', true)
 end
 
 return observers
