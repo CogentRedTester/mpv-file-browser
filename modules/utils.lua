@@ -363,9 +363,13 @@ fb_utils.code_fns = {
 
     f = function(item, s) return item and fb_utils.get_full_path(item, s.directory) or "" end,
     n = function(item, s) return item and (item.label or item.name) or "" end,
-    i = function(item, s) local i = fb_utils.list.indexOf(s.list, item) ; return i ~= -1 and i or 0 end,
-    j = function (item, s) return fb_utils.list.indexOf(s.list, item) ~= -1 and math.abs(fb_utils.list.indexOf( fb_utils.sort_keys(s.selection) , item)) or 0 end,
-
+    i = function(item, s)
+            local i = fb_utils.list.indexOf(s.list, item)
+            return i ~= -1 and ('%0'..math.ceil(math.log10(#s.list))..'d'):format(i) or 0
+        end,
+    j = function (item, s)
+            return fb_utils.list.indexOf(s.list, item) ~= -1 and math.abs(fb_utils.list.indexOf( fb_utils.sort_keys(s.selection) , item)) or 0
+        end,
     x = function(_, s) return #s.list or 0 end,
     p = function(_, s) return s.directory or "" end,
     q = function(_, s) return s.directory == '' and 'ROOT' or s.directory_label or s.directory or "" end,
