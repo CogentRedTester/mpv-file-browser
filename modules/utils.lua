@@ -188,6 +188,12 @@ function fb_utils.join_path(working, relative)
     return fb_utils.get_protocol(relative) and relative or utils.join_path(working, relative)
 end
 
+--converts the given path into an absolute path and normalises it using fb_utils.fix_path
+function fb_utils.absolute_path(path)
+    local absolute_path = fb_utils.join_path(mp.get_property('working-directory', ''), path)
+    return fb_utils.fix_path(absolute_path)
+end
+
 --sorts the table lexicographically ignoring case and accounting for leading/non-leading zeroes
 --the number format functionality was proposed by github user twophyro, and was presumably taken
 --from here: http://notebook.kulchenko.com/algorithms/alphanumeric-natural-sorting-for-humans-in-lua
@@ -223,6 +229,28 @@ end
 --returns whether or not the item can be parsed
 function fb_utils.parseable_item(item)
     return item.type == "dir" or g.parseable_extensions[fb_utils.get_extension(item.name, "")]
+end
+
+-- Takes a directory string and resolves any directory aliases,
+-- returning the resolved directory.
+function fb_utils.resolve_directory_mapping(directory)
+    if not directory then return directory end
+
+    for alias, target in pairs(g.directory_mappings) do
+        local start, finish  = string.find(directory, alias)
+        if start then
+            msg.debug('alias', alias, 'found for directory', directory, 'changing to', target)
+
+            -- if the alias is an exact match then return the target as is
+            if finish == #directory then return target end
+
+            -- else make sure the path is correctly formatted
+            target = fb_utils.fix_path(target, true)
+            return string.gsub(directory, alias, target)
+        end
+    end
+
+    return directory
 end
 
 --removes items and folders from the list
