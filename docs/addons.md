@@ -552,6 +552,41 @@ browser directories during the asynchronous operation.
 
 If you have no idea what I've been talking about read the [Lua manual on coroutines](https://www.lua.org/manual/5.1/manual.html#2.11).
 
+#### `fb.coroutine.callback_t(time_limit: number): function`
+ 
+Same as `coroutine.callback()` but sets a time limit (in seconds) within which the callback needs to be
+resolved. When the time limit expires the coroutine will be resumed and the callback function
+returned by `callback_t` will no-longer resume the coroutine.
+
+Additionally, a boolean is passed as the first resume argument to the coroutine;
+if the callback was called within the time limit the boolean will be `true`,
+if the callback is being run because the time limit expired the value will be `false`.
+
+If `time_limit` is falsy, then there will be no time limit, so the first resume
+argument to the coroutine will always be `true`.
+
+```lua
+local function execute(args)
+    local t = mp.command_native_async({
+            name = "subprocess",
+            playback_only = false,
+            capture_stdout = true,
+            capture_stderr = true,
+            args = args
+        }, fb.coroutine.callback_t(10))
+
+    local success, _, cmd = coroutine.yield()
+    if not success then
+        mp.abort_async_command(t)
+        msg.error("command timed out")
+        return nil
+    end
+
+    return cmd.status == 0 and cmd.stdout or nil
+end
+```
+
+
 #### `fb.coroutine.resume_catch(co: coroutine, ...): (boolean, ...)`
 
 Runs `coroutine.resume(co, ...)` with the given coroutine, passing through any additional arguments.

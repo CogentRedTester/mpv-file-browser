@@ -101,6 +101,25 @@ function fb_utils.coroutine.callback()
     end
 end
 
+-- Creates a callback function to resume the current coroutine with the given time limit.
+-- If the time limit expires the coroutine will be resumed. The first return value will be true
+-- if the callback was resumed within the time limit and false otherwise.
+-- If time_limit is falsy then there will be no time limit and the first return value will be true.
+function fb_utils.coroutine.callback_t(time_limit)
+    local co = fb_utils.coroutine.assert("cannot create a coroutine callback for the main thread")
+    local timer = time_limit and mp.add_timeout(time_limit, function ()
+            msg.debug("time limit on callback expired")
+            fb_utils.coroutine.resume_err(co, false)
+        end)
+    return function(...)
+        if timer then
+            if not timer:is_enabled() then return
+            else timer:kill() end
+        end
+        return fb_utils.coroutine.resume_err(co, true, ...)
+    end
+end
+
 --puts the current coroutine to sleep for the given number of seconds
 function fb_utils.coroutine.sleep(n)
     mp.add_timeout(n, fb_utils.coroutine.callback())
