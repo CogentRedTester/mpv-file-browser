@@ -557,7 +557,7 @@ than the current one to ensure that their contents will be rescanned when next o
 Throws an error if it is not called from within a coroutine. Returns the currently running coroutine on success.
 The string argument can be used to throw a custom error string.
 
-#### `fb.coroutine.callback(): function`
+#### `fb.coroutine.callback(time_limit?: number): function`
 
 Creates and returns a callback function that resumes the current coroutine.
 This function is designed to help streamline asynchronous operations. The best way to explain is with an example:
@@ -587,26 +587,9 @@ to execute the operation asynchronously and takes a callback function as its sec
 Any arguments passed into the callback function (by the async function, not by you) will be passed on to the resume;
 in this case `command_native_async` passes three values into the callback, of which only the second is of interest to me.
 
-The unsaid expectation is that the programmer will yield execution before that callback returns. In this example I
-yield immediately after running the async command.
-
-If you are doing this during a parse operation you could also substitute `coroutine.yield()` with `parse_state:yield()` to abort the parse if the user changed
-browser directories during the asynchronous operation.
-
-If you have no idea what I've been talking about read the [Lua manual on coroutines](https://www.lua.org/manual/5.1/manual.html#2.11).
-
-#### `fb.coroutine.callback_t(time_limit: number): function`
- 
-Same as `coroutine.callback()` but sets a time limit (in seconds) within which the callback needs to be
-resolved. When the time limit expires the coroutine will be resumed and the callback function
-returned by `callback_t` will no-longer resume the coroutine.
-
-Additionally, a boolean is passed as the first resume argument to the coroutine;
-if the callback was called within the time limit the boolean will be `true`,
-if the callback is being run because the time limit expired the value will be `false`.
-
-If `time_limit` is falsy, then there will be no time limit, so the first resume
-argument to the coroutine will always be `true`.
+If `time_limit` is set to a number, then a boolean is passed as the first resume argument to the coroutine.
+If the callback is not run within `time_limit` seconds then the coroutine will be resumed, and the first
+argument will be `false`. If the callback is run within the time limit then the first argument will be `true`.
 
 ```lua
 local function execute(args)
@@ -616,7 +599,7 @@ local function execute(args)
             capture_stdout = true,
             capture_stderr = true,
             args = args
-        }, fb.coroutine.callback_t(10))
+        }, fb.coroutine.callback(10))
 
     local success, _, cmd = coroutine.yield()
     if not success then
@@ -628,6 +611,14 @@ local function execute(args)
     return cmd.status == 0 and cmd.stdout or nil
 end
 ```
+
+The expectation is that the programmer will yield execution before that callback returns. In this example I
+yield immediately after running the async command.
+
+If you are doing this during a parse operation you could also substitute `coroutine.yield()` with `parse_state:yield()` to abort the parse if the user changed
+browser directories during the asynchronous operation.
+
+If you have no idea what I've been talking about read the [Lua manual on coroutines](https://www.lua.org/manual/5.1/manual.html#2.11).
 
 #### `fb.coroutine.resume_catch(co: coroutine, ...): (boolean, ...)`
 
