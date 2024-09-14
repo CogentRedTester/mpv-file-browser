@@ -461,12 +461,12 @@ Add an item_table to the root list at the specified position. If `pos` is nil th
 Creates a directory mapping for the given directory. A directory mapping is a
 one-way mapping from an external directory string, to an internal directory
 within file-browser's directory tree. It allows external paths that may not
-exist with file-browser's tree to be mapping to a location that is.
+exist within file-browser's tree to be mapped to a location that is.
 Internally, this is used by file-browser to map the `bd://`, `dvd://`, and `cdda://`
-protocol paths to their respective device locations in the file-system.
+protocol paths to their respective device locations in the filesystem.
 
-Note that as this is still an experimental feature, the exact locations where mappings
-are resolved is subject to change. Currently, this mapping occurs only when
+Note that as this is still an experimental feature, the exact situations when mappings
+are resolved is subject to change. Currently, mapping occurs only when
 receiving a directory from an external source, such as the mpv `path` property,
 or the `browse-directory` script message.
 
@@ -481,7 +481,7 @@ fb.resolve_directory_mapping('dvd://1') -- /dev/dvd/1
 There can only be one `directory` string associated with each unique `mapping` string,
 but multiple mappings can point to the same directory.
 If `directory` is set to `nil` then the existing mapping for `mapping` will be removed.
-If `pattern` is set to true, then the `mapping` will be treated as a Lua
+If `pattern` is set to true, then `mapping` will be treated as a Lua
 pattern. Any part of an input path that matches the pattern will be substituted for
 the `directory` string.
 
@@ -492,7 +492,6 @@ fb.resolve_directory_mapping('dvd://1') -- /dev/dvd
 
 When `pattern` is falsy, `mapping` is equivalent to `'^'..fb.pattern_escape(mapping)`.
 Captures in the pattern may be given extra behaviour in the future.
-
 
 #### `fb.register_parseable_extension(ext: string): void`
 
@@ -629,7 +628,6 @@ local function execute(args)
     return cmd.status == 0 and cmd.stdout or nil
 end
 ```
-
 
 #### `fb.coroutine.resume_catch(co: coroutine, ...): (boolean, ...)`
 
@@ -777,7 +775,7 @@ Takes a `directory` string and resolves any
 [directory mappings](#fbregister_directory_mappingdirectory-string--nil-mapping-string-pattern-bool-void),
 replacing any substrings that match a mapping with the associated directory.
 
-Only the first matching mapping will be applied, but this behaviour will likely change in
+Only the first valid mapping is applied, but this behaviour will likely change in
 the future. Changes to this behaviour will not consitute a major version bump so should not
 be relied upon.
 
