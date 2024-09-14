@@ -456,6 +456,44 @@ This is the equivalent of calling the `browse-directory` script-message.
 Add an item_table to the root list at the specified position. If `pos` is nil then append to the end of the root.
 `item` must be a valid item_table of `type='dir'`.
 
+#### `fb.register_directory_mapping(directory: string | nil, mapping: string, pattern?: bool): void`
+
+Creates a directory mapping for the given directory. A directory mapping is a
+one-way mapping from an external directory string, to an internal directory
+within file-browser's directory tree. It allows external paths that may not
+exist with file-browser's tree to be mapping to a location that is.
+Internally, this is used by file-browser to map the `bd://`, `dvd://`, and `cdda://`
+protocol paths to their respective device locations in the file-system.
+
+Note that as this is still an experimental feature, the exact locations where mappings
+are resolved is subject to change. Currently, this mapping occurs only when
+receiving a directory from an external source, such as the mpv `path` property,
+or the `browse-directory` script message.
+
+`directory` is a string that represents a location within file-browser's file-system.
+`mapping` is a string that will be replaced by the `directory` string if found in a path:
+
+```lua
+fb.register_directory_mapping('/dev/dvd', 'dvd://')
+fb.resolve_directory_mapping('dvd://1') -- /dev/dvd/1
+```
+
+There can only be one `directory` string associated with each unique `mapping` string,
+but multiple mappings can point to the same directory.
+If `directory` is set to `nil` then the existing mapping for `mapping` will be removed.
+If `pattern` is set to true, then the `mapping` will be treated as a Lua
+pattern. Any part of an input path that matches the pattern will be substituted for
+the `directory` string.
+
+```lua
+fb.register_directory_mapping('/dev/dvd', '^dvd://.*')
+fb.resolve_directory_mapping('dvd://1') -- /dev/dvd
+```
+
+When `pattern` is falsy, `mapping` is equivalent to `'^'..fb.pattern_escape(mapping)`.
+Captures in the pattern may be given extra behaviour in the future.
+
+
 #### `fb.register_parseable_extension(ext: string): void`
 
 Register a file extension that the browser will attempt to open, like a directory - for addons which can parse files such
@@ -501,6 +539,12 @@ which hands execution back to the original coroutine upon completion.
 
 A wrapper around [`fb.register_root_item`](#fbregister_root_itemitem-string--item_table-priority-number-boolean)
 which uses the parser's priority value if `priority` is undefined.
+
+#### `fb.remove_all_mappings(directory: string): string[]`
+
+Removes all [directory mappings](#fbregister_directory_mappingdirectory-string--nil-mapping-string-pattern-bool-void)
+that resolve to the given `directory`. Returns a list of the `mapping` strings
+that were removed.
 
 ### Advanced Functions
 
@@ -726,6 +770,16 @@ which treats paths with network protocols as absolute paths.
 #### `fb.pattern_escape(str: string): string`
 
 Returns `str` with Lua special pattern characters escaped.
+
+#### `fb_utils.resolve_directory_mapping(directory: string): string`
+
+Takes a `directory` string and resolves any
+[directory mappings](#fbregister_directory_mappingdirectory-string--nil-mapping-string-pattern-bool-void),
+replacing any substrings that match a mapping with the associated directory.
+
+Only the first matching mapping will be applied, but this behaviour will likely change in
+the future. Changes to this behaviour will not consitute a major version bump so should not
+be relied upon.
 
 #### `fb.sort(list: list_table): list_table`
 
