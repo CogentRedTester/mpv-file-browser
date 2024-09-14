@@ -250,22 +250,22 @@ function fb_utils.parseable_item(item)
     return item.type == "dir" or g.parseable_extensions[fb_utils.get_extension(item.name, "")]
 end
 
--- Takes a directory string and resolves any directory aliases,
+-- Takes a directory string and resolves any directory mappings,
 -- returning the resolved directory.
 function fb_utils.resolve_directory_mapping(directory)
     if not directory then return directory end
 
-    for alias, target in pairs(g.directory_mappings) do
-        local start, finish  = string.find(directory, alias)
+    for mapping, target in pairs(g.directory_mappings) do
+        local start, finish  = string.find(directory, mapping)
         if start then
-            msg.debug('alias', alias, 'found for directory', directory, 'changing to', target)
+            msg.debug('mapping', mapping, 'found for directory', directory, 'changing to', target)
 
-            -- if the alias is an exact match then return the target as is
+            -- if the mapping is an exact match then return the target as is
             if finish == #directory then return target end
 
             -- else make sure the path is correctly formatted
             target = fb_utils.fix_path(target, true)
-            return string.gsub(directory, alias, target)
+            return string.gsub(directory, mapping, target)
         end
     end
 
