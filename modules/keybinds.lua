@@ -49,8 +49,8 @@ end
 if o.mouse_mode then
     add_key{'WHEEL_DOWN',       'mouse/scroll_down',    function() cursor.wheel(1) end}
     add_key{'WHEEL_UP',         'mouse/scroll_up',      function() cursor.wheel(-1) end}
-    add_key{'MBTN_LEFT',        'mouse/down_dir',       cursor.down_dir}
-    add_key{'MBTN_RIGHT',       'mouse/up_dir',         cursor.up_dir}
+    add_key{'MBTN_LEFT',        'mouse/down_dir',       movement.down_dir}
+    add_key{'MBTN_RIGHT',       'mouse/up_dir',         movement.up_dir}
     add_key{'MBTN_RIGHT_DBL',   'mouse/goto_root',      movement.goto_root}
     add_key{'Shift+MBTN_LEFT',  'mouse/play_left',      function() playlist.add_files('replace', false) end}
     add_key{'MBTN_MID',         'mouse/play_mid',       function() playlist.add_files('replace', false) end}
