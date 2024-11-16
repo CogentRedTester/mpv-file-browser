@@ -39,7 +39,7 @@ local function main(key, state, co)
     if input_loaded then
         input.get({
             prompt = text .. "\n>",
-            id = "find",
+            id = "file-browser/find",
             submit = fb.coroutine.callback(),
         })
     elseif user_input_loaded then
