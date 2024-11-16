@@ -172,10 +172,11 @@ end
 -- scrolls the view window when using mouse mode
 function cursor.wheel(direction)
     g.state.scroll_offset = g.state.scroll_offset + direction
+    if (g.state.scroll_offset + o.num_entries) > #g.state.list then
+        g.state.scroll_offset = #g.state.list - o.num_entries
+    end
     if g.state.scroll_offset < 0 then
         g.state.scroll_offset = 0
-    elseif (g.state.scroll_offset + o.num_entries) > #g.state.list then
-        g.state.scroll_offset = #g.state.list - o.num_entries
     end
     cursor.update_mouse_pos()
 end

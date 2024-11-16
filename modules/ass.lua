@@ -77,7 +77,7 @@ local function update_ass()
     end
 
     local start = 1
-    local finish = start+o.num_entries-1
+    local finish = start + math.min(o.num_entries, #state.list) - 1
 
     --handling the offset caused by scrolling
     if state.scroll_offset > 0 then
