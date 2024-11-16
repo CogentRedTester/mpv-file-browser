@@ -4,6 +4,8 @@
 --------------------------------------------------------------------------------------------------------
 
 local mp = require 'mp'
+local msg = require 'mp.msg'
+local utils = require 'mp.utils'
 
 local o = require 'modules.options'
 local g = require 'modules.globals'
@@ -133,14 +135,23 @@ function cursor.update_mouse_pos(_, mouse_pos)
 
     if not mouse_pos then mouse_pos = mp.get_property_native("mouse-pos", {}) end
     if not mouse_pos.hover then return end
-    local scale = mp.get_property_number("osd-height", 0) / 720
+    msg.trace('received mouse pos:', utils.to_string(mouse_pos))
+
+    local scale = mp.get_property_number("osd-height", 0) / g.ass.res_y
     local osd_offset = scale * mp.get_property("osd-margin-y", 22)
+
+    local font_size_body = g.BASE_FONT_SIZE
+    local font_size_header = g.BASE_FONT_SIZE * o.scaling_factor_header
+    local font_size_wrappers = g.BASE_FONT_SIZE * o.scaling_factor_wrappers
+
+    msg.trace('calculating mouse pos for', g.state.osd_alignment, 'alignment')
 
     --calculate position when browser is aligned to the top of the screen
     if g.state.osd_alignment == "top" then
-        local header_offset = osd_offset + (2 * scale * o.font_size_header) + (g.state.scroll_offset > 0 and (scale * o.font_size_wrappers) or 0)
+        local header_offset = osd_offset + (2 * scale * font_size_header) + (g.state.scroll_offset > 0 and (scale * font_size_wrappers) or 0)
+        msg.trace('calculated header offset', header_offset)
 
-        g.state.selected = math.ceil((mouse_pos.y-header_offset) / (scale * o.font_size_body)) + g.state.scroll_offset
+        g.state.selected = math.ceil((mouse_pos.y-header_offset) / (scale * font_size_body)) + g.state.scroll_offset
 
     --calculate position when browser is aligned to the bottom of the screen
     --this calculation is slightly off when a bottom wrapper exists,
@@ -149,9 +160,10 @@ function cursor.update_mouse_pos(_, mouse_pos)
         mouse_pos.y = (mp.get_property_number("osd-height", 0)) - mouse_pos.y
 
         local bottom = math.min(#g.state.list, g.state.scroll_offset + o.num_entries)
-        local footer_offset = (2 * scale * o.font_size_wrappers) + osd_offset
+        local footer_offset = (2 * scale * font_size_wrappers) + osd_offset
+        msg.trace('calculated footer offset', footer_offset)
 
-        g.state.selected = bottom - math.floor((mouse_pos.y - footer_offset) / (scale * o.font_size_body))
+        g.state.selected = bottom - math.floor((mouse_pos.y - footer_offset) / (scale * font_size_body))
     end
 
     ass.update_ass()
