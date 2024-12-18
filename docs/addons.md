@@ -486,7 +486,7 @@ pattern. Any part of an input path that matches the pattern will be substituted 
 the `directory` string.
 
 ```lua
-fb.register_directory_mapping('/dev/dvd', '^dvd://.*')
+fb.register_directory_mapping('/dev/dvd', '^dvd://.*', true)
 fb.resolve_directory_mapping('dvd://1') -- /dev/dvd
 ```
 
