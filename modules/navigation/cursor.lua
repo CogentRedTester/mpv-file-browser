@@ -129,6 +129,22 @@ function cursor.toggle_select_mode()
     end
 end
 
+local function count_substrings(str, substring)
+    local count = 0
+    for match in string.gmatch(str, substring) do
+        count = count + 1
+    end
+    return count
+end
+
+local font_size_body = g.BASE_FONT_SIZE
+local font_size_header = g.BASE_FONT_SIZE * o.scaling_factor_header
+local font_size_wrappers = g.BASE_FONT_SIZE * o.scaling_factor_wrappers
+
+local num_header_lines = count_substrings(o.format_string_header, '\\N') + 1
+local num_twrapper_lines = count_substrings(o.format_string_topwrapper, '\\N') + 1
+local num_bwrapper_lines = count_substrings(o.format_string_bottomwrapper, '\\N') + 1
+
 --update the selected item based on the mouse position
 function cursor.update_mouse_pos(_, mouse_pos)
     if not o.mouse_mode or g.state.hidden or #g.state.list == 0 then return end
@@ -140,15 +156,12 @@ function cursor.update_mouse_pos(_, mouse_pos)
     local scale = mp.get_property_number("osd-height", 0) / g.ass.res_y
     local osd_offset = scale * mp.get_property("osd-margin-y", 22)
 
-    local font_size_body = g.BASE_FONT_SIZE
-    local font_size_header = g.BASE_FONT_SIZE * o.scaling_factor_header
-    local font_size_wrappers = g.BASE_FONT_SIZE * o.scaling_factor_wrappers
-
     msg.trace('calculating mouse pos for', g.state.osd_alignment, 'alignment')
 
     --calculate position when browser is aligned to the top of the screen
     if g.state.osd_alignment == "top" then
-        local header_offset = osd_offset + (2 * scale * font_size_header) + (g.state.scroll_offset > 0 and (scale * font_size_wrappers) or 0)
+        local header_offset = osd_offset + (num_header_lines * scale * font_size_header)
+        if g.state.scroll_offset > 0 then header_offset = header_offset + (num_twrapper_lines * scale * font_size_wrappers) end
         msg.trace('calculated header offset', header_offset)
 
         g.state.selected = math.ceil((mouse_pos.y-header_offset) / (scale * font_size_body)) + g.state.scroll_offset
