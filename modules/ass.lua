@@ -52,9 +52,14 @@ local function highlight_entry(v)
     end
 end
 
+local ass_cache = setmetatable({}, {__mode = 'k'})
+
 -- escape ass values and replace newlines
 local function ass_escape(str)
-    return fb_utils.ass_escape(str, true)
+    if ass_cache[str] then return ass_cache[str] end
+    local escaped = fb_utils.ass_escape(str, true)
+    ass_cache[str] = escaped
+    return escaped
 end
 
 --refreshes the ass text using the contents of the list
