@@ -443,9 +443,12 @@ The current API version in use by file-browser.
 
 Adds the given extension to the default extension filter whitelist. Can only be run inside the `setup()` method.
 
-#### `fb.browse_directory(directory: string): void`
+#### `fb.browse_directory(directory: string, open_browser: bool = true): void`
 
-Clears the cache and opens the given directory in the browser. If the browser is closed then it will be opened.
+Clears the cache and opens the given directory in the browser.
+If the `open_browser` argument is truthy or `nil` then the browser will be opened
+if it is currently closed. If `open_browser` is `false` then the directory will
+be opened in the background.
 This function is non-blocking, it is possible that the function will return before the directory has finished
 being scanned.
 
