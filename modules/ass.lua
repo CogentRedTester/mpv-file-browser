@@ -44,14 +44,14 @@ end
 local function highlight_entry(v)
     if g.current_file.path == nil then return false end
     local full_path = fb_utils.get_full_path(v)
-    local alt_path = g.state.directory..v.name
+    local alt_path = v.name and g.state.directory..v.name or nil
 
     if fb_utils.parseable_item(v) then
         return string.find(g.current_file.directory, full_path, 1, true)
-            or string.find(g.current_file.directory, alt_path, 1, true)
+            or (alt_path and string.find(g.current_file.directory, alt_path, 1, true))
     else
         return g.current_file.path == full_path
-            or g.current_file.path == alt_path
+            or (alt_path and g.current_file.path == alt_path)
     end
 end
 
