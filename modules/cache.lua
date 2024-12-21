@@ -9,7 +9,7 @@ local g = require 'modules.globals'
 local __cache = {}
 
 __cache.cached_values = {
-    "directory", "directory_label", "list", "selected", "selection", "parser", "empty_text", "co"
+    "directory", "directory_label", "list", "selected", "selection", "parser", "empty_text", "co", "scroll_offset"
 }
 
 --inserts latest state values onto the cache stack

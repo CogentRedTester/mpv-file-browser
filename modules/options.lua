@@ -27,6 +27,9 @@ local o = {
     --enable custom keybinds
     custom_keybinds = false,
 
+    --enable experimental mouse mode
+    mouse_mode = false,
+
     --blacklist compatible files, it's recommended to use this rather than to edit the
     --compatible list directly. A semicolon separated list of extensions without spaces
     extension_blacklist = "",
