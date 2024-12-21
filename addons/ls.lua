@@ -31,7 +31,7 @@ local function command(args, parse_state)
 end
 
 function ls:can_parse(directory)
-    return not fb.get_protocol(directory)
+    return directory ~= '' and not fb.get_protocol(directory)
 end
 
 function ls:parse(directory, parse_state)
