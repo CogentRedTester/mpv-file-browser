@@ -13,7 +13,7 @@ local API_MAJOR, API_MINOR, API_PATCH = g.API_VERSION:match("(%d+)%.(%d+)%.(%d+)
 --checks if the given parser has a valid version number
 local function check_api_version(parser, id)
     if parser.version then
-        msg.warn(('%q: use of the `version` field is deprecated - use `api_version` instead'):format(id))
+        msg.warn(('%s: use of the `version` field is deprecated - use `api_version` instead'):format(id))
         parser.api_version = parser.version
     end
 
@@ -22,11 +22,11 @@ local function check_api_version(parser, id)
     local major, minor = version:match("(%d+)%.(%d+)")
 
     if not major or not minor then
-        return msg.error("Invalid version number")
+        return msg.error(("%s: invalid version number, expected v%d.%d.x, got v%s"):format(id, API_MAJOR, API_MINOR, version))
     elseif major ~= API_MAJOR then
-        return msg.error("parser", parser.name, "has wrong major version number, expected", ("v%d.x.x"):format(API_MAJOR), "got", 'v'..version)
+        return msg.error(("%s has wrong major version number, expected v%d.x.x, got, v%s"):format(id, API_MAJOR, version))
     elseif minor > API_MINOR then
-        msg.warn("parser", parser.name, "has newer minor version number than API, expected", ("v%d.%d.x"):format(API_MAJOR, API_MINOR), "got", 'v'..version)
+        msg.warn(("%s has newer minor version number than API, expected v%d.%d.x, got v%s"):format(id, API_MAJOR, API_MINOR, version))
     end
     return true
 end
@@ -164,6 +164,7 @@ local function load_external_addons()
 end
 
 return {
+    check_api_version = check_api_version,
     load_internal_parsers = load_internal_parsers,
     load_external_addons = load_external_addons
 }
