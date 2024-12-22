@@ -48,7 +48,7 @@ local function setup()
 end
 
 return {
-    version = '1.4.0',
+    api_version = '1.4.0',
     setup = setup,
     priority = -1000,
 }

@@ -9,7 +9,7 @@ local fb = require 'file-browser'
 
 local ftp = {
     priority = 100,
-    version = "1.1.0"
+    api_version = "1.1.0"
 }
 
 function ftp:can_parse(directory)

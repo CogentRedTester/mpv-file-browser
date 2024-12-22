@@ -12,7 +12,7 @@ local rf = require "read-file"
 
 local m3u = {
     priority = 100,
-    version = "1.0.0",
+    api_version = "1.0.0",
     name = "m3u"
 }
 
