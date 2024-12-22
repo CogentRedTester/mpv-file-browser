@@ -119,6 +119,17 @@ function fb_utils.coroutine.sleep(n)
     coroutine.yield()
 end
 
+
+--Runs the given function in a coroutine, passing through any additional arguments.
+--Does not run the coroutine immediately, instead it ques the coroutine to run when the thread is next idle.
+--Returns the coroutine object so that the caller can act on it before it is run.
+function fb_utils.coroutine.queue(fn, ...)
+    local co = coroutine.create(fn)
+    local args = table.pack(...)
+    mp.add_timeout(0, function() fb_utils.coroutine.resume_err(co, table.unpack(args, 1, args.n)) end)
+    return co
+end
+
 --runs the given function in a coroutine, passing through any additional arguments
 --this is for triggering an event in a coroutine
 function fb_utils.coroutine.run(fn, ...)

@@ -639,6 +639,11 @@ Returns the success boolean returned by `coroutine.resume`, but drops all other 
 
 Runs the given function in a new coroutine, passing through any additional arguments.
 
+#### `fb.coroutine.queue(fn: function, ...): coroutine`
+
+Runs the given function in a coroutine when the script next goes idle, passing through
+any additional arguments. The (not yet started) coroutine is returned by the function.
+
 #### `fb.rescan(): void`
 
 Rescans the current directory. Equivalent to Ctrl+r without the cache refresh for higher level directories.
