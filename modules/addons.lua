@@ -11,13 +11,13 @@ local parser_API = require 'modules.apis.parser'
 local API_MAJOR, API_MINOR, API_PATCH = g.API_VERSION:match("(%d+)%.(%d+)%.(%d+)")
 
 --checks if the given parser has a valid version number
-local function check_api_version(parser, file)
+local function check_api_version(parser, id)
     if parser.version then
-        msg.warn(('%q: use of the `version` field is deprecated - use `api_version` instead'):format(file))
+        msg.warn(('%q: use of the `version` field is deprecated - use `api_version` instead'):format(id))
         parser.api_version = parser.version
     end
 
-    local version = parser.version or "1.0.0"
+    local version = parser.api_version or "1.0.0"
 
     local major, minor = version:match("(%d+)%.(%d+)")
 
