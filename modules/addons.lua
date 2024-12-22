@@ -9,6 +9,7 @@ local fb_utils = require 'modules.utils'
 local parser_API = require 'modules.apis.parser'
 
 local API_MAJOR, API_MINOR, API_PATCH = g.API_VERSION:match("(%d+)%.(%d+)%.(%d+)")
+API_MAJOR, API_MINOR, API_PATCH = tonumber(API_MAJOR), tonumber(API_MINOR), tonumber(API_PATCH)
 
 --checks if the given parser has a valid version number
 local function check_api_version(parser, id)
@@ -20,6 +21,7 @@ local function check_api_version(parser, id)
     local version = parser.api_version or "1.0.0"
 
     local major, minor = version:match("(%d+)%.(%d+)")
+    major, minor = tonumber(major), tonumber(minor)
 
     if not major or not minor then
         return msg.error(("%s: invalid version number, expected v%d.%d.x, got v%s"):format(id, API_MAJOR, API_MINOR, version))
