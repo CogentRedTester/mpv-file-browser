@@ -1,4 +1,4 @@
-# How to Write an Addon - API v1.6.0
+# How to Write an Addon - API v1.7.0
 
 Addons provide ways for file-browser to parse non-native directory structures. This document describes how one can create their own custom addon.
 
@@ -17,7 +17,7 @@ version of the API. It follows [semantic versioning](https://semver.org/) conven
 A parser sets its version string with the `version` field, as seen [below](#overview).
 
 Any change that breaks backwards compatability will cause the major version number to increase.
-A parser MUST have the same version number as the API, otherwise an error message will be printed and the parser will
+A parser MUST have the same major version number as the API, otherwise an error message will be printed and the parser will
 not be loaded.
 
 A minor version number denotes a change to the API that is backwards compatible. This includes additional API functions,
@@ -36,7 +36,7 @@ Each addon must return either a single parser table, or an array of parser table
 | key       | type   | arguments                 | returns                | description                                                                                                  |
 |-----------|--------|---------------------------|------------------------|--------------------------------------------------------------------------------------------------------------|
 | priority  | number | -                         | -                      | a number to determine what order parsers are tested - see [here](#priority-suggestions) for suggested values |
-| version   | string | -                         | -                      | the API version the parser is using - see [API Version](#api-version)                                        |
+| api_version| string | -                         | -                      | the API version the parser is using - see [API Version](#api-version)                                        |
 | can_parse | method | string, parse_state_table | boolean                | returns whether or not the given path is compatible with the parser                                          |
 | parse     | method | string, parse_state_table | list_table, opts_table | returns an array of item_tables, and a table of options to control how file_browser handles the list         |
 
@@ -56,7 +56,7 @@ Here is an extremely simple example of an addon creating a parser table and retu
 
 ```lua
 local parser = {
-    version = '1.0.0',
+    api_version = '1.0.0',
     priority = 100,
     name = "example"        -- this parser will have the id 'example' or 'example_#' if there are duplicates
 }
@@ -674,7 +674,7 @@ local fb = require "file-browser"
 local home = fb.fix_path(mp.command_native({"expand-path", "~/"}), true)
 
 local home_label = {
-    version = '1.0.0',
+    api_version = '1.0.0',
     priority = 100
 }
 
