@@ -443,14 +443,14 @@ The current API version in use by file-browser.
 
 Adds the given extension to the default extension filter whitelist. Can only be run inside the `setup()` method.
 
-#### `fb.browse_directory(directory: string, open_browser: bool = true): void`
+#### `fb.browse_directory(directory: string, open_browser: bool = true): coroutine`
 
 Clears the cache and opens the given directory in the browser.
 If the `open_browser` argument is truthy or `nil` then the browser will be opened
 if it is currently closed. If `open_browser` is `false` then the directory will
 be opened in the background.
-This function is non-blocking, it is possible that the function will return before the directory has finished
-being scanned.
+Returns the coroutine of the upcoming parse operation. The parse is queued and run when the script thread next goes idle,
+allowing one to store this value and use it to identify the triggered parse operation.
 
 This is the equivalent of calling the `browse-directory` script-message.
 
@@ -644,9 +644,11 @@ Runs the given function in a new coroutine, passing through any additional argum
 Runs the given function in a coroutine when the script next goes idle, passing through
 any additional arguments. The (not yet started) coroutine is returned by the function.
 
-#### `fb.rescan(): void`
+#### `fb.rescan(): coroutine`
 
 Rescans the current directory. Equivalent to Ctrl+r without the cache refresh for higher level directories.
+Returns the coroutine of the upcoming parse operation. The parse is queued and run when the script thread next goes idle,
+allowing one to store this value and use it to identify the triggered parse operation.
 
 #### `fb.redraw(): void`
 

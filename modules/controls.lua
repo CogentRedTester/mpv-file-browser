@@ -82,8 +82,9 @@ function controls.browse_directory(directory, open_browser)
     msg.verbose('recieved directory from script message: '..directory)
 
     directory = fb_utils.resolve_directory_mapping(directory)
-    movement.goto_directory(directory)
+    local co = movement.goto_directory(directory)
     if open_browser then controls.open() end
+    return co
 end
 
 return controls

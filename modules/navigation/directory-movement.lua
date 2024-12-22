@@ -35,19 +35,19 @@ end
 --the base function for moving to a directory
 function directory_movement.goto_directory(directory)
     g.state.directory = directory
-    scanning.rescan(false)
+    return scanning.rescan(false)
 end
 
 --loads the root list
 function directory_movement.goto_root()
     msg.verbose('jumping to root')
-    directory_movement.goto_directory("")
+    return directory_movement.goto_directory("")
 end
 
 --switches to the directory of the currently playing file
 function directory_movement.goto_current_dir()
     msg.verbose('jumping to current directory')
-    directory_movement.goto_directory(g.current_file.directory)
+    return directory_movement.goto_directory(g.current_file.directory)
 end
 
 --moves up a directory
@@ -55,8 +55,7 @@ function directory_movement.up_dir()
     local parent_dir = g.state.directory:match("^(.-/+)[^/]+/*$") or ""
 
     if o.skip_protocol_schemes and parent_dir:find("^(%a[%w+-.]*)://$") then
-        directory_movement.goto_root()
-        return;
+        return directory_movement.goto_root()
     end
 
     g.state.directory = parent_dir
@@ -79,7 +78,7 @@ function directory_movement.down_dir()
 
     --we can make some assumptions about the next directory label when moving up or down
     if g.state.directory_label then g.state.directory_label = g.state.directory_label..(current.label or current.name) end
-    scanning.rescan(not redirected)
+    return scanning.rescan(not redirected)
 end
 
 return directory_movement
