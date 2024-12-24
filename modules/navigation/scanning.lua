@@ -148,7 +148,8 @@ local function update_list(moving_adjacent)
 end
 
 --rescans the folder and updates the list
-local function update(moving_adjacent)
+--returns the coroutine for the new parse operation
+local function rescan(moving_adjacent)
     --we can only make assumptions about the directory label when moving from adjacent directories
     if not moving_adjacent then clear_non_adjacent_state() end
 
@@ -159,16 +160,17 @@ local function update(moving_adjacent)
 
     --the directory is always handled within a coroutine to allow addons to
     --pause execution for asynchronous operations
-    fb_utils.coroutine.run(function()
-        g.state.co = coroutine.running()
+    g.state.co = fb_utils.coroutine.queue(function()
         update_list(moving_adjacent)
         if g.state.empty_text == "~" then g.state.empty_text = "empty directory" end
         ass.update_ass()
     end)
+
+    return g.state.co
 end
 
 return {
-    rescan = update,
+    rescan = rescan,
     scan_directory = parse_directory,
     choose_and_parse = choose_and_parse,
 }
