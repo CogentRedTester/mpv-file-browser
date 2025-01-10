@@ -28,6 +28,25 @@ Alternatively, you can download the zip and extract the contents to `~~/scripts/
 Create a `file_browser.conf` file in the `~~/script-opts/` directory and customise the [`root` option](#root-directory) for your
 system. The [`docs/file_browser.conf`](docs/file_browser.conf) file contains the full list of options and their defaults.
 
+<details>
+<summary>Expected directory tree:</summary>
+
+```
+~~/
+├── script-opts
+│   └── file-browser.conf
+└── scripts
+    └── file-browser
+        ├── addons/
+        ├── docs/
+        ├── modules/
+        ├── screenshots/
+        ├── LICENSE
+        ├── main.lua
+        └── README.md
+```
+</details>
+
 ### Advanced
 
 To setup [custom keybinds](docs/custom-keybinds.md) enable the `custom_keybinds` option in `file_browser.conf` and
@@ -40,6 +59,31 @@ in the `~~/script-modules/file-browser-addons/` directory.
 
 If you are not going to enable custom keybinds or addons then there is no reason to
 create `file-browser-keybinds.json` or `script-modules/file-browser-addons/`.
+
+<details>
+<summary>Expected directory tree:</summary>
+
+```
+~~/
+├── script-modules
+│   └── file-browser-addons
+│       ├── addon1.lua
+│       ├── addon2.lua
+│       └── etc.lua
+├── script-opts
+│   ├── file_browser.conf
+│   └── file-browser-keybinds.json
+└── scripts
+    └── file-browser
+        ├── addons/
+        ├── docs/
+        ├── modules/
+        ├── screenshots/
+        ├── LICENSE
+        ├── main.lua
+        └── README.md
+```
+</details>
 
 ## Keybinds
 
