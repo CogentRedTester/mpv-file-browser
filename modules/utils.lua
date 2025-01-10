@@ -48,6 +48,16 @@ function fb_utils.list.some(t, fn)
     return false
 end
 
+-- Creates a new table populated with the results of
+-- calling a provided function on every element in t.
+function fb_utils.list.map(t, fn)
+    local new_t = {}
+    for i, v in ipairs(t) do
+        new_t[i] = fn(v, i, t)
+    end
+    return new_t
+end
+
 --prints an error message and a stack trace
 --accepts an error object and optionally a coroutine
 --can be passed directly to xpcall
