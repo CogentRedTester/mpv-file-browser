@@ -4,7 +4,7 @@
 
 local urldecode = {
     priority = 5,
-    version = "1.0.0"
+    api_version = "1.0.0"
 }
 
 --decodes a URL address

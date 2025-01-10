@@ -48,6 +48,16 @@ function fb_utils.list.some(t, fn)
     return false
 end
 
+-- Creates a new table populated with the results of
+-- calling a provided function on every element in t.
+function fb_utils.list.map(t, fn)
+    local new_t = {}
+    for i, v in ipairs(t) do
+        new_t[i] = fn(v, i, t)
+    end
+    return new_t
+end
+
 --prints an error message and a stack trace
 --accepts an error object and optionally a coroutine
 --can be passed directly to xpcall
@@ -117,6 +127,17 @@ end
 function fb_utils.coroutine.sleep(n)
     mp.add_timeout(n, fb_utils.coroutine.callback())
     coroutine.yield()
+end
+
+
+--Runs the given function in a coroutine, passing through any additional arguments.
+--Does not run the coroutine immediately, instead it ques the coroutine to run when the thread is next idle.
+--Returns the coroutine object so that the caller can act on it before it is run.
+function fb_utils.coroutine.queue(fn, ...)
+    local co = coroutine.create(fn)
+    local args = table.pack(...)
+    mp.add_timeout(0, function() fb_utils.coroutine.resume_err(co, table.unpack(args, 1, args.n)) end)
+    return co
 end
 
 --runs the given function in a coroutine, passing through any additional arguments

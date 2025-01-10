@@ -16,7 +16,7 @@ local input_loaded, input = pcall(require, "mp.input")
 local user_input_loaded, user_input = pcall(require, "user-input-module")
 
 local find = {
-    version = "1.3.0"
+    api_version = "1.3.0"
 }
 local latest_coroutine = nil
 local global_fb_state = getmetatable(fb.get_state()).__original

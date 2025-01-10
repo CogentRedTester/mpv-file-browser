@@ -20,6 +20,7 @@ Keybinds are declared in the `~~/script-opts/file-browser-keybinds.json` file, t
 | delay         | no       | `0`        | time to wait between sending repeated multi commands                                       |
 | concat-string | no       | `' '` (space) | string to insert between items when concatenating multi commands                        |
 | passthrough   | no       | -          | force or ban passthrough behaviour - see [passthrough](#passthrough-keybinds)              |
+| api_version   | no       | -          | tie the keybind to a particular [addon API version](./addons.md#api-version), printing warnings and throwing errors if the keybind is used with wrong versions |
 
 Example:
 
