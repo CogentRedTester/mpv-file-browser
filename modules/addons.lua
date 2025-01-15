@@ -19,6 +19,7 @@ local function check_api_version(parser, id)
     end
 
     local version = parser.api_version
+    if type(version) ~= 'string' then return msg.error(("%s: field `api_version` must be a string, got %s"):format(id, tostring(version))) end
 
     local major, minor = version:match("(%d+)%.(%d+)")
     major, minor = tonumber(major), tonumber(minor)
@@ -118,6 +119,7 @@ local function setup_addon(file, path)
     if file:sub(-4) ~= ".lua" then return msg.verbose(path, "is not a lua file - aborting addon setup") end
 
     local addon_parsers = run_addon(path)
+    if addon_parsers and not next(addon_parsers) then return msg.verbose('addon', path, 'returned empry table - special case, ignoring') end
     if not addon_parsers or type(addon_parsers) ~= "table" then return msg.error("addon", path, "did not return a table") end
 
     --if the table contains a priority key then we assume it isn't an array of parsers
