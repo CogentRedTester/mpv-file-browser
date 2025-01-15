@@ -76,6 +76,10 @@ function fb_utils.redirect_table(t)
     return setmetatable({}, { __index = t })
 end
 
+function fb_utils.set_prototype(t, proto)
+    return setmetatable(t, { __index = proto })
+end
+
 --prints an error if a coroutine returns an error
 --unlike the next function this one still returns the results of coroutine.resume()
 function fb_utils.coroutine.resume_catch(...)
@@ -372,21 +376,27 @@ end
 --evaluates and runs the given string in both Lua 5.1 and 5.2
 --the name argument is used for error reporting
 --provides the mpv modules and the fb module to the string
-function fb_utils.evaluate_string(str, name)
-    local env = fb_utils.redirect_table(_G)
-    env.mp = fb_utils.redirect_table(mp)
-    env.msg = fb_utils.redirect_table(msg)
-    env.utils = fb_utils.redirect_table(utils)
-    env.fb = fb_utils.redirect_table(fb_utils)
-    env.input = input_loaded and fb_utils.redirect_table(input)
-    env.user_input = user_input_loaded and fb_utils.redirect_table(user_input)
+function fb_utils.evaluate_string(str, chunkname, custom_env, env_defaults)
+    local env
+    if env_defaults ~= false then
+        env = fb_utils.redirect_table(_G)
+        env.mp = fb_utils.redirect_table(mp)
+        env.msg = fb_utils.redirect_table(msg)
+        env.utils = fb_utils.redirect_table(utils)
+        env.fb = fb_utils.redirect_table(fb_utils)
+        env.input = input_loaded and fb_utils.redirect_table(input)
+        env.user_input = user_input_loaded and fb_utils.redirect_table(user_input)
+        env = fb_utils.set_prototype(custom_env or {}, env)
+    else
+        env = custom_env or {}
+    end
 
     local chunk, err
     if setfenv then
-        chunk, err = loadstring(str, name)
+        chunk, err = loadstring(str, chunkname)
         if chunk then setfenv(chunk, env) end
     else
-        chunk, err = load(str, name, 't', env)
+        chunk, err = load(str, chunkname, 't', env)
     end
     if not chunk then
         msg.warn('failed to load string:', str)

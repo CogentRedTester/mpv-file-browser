@@ -717,6 +717,42 @@ Both keys and values are copied. If `depth` is undefined then it defaults to `ma
 Additionally, the original table is stored in the `__original` field of the copy's metatable.
 The copy behaviour of the metatable itself is subject to change, but currently it is not copied.
 
+#### `fb.evaluate_string(str: string, chunkname?: string, env?: table, defaults?: bool = true): unknown`
+
+Loads `str` as a chunk of Lua statement(s) and runs them, returning the result.
+Errors are propagated to the caller. `chunkname` is used
+for debug output and error messages.
+
+Each chunk has a separate global environment table that inherits
+from the main global table. This means new globals can be created safely,
+but the default globals can still be accessed. As such, this method
+cannot and should not be used for security or sandboxing.
+
+A custom environment table can be provided with the `env` argument.
+Inheritance from the global table is disabled if `defaults` is `false`.
+
+Examples:
+
+```lua
+fb.evaluate_string('return 5 + 5')          -- 10
+fb.evaluate_string('x = 20 ; return x * x') -- 400
+
+local code = [[
+local arr = {1, 2, 3, 4}
+table.insert(arr, x)
+return unpack(arr)
+]]
+fb.evaluate_string(code, 'test3', {x = 5})      -- 1, 2, 3, 4, 5
+fb.evaluate_string(code, 'test4', nil, false)   -- Lua error: [string "test4"]:2: attempt to index global 'table' (a nil value)
+
+```
+
+In an expression the `mp`, `mp.msg`, and `mp.utils` modules are available as `mp`, `msg`, and `utils` respectively.
+Additionally, in mpv v0.38+ the `mp.input` module is available as `input`.
+This addon API is available as `fb` and if [mpv-user-input](https://github.com/CogentRedTester/mpv-user-input)
+is installed then user-input will be available in `user_input`.
+These modules are all unavailable if `defaults` is `false`.
+
 #### `fb.filter(list: list_table): list_table`
 
 Iterates through the given list and removes items that don't pass the user set filters
