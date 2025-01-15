@@ -168,6 +168,31 @@ package.loaded["file-browser"] = setmetatable({}, { __index = API })
 local parser_API = setmetatable({}, { __index = package.loaded["file-browser"] })
 local parse_state_API = {}
 
+local API_MAJOR, API_MINOR, API_PATCH = API_VERSION:match("(%d+)%.(%d+)%.(%d+)")
+API_MAJOR, API_MINOR, API_PATCH = tonumber(API_MAJOR), tonumber(API_MINOR), tonumber(API_PATCH)
+
+--checks if the given parser has a valid version number
+local function check_api_version(parser, id)
+    if parser.version then
+        msg.warn(('%s: use of the `version` field is deprecated - use `api_version` instead'):format(id))
+        parser.api_version = parser.version
+    end
+
+    local version = parser.api_version
+
+    local major, minor = version:match("(%d+)%.(%d+)")
+    major, minor = tonumber(major), tonumber(minor)
+
+    if not major or not minor then
+        return msg.error(("%s: invalid version number, expected v%d.%d.x, got v%s"):format(id, API_MAJOR, API_MINOR, version))
+    elseif major ~= API_MAJOR then
+        return msg.error(("%s has wrong major version number, expected v%d.x.x, got, v%s"):format(id, API_MAJOR, version))
+    elseif minor > API_MINOR then
+        msg.warn(("%s has newer minor version number than API, expected v%d.%d.x, got v%s"):format(id, API_MAJOR, API_MINOR, version))
+    end
+    return true
+end
+
 --------------------------------------------------------------------------------------------------------
 ------------------------------------------Variable Setup------------------------------------------------
 --------------------------------------------------------------------------------------------------------
@@ -1766,6 +1791,10 @@ end
 --inserting the custom keybind into the keybind array for declaration when file-browser is opened
 --custom keybinds with matching names will overwrite eachother
 local function insert_custom_keybind(keybind)
+    -- api checking for the keybinds is optional, so set to a valid version if it does not exist
+    keybind.api_version = keybind.api_version or '1.0.0'
+    if not check_api_version(keybind, 'keybind '..keybind.name) then return end
+
     --we'll always save the keybinds as either an array of command arrays or a function
     if type(keybind.command) == "table" and type(keybind.command[1]) ~= "table" then
         keybind.command = {keybind.command}
@@ -1982,32 +2011,6 @@ end
 -----------------------------------------Setup Functions------------------------------------------------
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
-
-
-local API_MAJOR, API_MINOR, API_PATCH = API_VERSION:match("(%d+)%.(%d+)%.(%d+)")
-API_MAJOR, API_MINOR, API_PATCH = tonumber(API_MAJOR), tonumber(API_MINOR), tonumber(API_PATCH)
-
---checks if the given parser has a valid version number
-local function check_api_version(parser, id)
-    if parser.version then
-        msg.warn(('%s: use of the `version` field is deprecated - use `api_version` instead'):format(id))
-        parser.api_version = parser.version
-    end
-
-    local version = parser.api_version
-
-    local major, minor = version:match("(%d+)%.(%d+)")
-    major, minor = tonumber(major), tonumber(minor)
-
-    if not major or not minor then
-        return msg.error(("%s: invalid version number, expected v%d.%d.x, got v%s"):format(id, API_MAJOR, API_MINOR, version))
-    elseif major ~= API_MAJOR then
-        return msg.error(("%s has wrong major version number, expected v%d.x.x, got, v%s"):format(id, API_MAJOR, version))
-    elseif minor > API_MINOR then
-        msg.warn(("%s has newer minor version number than API, expected v%d.%d.x, got v%s"):format(id, API_MAJOR, API_MINOR, version))
-    end
-    return true
-end
 
 --create a unique id for the given parser
 local function set_parser_id(parser)
