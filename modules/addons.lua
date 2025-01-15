@@ -18,7 +18,7 @@ local function check_api_version(parser, id)
         parser.api_version = parser.version
     end
 
-    local version = parser.api_version or "1.0.0"
+    local version = parser.api_version
 
     local major, minor = version:match("(%d+)%.(%d+)")
     major, minor = tonumber(major), tonumber(minor)

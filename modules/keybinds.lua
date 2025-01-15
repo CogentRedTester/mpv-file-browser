@@ -234,6 +234,8 @@ end
 --inserting the custom keybind into the keybind array for declaration when file-browser is opened
 --custom keybinds with matching names will overwrite eachother
 local function insert_custom_keybind(keybind)
+    -- api checking for the keybinds is optional, so set to a valid version if it does not exist
+    keybind.api_version = keybind.api_version or '1.0.0'
     if not addons.check_api_version(keybind, 'keybind '..keybind.name) then return end
 
     --we'll always save the keybinds as either an array of command arrays or a function
