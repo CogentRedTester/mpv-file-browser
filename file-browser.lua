@@ -179,6 +179,7 @@ local function check_api_version(parser, id)
     end
 
     local version = parser.api_version
+    if type(version) ~= 'string' then return msg.error(("%s: field `api_version` must be a string, got %s"):format(id, tostring(version))) end
 
     local major, minor = version:match("(%d+)%.(%d+)")
     major, minor = tonumber(major), tonumber(minor)
