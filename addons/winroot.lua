@@ -46,7 +46,7 @@ local keybind = {
 }
 
 return {
-    version = '1.4.0',
+    api_version = '1.4.0',
     setup = import_drives,
     keybinds = { keybind }
 }

@@ -93,7 +93,7 @@ The following keybinds are set by default
 |-------------|----------------------------------|-------------------------------------------------------------------------------|
 | MENU        | browse-files                     | toggles the browser                                                           |
 | Ctrl+o      | open-browser                     | opens the browser                                                             |
-| Alt+o       | browse-directory/get-user-input  | opens a dialogue box to type in a directory - requires [mpv-user-input](#mpv-user-input) |
+| Alt+o       | browse-directory/get-user-input  | opens a dialogue box to type in a directory - requires [mpv-user-input](#mpv-user-input) when mpv < v0.38 |
 
 The following dynamic keybinds are only set while the browser is open:
 
@@ -221,4 +221,7 @@ See [#55](https://github.com/CogentRedTester/mpv-file-browser/issues/55) for mor
 
 mpv-user-input is a script that provides an API to request text input from the user over the OSD.
 It was built using `console.lua` as a base, so supports almost all the same text input commands.
-If `user-input.lua` is loaded by mpv, and `user-input-module` is in the `~~/script-modules/` directory, then using `Alt+o` will open an input box that can be used to directly enter directories for file-browser to open.
+If `user-input.lua` is loaded by mpv, and `user-input-module` is in the `~~/script-modules/` directory,
+then using `Alt+o` will open an input box that can be used to directly enter directories for file-browser to open.
+
+Mpv v0.38 added the `mp.input` module, which means `mpv-user-input` is no-longer necessary from that version onwards.

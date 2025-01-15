@@ -71,8 +71,10 @@ function controls.escape()
 end
 
 --opens a specific directory
-function controls.browse_directory(directory)
+function controls.browse_directory(directory, open_browser)
     if not directory then return end
+    if open_browser == nil then open_browser = true end
+
     directory = mp.command_native({"expand-path", directory}) or ''
     -- directory = join_path( mp.get_property("working-directory", ""), directory )
 
@@ -80,8 +82,9 @@ function controls.browse_directory(directory)
     msg.verbose('recieved directory from script message: '..directory)
 
     directory = fb_utils.resolve_directory_mapping(directory)
-    movement.goto_directory(directory)
-    controls.open()
+    local co = movement.goto_directory(directory)
+    if open_browser then controls.open() end
+    return co
 end
 
 return controls

@@ -1,4 +1,4 @@
-# How to Write an Addon - API v1.6.0
+# How to Write an Addon - API v1.7.0
 
 Addons provide ways for file-browser to parse non-native directory structures. This document describes how one can create their own custom addon.
 
@@ -17,7 +17,7 @@ version of the API. It follows [semantic versioning](https://semver.org/) conven
 A parser sets its version string with the `version` field, as seen [below](#overview).
 
 Any change that breaks backwards compatability will cause the major version number to increase.
-A parser MUST have the same version number as the API, otherwise an error message will be printed and the parser will
+A parser MUST have the same major version number as the API, otherwise an error message will be printed and the parser will
 not be loaded.
 
 A minor version number denotes a change to the API that is backwards compatible. This includes additional API functions,
@@ -36,7 +36,7 @@ Each addon must return either a single parser table, or an array of parser table
 | key       | type   | arguments                 | returns                | description                                                                                                  |
 |-----------|--------|---------------------------|------------------------|--------------------------------------------------------------------------------------------------------------|
 | priority  | number | -                         | -                      | a number to determine what order parsers are tested - see [here](#priority-suggestions) for suggested values |
-| version   | string | -                         | -                      | the API version the parser is using - see [API Version](#api-version)                                        |
+| api_version| string | -                         | -                      | the API version the parser is using - see [API Version](#api-version)                                        |
 | can_parse | method | string, parse_state_table | boolean                | returns whether or not the given path is compatible with the parser                                          |
 | parse     | method | string, parse_state_table | list_table, opts_table | returns an array of item_tables, and a table of options to control how file_browser handles the list         |
 
@@ -56,7 +56,7 @@ Here is an extremely simple example of an addon creating a parser table and retu
 
 ```lua
 local parser = {
-    version = '1.0.0',
+    api_version = '1.0.0',
     priority = 100,
     name = "example"        -- this parser will have the id 'example' or 'example_#' if there are duplicates
 }
@@ -443,11 +443,14 @@ The current API version in use by file-browser.
 
 Adds the given extension to the default extension filter whitelist. Can only be run inside the `setup()` method.
 
-#### `fb.browse_directory(directory: string): void`
+#### `fb.browse_directory(directory: string, open_browser: bool = true): coroutine`
 
-Clears the cache and opens the given directory in the browser. If the browser is closed then it will be opened.
-This function is non-blocking, it is possible that the function will return before the directory has finished
-being scanned.
+Clears the cache and opens the given directory in the browser.
+If the `open_browser` argument is truthy or `nil` then the browser will be opened
+if it is currently closed. If `open_browser` is `false` then the directory will
+be opened in the background.
+Returns the coroutine of the upcoming parse operation. The parse is queued and run when the script thread next goes idle,
+allowing one to store this value and use it to identify the triggered parse operation.
 
 This is the equivalent of calling the `browse-directory` script-message.
 
@@ -636,9 +639,16 @@ Returns the success boolean returned by `coroutine.resume`, but drops all other 
 
 Runs the given function in a new coroutine, passing through any additional arguments.
 
-#### `fb.rescan(): void`
+#### `fb.coroutine.queue(fn: function, ...): coroutine`
+
+Runs the given function in a coroutine when the script next goes idle, passing through
+any additional arguments. The (not yet started) coroutine is returned by the function.
+
+#### `fb.rescan(): coroutine`
 
 Rescans the current directory. Equivalent to Ctrl+r without the cache refresh for higher level directories.
+Returns the coroutine of the upcoming parse operation. The parse is queued and run when the script thread next goes idle,
+allowing one to store this value and use it to identify the triggered parse operation.
 
 #### `fb.redraw(): void`
 
@@ -671,7 +681,7 @@ local fb = require "file-browser"
 local home = fb.fix_path(mp.command_native({"expand-path", "~/"}), true)
 
 local home_label = {
-    version = '1.0.0',
+    api_version = '1.0.0',
     priority = 100
 }
 
@@ -706,6 +716,42 @@ The copy is done recursively to the given `depth`, and any cyclical table refere
 Both keys and values are copied. If `depth` is undefined then it defaults to `math.huge` (infinity).
 Additionally, the original table is stored in the `__original` field of the copy's metatable.
 The copy behaviour of the metatable itself is subject to change, but currently it is not copied.
+
+#### `fb.evaluate_string(str: string, chunkname?: string, env?: table, defaults?: bool = true): unknown`
+
+Loads `str` as a chunk of Lua statement(s) and runs them, returning the result.
+Errors are propagated to the caller. `chunkname` is used
+for debug output and error messages.
+
+Each chunk has a separate global environment table that inherits
+from the main global table. This means new globals can be created safely,
+but the default globals can still be accessed. As such, this method
+cannot and should not be used for security or sandboxing.
+
+A custom environment table can be provided with the `env` argument.
+Inheritance from the global table is disabled if `defaults` is `false`.
+
+Examples:
+
+```lua
+fb.evaluate_string('return 5 + 5')          -- 10
+fb.evaluate_string('x = 20 ; return x * x') -- 400
+
+local code = [[
+local arr = {1, 2, 3, 4}
+table.insert(arr, x)
+return unpack(arr)
+]]
+fb.evaluate_string(code, 'test3', {x = 5})      -- 1, 2, 3, 4, 5
+fb.evaluate_string(code, 'test4', nil, false)   -- Lua error: [string "test4"]:2: attempt to index global 'table' (a nil value)
+
+```
+
+In an expression the `mp`, `mp.msg`, and `mp.utils` modules are available as `mp`, `msg`, and `utils` respectively.
+Additionally, in mpv v0.38+ the `mp.input` module is available as `input`.
+This addon API is available as `fb` and if [mpv-user-input](https://github.com/CogentRedTester/mpv-user-input)
+is installed then user-input will be available in `user_input`.
+These modules are all unavailable if `defaults` is `false`.
 
 #### `fb.filter(list: list_table): list_table`
 

@@ -10,8 +10,8 @@ local utils = require 'mp.utils'
 local o = require 'modules.options'
 local g = require 'modules.globals'
 
-local success, input = pcall(require, "user-input-module")
-if not success then input = nil end
+local input_loaded, input = pcall(require, 'mp.input')
+local user_input_loaded, user_input = pcall(require, 'user-input-module')
 
 --creates a table for the API functions
 --adds one metatable redirect to prevent addon authors from accidentally breaking file-browser
@@ -48,6 +48,16 @@ function fb_utils.list.some(t, fn)
     return false
 end
 
+-- Creates a new table populated with the results of
+-- calling a provided function on every element in t.
+function fb_utils.list.map(t, fn)
+    local new_t = {}
+    for i, v in ipairs(t) do
+        new_t[i] = fn(v, i, t)
+    end
+    return new_t
+end
+
 --prints an error message and a stack trace
 --accepts an error object and optionally a coroutine
 --can be passed directly to xpcall
@@ -64,6 +74,10 @@ end
 --creates a prototypally inherited table
 function fb_utils.redirect_table(t)
     return setmetatable({}, { __index = t })
+end
+
+function fb_utils.set_prototype(t, proto)
+    return setmetatable(t, { __index = proto })
 end
 
 --prints an error if a coroutine returns an error
@@ -117,6 +131,17 @@ end
 function fb_utils.coroutine.sleep(n)
     mp.add_timeout(n, fb_utils.coroutine.callback())
     coroutine.yield()
+end
+
+
+--Runs the given function in a coroutine, passing through any additional arguments.
+--Does not run the coroutine immediately, instead it ques the coroutine to run when the thread is next idle.
+--Returns the coroutine object so that the caller can act on it before it is run.
+function fb_utils.coroutine.queue(fn, ...)
+    local co = coroutine.create(fn)
+    local args = table.pack(...)
+    mp.add_timeout(0, function() fb_utils.coroutine.resume_err(co, table.unpack(args, 1, args.n)) end)
+    return co
 end
 
 --runs the given function in a coroutine, passing through any additional arguments
@@ -351,20 +376,27 @@ end
 --evaluates and runs the given string in both Lua 5.1 and 5.2
 --the name argument is used for error reporting
 --provides the mpv modules and the fb module to the string
-function fb_utils.evaluate_string(str, name)
-    local env = fb_utils.redirect_table(_G)
-    env.mp = fb_utils.redirect_table(mp)
-    env.msg = fb_utils.redirect_table(msg)
-    env.utils = fb_utils.redirect_table(utils)
-    env.fb = fb_utils.redirect_table(fb_utils)
-    env.input = input and fb_utils.redirect_table(input)
+function fb_utils.evaluate_string(str, chunkname, custom_env, env_defaults)
+    local env
+    if env_defaults ~= false then
+        env = fb_utils.redirect_table(_G)
+        env.mp = fb_utils.redirect_table(mp)
+        env.msg = fb_utils.redirect_table(msg)
+        env.utils = fb_utils.redirect_table(utils)
+        env.fb = fb_utils.redirect_table(fb_utils)
+        env.input = input_loaded and fb_utils.redirect_table(input)
+        env.user_input = user_input_loaded and fb_utils.redirect_table(user_input)
+        env = fb_utils.set_prototype(custom_env or {}, env)
+    else
+        env = custom_env or {}
+    end
 
     local chunk, err
     if setfenv then
-        chunk, err = loadstring(str, name)
+        chunk, err = loadstring(str, chunkname)
         if chunk then setfenv(chunk, env) end
     else
-        chunk, err = load(str, name, 't', env)
+        chunk, err = load(str, chunkname, 't', env)
     end
     if not chunk then
         msg.warn('failed to load string:', str)

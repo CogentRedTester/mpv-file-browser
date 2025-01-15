@@ -9,19 +9,27 @@ local fb_utils = require 'modules.utils'
 local parser_API = require 'modules.apis.parser'
 
 local API_MAJOR, API_MINOR, API_PATCH = g.API_VERSION:match("(%d+)%.(%d+)%.(%d+)")
+API_MAJOR, API_MINOR, API_PATCH = tonumber(API_MAJOR), tonumber(API_MINOR), tonumber(API_PATCH)
 
 --checks if the given parser has a valid version number
-local function check_api_version(parser)
-    local version = parser.version or "1.0.0"
+local function check_api_version(parser, id)
+    if parser.version then
+        msg.warn(('%s: use of the `version` field is deprecated - use `api_version` instead'):format(id))
+        parser.api_version = parser.version
+    end
+
+    local version = parser.api_version
+    if type(version) ~= 'string' then return msg.error(("%s: field `api_version` must be a string, got %s"):format(id, tostring(version))) end
 
     local major, minor = version:match("(%d+)%.(%d+)")
+    major, minor = tonumber(major), tonumber(minor)
 
     if not major or not minor then
-        return msg.error("Invalid version number")
+        return msg.error(("%s: invalid version number, expected v%d.%d.x, got v%s"):format(id, API_MAJOR, API_MINOR, version))
     elseif major ~= API_MAJOR then
-        return msg.error("parser", parser.name, "has wrong major version number, expected", ("v%d.x.x"):format(API_MAJOR), "got", 'v'..version)
+        return msg.error(("%s has wrong major version number, expected v%d.x.x, got, v%s"):format(id, API_MAJOR, version))
     elseif minor > API_MINOR then
-        msg.warn("parser", parser.name, "has newer minor version number than API, expected", ("v%d.%d.x"):format(API_MAJOR, API_MINOR), "got", 'v'..version)
+        msg.warn(("%s has newer minor version number than API, expected v%d.%d.x, got v%s"):format(id, API_MAJOR, API_MINOR, version))
     end
     return true
 end
@@ -90,7 +98,7 @@ local function setup_parser(parser, file)
     parser.name = parser.name or file:gsub("%-browser%.lua$", ""):gsub("%.lua$", "")
 
     set_parser_id(parser)
-    if not check_api_version(parser) then return msg.error("aborting load of parser", parser:get_id(), "from", file) end
+    if not check_api_version(parser, file) then return msg.error("aborting load of parser", parser:get_id(), "from", file) end
 
     msg.verbose("imported parser", parser:get_id(), "from", file)
 
@@ -111,6 +119,7 @@ local function setup_addon(file, path)
     if file:sub(-4) ~= ".lua" then return msg.verbose(path, "is not a lua file - aborting addon setup") end
 
     local addon_parsers = run_addon(path)
+    if addon_parsers and not next(addon_parsers) then return msg.verbose('addon', path, 'returned empry table - special case, ignoring') end
     if not addon_parsers or type(addon_parsers) ~= "table" then return msg.error("addon", path, "did not return a table") end
 
     --if the table contains a priority key then we assume it isn't an array of parsers
@@ -159,6 +168,7 @@ local function load_external_addons()
 end
 
 return {
+    check_api_version = check_api_version,
     load_internal_parsers = load_internal_parsers,
     load_external_addons = load_external_addons
 }

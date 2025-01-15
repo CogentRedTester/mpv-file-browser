@@ -12,7 +12,7 @@ local parse_state_API = require 'modules.apis.parse-state'
 
 local function clear_non_adjacent_state()
     g.state.directory_label = nil
-    cache:clear()
+    cache:clear_traversal_stack()
 end
 
 --parses the given directory or defers to the next parser if nil is returned
@@ -86,11 +86,9 @@ local function update_list(moving_adjacent)
     g.state.selection = {}
 
     --loads the current directry from the cache to save loading time
-    --there will be a way to forcibly reload the current directory at some point
-    --the cache is in the form of a stack, items are taken off the stack when the dir moves up
-    if cache[1] and cache[#cache].directory == g.state.directory then
+    if cache:in_cache(g.state.directory) then
         msg.verbose('found directory in cache')
-        cache:apply()
+        cache:apply(g.state.directory)
         g.state.prev_directory = g.state.directory
         return
     end
@@ -106,11 +104,11 @@ local function update_list(moving_adjacent)
     end
 
     --apply fallbacks if the scan failed
-    if not list and cache[1] then
+    if not list and cache:in_cache(g.state.prev_directory) then
         --switches settings back to the previously opened directory
         --to the user it will be like the directory never changed
         msg.warn("could not read directory", g.state.directory)
-        cache:apply()
+        cache:apply(g.state.prev_directory)
         return
     elseif not list then
         --opens the root instead
@@ -148,7 +146,10 @@ local function update_list(moving_adjacent)
 end
 
 --rescans the folder and updates the list
-local function update(moving_adjacent)
+--returns the coroutine for the new parse operation
+local function rescan(moving_adjacent)
+    if moving_adjacent == nil then moving_adjacent = 0 end
+
     --we can only make assumptions about the directory label when moving from adjacent directories
     if not moving_adjacent then clear_non_adjacent_state() end
 
@@ -159,16 +160,23 @@ local function update(moving_adjacent)
 
     --the directory is always handled within a coroutine to allow addons to
     --pause execution for asynchronous operations
-    fb_utils.coroutine.run(function()
-        g.state.co = coroutine.running()
+    g.state.co = fb_utils.coroutine.queue(function()
         update_list(moving_adjacent)
         if g.state.empty_text == "~" then g.state.empty_text = "empty directory" end
+
+        cache:append_history()
+        if type(moving_adjacent) == 'number' and moving_adjacent < 0 then cache:pop()
+        else cache:push() end
+        if not cache.traversal_stack[1] then cache:push() end
+
         ass.update_ass()
     end)
+
+    return g.state.co
 end
 
 return {
-    rescan = update,
+    rescan = rescan,
     scan_directory = parse_directory,
     choose_and_parse = choose_and_parse,
 }

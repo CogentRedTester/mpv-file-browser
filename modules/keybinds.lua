@@ -10,6 +10,7 @@ local utils = require 'mp.utils'
 local o = require 'modules.options'
 local g = require 'modules.globals'
 local fb_utils = require 'modules.utils'
+local addons = require 'modules.addons'
 local playlist = require 'modules.playlist'
 local controls = require 'modules.controls'
 local movement = require 'modules.navigation.directory-movement'
@@ -233,6 +234,10 @@ end
 --inserting the custom keybind into the keybind array for declaration when file-browser is opened
 --custom keybinds with matching names will overwrite eachother
 local function insert_custom_keybind(keybind)
+    -- api checking for the keybinds is optional, so set to a valid version if it does not exist
+    keybind.api_version = keybind.api_version or '1.0.0'
+    if not addons.check_api_version(keybind, 'keybind '..keybind.name) then return end
+
     --we'll always save the keybinds as either an array of command arrays or a function
     if type(keybind.command) == "table" and type(keybind.command[1]) ~= "table" then
         keybind.command = {keybind.command}
