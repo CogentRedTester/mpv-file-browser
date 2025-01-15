@@ -8,6 +8,7 @@ local utils = require 'mp.utils'
 local file_parser = {
     name = "file",
     priority = 110,
+    api_version = '1.0.0',
 }
 
 --try to parse any directory except for the root

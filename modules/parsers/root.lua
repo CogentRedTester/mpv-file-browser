@@ -7,6 +7,7 @@ local g = require 'modules.globals'
 local root_parser = {
     name = "root",
     priority = math.huge,
+    api_version = '1.0.0',
 }
 
 function root_parser:can_parse(directory)
