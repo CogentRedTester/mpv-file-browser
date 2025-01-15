@@ -10,8 +10,8 @@ local utils = require 'mp.utils'
 local o = require 'modules.options'
 local g = require 'modules.globals'
 
-local success, input = pcall(require, "user-input-module")
-if not success then input = nil end
+local input_loaded, input = pcall(require, 'mp.input')
+local user_input_loaded, user_input = pcall(require, 'user-input-module')
 
 --creates a table for the API functions
 --adds one metatable redirect to prevent addon authors from accidentally breaking file-browser
@@ -378,7 +378,8 @@ function fb_utils.evaluate_string(str, name)
     env.msg = fb_utils.redirect_table(msg)
     env.utils = fb_utils.redirect_table(utils)
     env.fb = fb_utils.redirect_table(fb_utils)
-    env.input = input and fb_utils.redirect_table(input)
+    env.input = input_loaded and fb_utils.redirect_table(input)
+    env.user_input = user_input_loaded and fb_utils.redirect_table(user_input)
 
     local chunk, err
     if setfenv then

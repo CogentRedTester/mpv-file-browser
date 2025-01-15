@@ -11,6 +11,10 @@
 local mp = require 'mp'
 
 local o = require 'modules.options'
+
+-- setting the package paths
+package.path = mp.command_native({"expand-path", o.module_directory}).."/?.lua;"..package.path
+
 local addons = require 'modules.addons'
 local keybinds = require 'modules.keybinds'
 local setup = require 'modules.setup'
@@ -18,8 +22,6 @@ local controls = require 'modules.controls'
 local observers = require 'modules.observers'
 local script_messages = require 'modules.script-messages'
 
--- setting the package paths
-package.path = mp.command_native({"expand-path", o.module_directory}).."/?.lua;"..package.path
 local input_loaded, input = pcall(require, "mp.input")
 local user_input_loaded, user_input = pcall(require, "user-input-module")
 
