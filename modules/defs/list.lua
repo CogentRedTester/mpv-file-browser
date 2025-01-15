@@ -21,5 +21,5 @@
 ---@field directory_label string?
 ---@field empty_text string?
 ---@field selected_index number?
----@field id number?
+---@field id string?
 ---@field parser Parser?

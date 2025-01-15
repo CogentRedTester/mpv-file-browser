@@ -4,7 +4,8 @@
 local msg = require 'mp.msg'
 local utils = require 'mp.utils'
 
---parser object for native filesystems
+---Parser for native filesystems
+---@type ParserConfig
 local file_parser = {
     name = "file",
     priority = 110,

@@ -1,4 +1,4 @@
----@meta State
+---@meta StateDefs
 
 ---@class (exact) State
 ---@field list List
