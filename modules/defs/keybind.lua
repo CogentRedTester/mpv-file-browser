@@ -1,0 +1,3 @@
+---@meta KeybindDefs
+
+---@class Keybind

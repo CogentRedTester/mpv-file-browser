@@ -1,0 +1,19 @@
+---@meta State
+
+---@class (exact) State
+---@field list List
+---@field selected number
+---@field hidden boolean
+---@field flag_update boolean
+---@field keybinds Keybind[]?
+---
+---@field parser Parser?
+---@field directory string?
+---@field directory_label string?
+---@field prev_directory string
+---@field empty_text string
+---@field co thread?
+---
+---@field multiselect_start number?
+---@field initial_selection {[number]: boolean}?
+---@field selection {[number]: boolean}?

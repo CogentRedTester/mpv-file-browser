@@ -4,9 +4,15 @@ local g = require 'modules.globals'
 local scanning = require 'modules.navigation.scanning'
 local fb = require 'modules.apis.fb'
 
+---@class ParserAPI
 local parser_api = setmetatable({}, { __index = fb })
 
+---Returns the index of the parser.
+---@return number
 function parser_api:get_index() return g.parsers[self].index end
+
+---Returns the ID of the parser
+---@return string
 function parser_api:get_id() return g.parsers[self].id end
 
 --a wrapper that passes the parsers priority value if none other is specified

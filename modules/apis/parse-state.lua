@@ -3,11 +3,15 @@ local msg = require 'mp.msg'
 
 local g = require 'modules.globals'
 
+---@class ParseStateAPI
 local parse_state_API = {}
 
---a wrapper around coroutine.yield that aborts the coroutine if
---the parse request was cancelled by the user
+---A wrapper around coroutine.yield that aborts the coroutine if
+--the parse request was cancelled by the user.
 --the coroutine is 
+---@param self ParseState
+---@param ... any
+---@return any ...
 function parse_state_API:yield(...)
     local co = coroutine.running()
     local is_browser = co == g.state.co
