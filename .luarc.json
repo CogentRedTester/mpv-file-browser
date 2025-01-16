@@ -1,3 +1,21 @@
 {
-    "misc.parameters": ["./main.lua"]
+    "runtime.version": "LuaJIT",
+    "diagnostics.workspaceDelay": 1000,
+    "diagnostics.groupFileStatus": {
+        "await": "Any",
+        "luadoc": "Any",
+        // "strong": "Any",
+        "type-check": "Any",
+        "unbalanced": "Any"
+    },
+    "diagnostics.groupSeverity": {
+        "await": "Error"
+    },
+    "diagnostics.severity": {
+        "missing-return": "Error!",
+        "missing-return-value": "Error!",
+        "cast-type-mismatch": "Error!",
+        "assign-type-mismatch": "Error!",
+        "global-element": "Warning!"
+    }
 }
