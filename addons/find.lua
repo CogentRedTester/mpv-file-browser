@@ -8,6 +8,7 @@
         Ctrl+f  open search box
         Ctrl+F  open advanced search box (supports Lua patterns)
         n       cycle to next valid item
+        N       cycle to prev valid item
 ]]--
 
 local msg = require "mp.msg"
@@ -76,29 +77,37 @@ local function main(key, state, co)
     --the final return statement should return to `step_find` not any other function
     fb.coroutine.run(function()
         latest_coroutine = coroutine.running()
+        local rindex = 1
         while (true) do
-            for _, index in ipairs(results) do
-                fb.set_selected_index(index)
-                coroutine.yield(true)
 
-                if parse_id ~= global_fb_state.co then
-                    latest_coroutine = nil
-                    return false
-                end
+            if rindex == 0 then rindex = #results
+            elseif rindex == #results + 1 then rindex = 1 end
+
+            fb.set_selected_index(results[rindex])
+            local direction = coroutine.yield(true)
+            rindex = rindex + direction
+
+            if parse_id ~= global_fb_state.co then
+                latest_coroutine = nil
+                return false
             end
         end
     end)
 end
 
-local function step_find()
+local function step_find(key)
     if not latest_coroutine then return false end
-    return fb.coroutine.resume_err(latest_coroutine)
+    local direction
+    if key.name == "find/next" then direction = 1
+    elseif key.name == "find/prev" then direction = -1 end
+    return fb.coroutine.resume_err(latest_coroutine, direction)
 end
 
 find.keybinds = {
     {"Ctrl+f", "find", main, {}},
     {"Ctrl+F", "find_advanced", main, {}},
     {"n", "next", step_find, {}},
+    {"N", "prev", step_find, {}},
 }
 
 return find
