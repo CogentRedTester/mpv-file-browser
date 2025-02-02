@@ -174,7 +174,7 @@ end
 ---Runs the given function in a coroutine, passing through any additional arguments.
 ---Does not run the coroutine immediately, instead it queues the coroutine to run when the thread is next idle.
 ---Returns the coroutine object so that the caller can act on it before it is run.
----@param fn function
+---@param fn async fun()
 ---@param ... any
 ---@return thread
 function fb_utils.coroutine.queue(fn, ...)
@@ -186,7 +186,7 @@ end
 
 ---Runs the given function in a coroutine, passing through any additional arguments.
 ---This is for triggering an event in a coroutine.
----@param fn function
+---@param fn async fun()
 ---@param ... any
 function fb_utils.coroutine.run(fn, ...)
     local co = coroutine.create(fn)
