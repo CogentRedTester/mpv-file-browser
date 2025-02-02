@@ -1,4 +1,6 @@
----@meta StateDefs
+---@meta _
+
+---@class Set<T>: {[T]: boolean}
 
 ---@class (exact) State
 ---@field list List
@@ -15,5 +17,5 @@
 ---@field co thread?
 ---
 ---@field multiselect_start number?
----@field initial_selection {[number]: boolean}?
----@field selection {[number]: boolean}?
+---@field initial_selection Set<number>?
+---@field selection Set<number>?

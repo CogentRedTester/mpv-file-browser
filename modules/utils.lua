@@ -30,8 +30,13 @@ if not table.pack then
     end
 end
 
--- returns the index of the given item in the table
--- return -1 if item does not exist
+---Returns the index of the given item in the table.
+---Return -1 if item does not exist.
+---@generic T
+---@param t T[]
+---@param item T
+---@param from_index? number
+---@return integer
 function fb_utils.list.indexOf(t, item, from_index)
     for i = from_index or 1, #t, 1 do
         if t[i] == item then return i end
@@ -39,8 +44,12 @@ function fb_utils.list.indexOf(t, item, from_index)
     return -1
 end
 
---returns whether or not the given table contains an entry that
---causes the given function to evaluate to true
+---Returns whether or not the given table contains an entry that
+---causes the given function to evaluate to true.
+---@generic T
+---@param t T[]
+---@param fn fun(v: T, i: number, t: T[]): boolean
+---@return boolean
 function fb_utils.list.some(t, fn)
     for i, v in ipairs(t) do
         if fn(v, i, t) then return true end
@@ -48,8 +57,13 @@ function fb_utils.list.some(t, fn)
     return false
 end
 
--- Creates a new table populated with the results of
--- calling a provided function on every element in t.
+---Creates a new table populated with the results of
+---calling a provided function on every element in t.
+---@generic T
+---@generic R
+---@param t T[]
+---@param fn fun(v: T, i: number, t: T[]): R
+---@return R[]
 function fb_utils.list.map(t, fn)
     local new_t = {}
     for i, v in ipairs(t) do
@@ -58,9 +72,10 @@ function fb_utils.list.map(t, fn)
     return new_t
 end
 
---prints an error message and a stack trace
---accepts an error object and optionally a coroutine
---can be passed directly to xpcall
+---Prints an error message and a stack trace.
+---Can be passed directly to xpcall.
+---@param errmsg string
+---@param co? thread A coroutine to grab the stack trace from.
 function fb_utils.traceback(errmsg, co)
     if co then
         msg.warn(debug.traceback(co))
@@ -70,18 +85,29 @@ function fb_utils.traceback(errmsg, co)
     msg.error(errmsg)
 end
 
---returns a table that stores the given table t as the __index in its metatable
---creates a prototypally inherited table
+---Returns a table that stores the given table t as the __index in its metatable.
+---Creates a prototypally inherited table.
+---@generic T: table
+---@param t T
+---@return T
 function fb_utils.redirect_table(t)
     return setmetatable({}, { __index = t })
 end
 
+---Sets the given table `proto` as the `__index` field in table `t`s metatable.
+---@generic T: table
+---@param t T
+---@param proto table
+---@return T
 function fb_utils.set_prototype(t, proto)
     return setmetatable(t, { __index = proto })
 end
 
---prints an error if a coroutine returns an error
---unlike the next function this one still returns the results of coroutine.resume()
+---Prints an error if a coroutine returns an error.
+---Unlike coroutine.resume_err this still returns the results of coroutine.resume().
+---@param ... any
+---@return boolean
+---@return ...
 function fb_utils.coroutine.resume_catch(...)
     local returns = table.pack(coroutine.resume(...))
     if not returns[1] and returns[2] ~= g.ABORT_ERROR then
@@ -90,7 +116,9 @@ function fb_utils.coroutine.resume_catch(...)
     return table.unpack(returns, 1, returns.n)
 end
 
---resumes a coroutine and prints an error if it was not sucessful
+---Resumes a coroutine and prints an error if it was not sucessful.
+---@param ... any
+---@return boolean
 function fb_utils.coroutine.resume_err(...)
     local success, err = coroutine.resume(...)
     if not success and err ~= g.ABORT_ERROR then
@@ -99,25 +127,31 @@ function fb_utils.coroutine.resume_err(...)
     return success
 end
 
---in lua 5.1 there is only one return value which will be nil if run from the main thread
---in lua 5.2 main will be true if running from the main thread
+---Throws an error if not run from within a coroutine.
+---In lua 5.1 there is only one return value which will be nil if run from the main thread.
+---In lua 5.2 main will be true if running from the main thread.
+---@param err any
+---@return thread
 function fb_utils.coroutine.assert(err)
     local co, main = coroutine.running()
     assert(not main and co, err or "error - function must be executed from within a coroutine")
     return co
 end
 
--- Creates a callback function to resume the current coroutine with the given time limit.
--- If the time limit expires the coroutine will be resumed. The first return value will be true
--- if the callback was resumed within the time limit and false otherwise.
--- If time_limit is falsy then there will be no time limit and there will be no additional return value.
+---Creates a callback function to resume the current coroutine with the given time limit.
+---If the time limit expires the coroutine will be resumed. The first return value will be true
+---if the callback was resumed within the time limit and false otherwise.
+---If time_limit is falsy then there will be no time limit and there will be no additional return value.
+---@param time_limit? number
+---@return fun(...)
 function fb_utils.coroutine.callback(time_limit)
     local co = fb_utils.coroutine.assert("cannot create a coroutine callback for the main thread")
     local timer = time_limit and mp.add_timeout(time_limit, function ()
             msg.debug("time limit on callback expired")
             fb_utils.coroutine.resume_err(co, false)
         end)
-    return function(...)
+
+    local function fn(...)
         if timer then
             if not timer:is_enabled() then return
             else timer:kill() end
@@ -125,18 +159,24 @@ function fb_utils.coroutine.callback(time_limit)
         end
         return fb_utils.coroutine.resume_err(co, ...)
     end
+    return fn
 end
 
---puts the current coroutine to sleep for the given number of seconds
+---Puts the current coroutine to sleep for the given number of seconds.
+---@async
+---@param n number
+---@return nil
 function fb_utils.coroutine.sleep(n)
     mp.add_timeout(n, fb_utils.coroutine.callback())
     coroutine.yield()
 end
 
-
---Runs the given function in a coroutine, passing through any additional arguments.
---Does not run the coroutine immediately, instead it ques the coroutine to run when the thread is next idle.
---Returns the coroutine object so that the caller can act on it before it is run.
+---Runs the given function in a coroutine, passing through any additional arguments.
+---Does not run the coroutine immediately, instead it queues the coroutine to run when the thread is next idle.
+---Returns the coroutine object so that the caller can act on it before it is run.
+---@param fn function
+---@param ... any
+---@return thread
 function fb_utils.coroutine.queue(fn, ...)
     local co = coroutine.create(fn)
     local args = table.pack(...)
@@ -144,21 +184,30 @@ function fb_utils.coroutine.queue(fn, ...)
     return co
 end
 
---runs the given function in a coroutine, passing through any additional arguments
---this is for triggering an event in a coroutine
+---Runs the given function in a coroutine, passing through any additional arguments.
+---This is for triggering an event in a coroutine.
+---@param fn function
+---@param ... any
 function fb_utils.coroutine.run(fn, ...)
     local co = coroutine.create(fn)
     fb_utils.coroutine.resume_err(co, ...)
 end
 
---get the full path for the current file
+---Get the full path for the current file.
+---@param item Item
+---@param dir? string
+---@return string
 function fb_utils.get_full_path(item, dir)
     if item.path then return item.path end
     return (dir or g.state.directory)..item.name
 end
 
---gets the path for a new subdirectory, redirects if the path field is set
---returns the new directory path and a boolean specifying if a redirect happened
+---Gets the path for a new subdirectory, redirects if the path field is set.
+---Returns the new directory path and a boolean specifying if a redirect happened.
+---@param item Item
+---@param directory string
+---@return string new_directory
+---@return boolean? redirected `true` if the path was redirected
 function fb_utils.get_new_directory(item, directory)
     if item.path and item.redirect ~= false then return item.path, true end
     if directory == "" then return item.name end
@@ -166,18 +215,32 @@ function fb_utils.get_new_directory(item, directory)
     return directory.."/"..item.name
 end
 
---returns the file extension of the given file
+---Returns the file extension of the given file, or def if there is none.
+---@generic T
+---@param filename string
+---@param def? T 
+---@return string|T
+---@overload fun(filename: string): string|nil
 function fb_utils.get_extension(filename, def)
     return string.lower(filename):match("%.([^%./]+)$") or def
 end
 
---returns the protocol scheme of the given url, or nil if there is none
+---Returns the protocol scheme of the given url, or def if there is none.
+---@generic T
+---@param filename string
+---@param def T
+---@return string|T
+---@overload fun(filename: string): string|nil
 function fb_utils.get_protocol(filename, def)
     return string.lower(filename):match("^(%a[%w+-.]*)://") or def
 end
 
---formats strings for ass handling
---this function is based on a similar function from https://github.com/mpv-player/mpv/blob/master/player/lua/console.lua#L110
+---Formats strings for ass handling.
+---This function is based on a similar function from
+---https://github.com/mpv-player/mpv/blob/master/player/lua/console.lua#L110.
+---@param str string
+---@param replace_newline? true|string
+---@return string
 function fb_utils.ass_escape(str, replace_newline)
     if replace_newline == true then replace_newline = "\\\239\187\191n" end
 
@@ -204,12 +267,17 @@ function fb_utils.ass_escape(str, replace_newline)
     return str
 end
 
---escape lua pattern characters
+---Escape lua pattern characters.
+---@param str string
+---@return string
 function fb_utils.pattern_escape(str)
-    return string.gsub(str, "([%^%$%(%)%%%.%[%]%*%+%-])", "%%%1")
+    return (string.gsub(str, "([%^%$%(%)%%%.%[%]%*%+%-])", "%%%1"))
 end
 
---standardises filepaths across systems
+---Standardises filepaths across systems.
+---@param str string
+---@param is_directory? boolean
+---@return string
 function fb_utils.fix_path(str, is_directory)
     if str == '' then return str end
     if o.normalise_backslash == 'yes' or (o.normalise_backslash == 'auto' and g.PLATFORM == 'windows') then
@@ -220,20 +288,27 @@ function fb_utils.fix_path(str, is_directory)
     return str
 end
 
---wrapper for utils.join_path to handle protocols
+---Wrapper for mp.utils.join_path to handle protocols.
+---@param working string
+---@param relative string
+---@return string
 function fb_utils.join_path(working, relative)
     return fb_utils.get_protocol(relative) and relative or utils.join_path(working, relative)
 end
 
---converts the given path into an absolute path and normalises it using fb_utils.fix_path
+---Converts the given path into an absolute path and normalises it using fb_utils.fix_path.
+---@param path string
+---@return string
 function fb_utils.absolute_path(path)
     local absolute_path = fb_utils.join_path(mp.get_property('working-directory', ''), path)
     return fb_utils.fix_path(absolute_path)
 end
 
---sorts the table lexicographically ignoring case and accounting for leading/non-leading zeroes
---the number format functionality was proposed by github user twophyro, and was presumably taken
---from here: http://notebook.kulchenko.com/algorithms/alphanumeric-natural-sorting-for-humans-in-lua
+---Sorts the table lexicographically ignoring case and accounting for leading/non-leading zeroes.
+---The number format functionality was proposed by github user twophyro, and was presumably taken
+---from here: http://notebook.kulchenko.com/algorithms/alphanumeric-natural-sorting-for-humans-in-lua.
+---@param t List
+---@return List
 function fb_utils.sort(t)
     local function padnum(n, d)
         return #d > 0 and ("%03d%s%.12f"):format(#n, n, tonumber(d) / (10 ^ #d))
@@ -252,24 +327,32 @@ function fb_utils.sort(t)
     return t
 end
 
+---@param dir string
+---@return boolean
 function fb_utils.valid_dir(dir)
     if o.filter_dot_dirs and string.sub(dir, 1, 1) == "." then return false end
     return true
 end
 
+---@param file string
+---@return boolean
 function fb_utils.valid_file(file)
     if o.filter_dot_files and (string.sub(file, 1, 1) == ".") then return false end
     if o.filter_files and not g.extensions[ fb_utils.get_extension(file, "") ] then return false end
     return true
 end
 
---returns whether or not the item can be parsed
+---Returns whether or not the item can be parsed.
+---@param item Item
+---@return boolean
 function fb_utils.parseable_item(item)
     return item.type == "dir" or g.parseable_extensions[fb_utils.get_extension(item.name, "")]
 end
 
--- Takes a directory string and resolves any directory mappings,
--- returning the resolved directory.
+---Takes a directory string and resolves any directory mappings,
+---returning the resolved directory.
+---@param path string
+---@return string
 function fb_utils.resolve_directory_mapping(path)
     if not path then return path end
 
@@ -283,15 +366,16 @@ function fb_utils.resolve_directory_mapping(path)
 
             -- else make sure the path is correctly formatted
             target = fb_utils.fix_path(target, true)
-            return string.gsub(path, mapping, target)
+            return (string.gsub(path, mapping, target))
         end
     end
 
     return path
 end
 
---removes items and folders from the list
---this is for addons which can't filter things during their normal processing
+---Removes items and folders from the list that fail the configured filters.
+---@param t List
+---@return List
 function fb_utils.filter(t)
     local max = #t
     local top = 1
@@ -309,38 +393,55 @@ function fb_utils.filter(t)
     return t
 end
 
---returns a string iterator that uses the root separators
+---Returns a string iterator that uses the root separators.
+---@param str any
+---@return fun():(string, ...)
 function fb_utils.iterate_opt(str)
     return string.gmatch(str, "([^"..fb_utils.pattern_escape(o.root_separators).."]+)")
 end
 
---sorts a table into an array of selected items in the correct order
---if a predicate function is passed, then the item will only be added to
---the table if the function returns true
+---Sorts a table into an array of selected items in the correct order.
+---If a predicate function is passed, then the item will only be added to
+---the table if the function returns true.
+---@param t Set<number>
+---@param include_item? fun(item: Item): boolean
+---@return Item[]
 function fb_utils.sort_keys(t, include_item)
+    ---@class Ref
+    ---@field item Item
+    ---@field index number
+
+    ---@type Ref[]
     local keys = {}
     for k in pairs(t) do
         local item = g.state.list[k]
         if not include_item or include_item(item) then
-            item.index = k
-            keys[#keys+1] = item
+            keys[#keys+1] = {
+                item = item,
+                index = k,
+            }
         end
     end
 
     table.sort(keys, function(a,b) return a.index < b.index end)
-    return keys
+    return fb_utils.list.map(keys, function(ref) return ref.item end)
 end
 
---Uses a loop to get the length of an array. The `#` operator is undefined if there
---are gaps in the array, this ensures there are none as expected by the mpv node function.
+---Uses a loop to get the length of an array. The `#` operator is undefined if there
+---are gaps in the array, this ensures there are none as expected by the mpv node function.
+---@param t any[]
+---@return integer
 local function get_length(t)
     local i = 1
     while t[i] do i = i+1 end
     return i - 1
 end
 
---recursively removes elements of the table which would cause
---utils.format_json to throw an error
+---Recursively removes elements of the table which would cause
+---utils.format_json to throw an error.
+---@generic T
+---@param t T
+---@return T
 local function json_safe_recursive(t)
     if type(t) ~= "table" then return t end
 
@@ -364,7 +465,12 @@ local function json_safe_recursive(t)
     return t
 end
 
---formats a table into a json string but ensures there are no invalid datatypes inside the table first
+---Formats a table into a json string but ensures there are no invalid datatypes inside the table first.
+---@param t table
+---@return true|nil
+---@return table?
+---@overload fun(t: table): (true, table)
+---@overload fun(t: table): (nil, string)
 function fb_utils.format_json_safe(t)
     --operate on a copy of the table to prevent any data loss in the original table
     t = json_safe_recursive(fb_utils.copy_table(t))
@@ -373,12 +479,17 @@ function fb_utils.format_json_safe(t)
     else return nil, result end
 end
 
---evaluates and runs the given string in both Lua 5.1 and 5.2
---the name argument is used for error reporting
---provides the mpv modules and the fb module to the string
+---Evaluates and runs the given string in both Lua 5.1 and 5.2.
+---Provides the mpv modules and the fb module to the string.
+---@param str string
+---@param chunkname? string Used for error reporting.
+---@param custom_env? table A custom environment that shadows the default environment.
+---@param env_defaults? boolean Load lua defaults in environment, as well as mpv and file-browser modules. Defaults to `true`.
+---@return unknown
 function fb_utils.evaluate_string(str, chunkname, custom_env, env_defaults)
     local env
     if env_defaults ~= false then
+        ---@type table
         env = fb_utils.redirect_table(_G)
         env.mp = fb_utils.redirect_table(mp)
         env.msg = fb_utils.redirect_table(msg)
@@ -407,8 +518,13 @@ function fb_utils.evaluate_string(str, chunkname, custom_env, env_defaults)
     return chunk()
 end
 
---copies a table without leaving any references to the original
---uses a structured clone algorithm to maintain cyclic references
+---Copies a table without leaving any references to the original.
+---Uses a structured clone algorithm to maintain cyclic references.
+---@generic T
+---@param t T
+---@param references table<table,table>
+---@param depth number
+---@return T
 local function copy_table_recursive(t, references, depth)
     if type(t) ~= "table" or depth == 0 then return t end
     if references[t] then return references[t] end
@@ -423,13 +539,21 @@ local function copy_table_recursive(t, references, depth)
     return copy
 end
 
---a wrapper around copy_table to provide the reference table
+---A wrapper around copy_table to provide the reference table.
+---@generic T: table
+---@param t T
+---@param depth? number
+---@return T
 function fb_utils.copy_table(t, depth)
     --this is to handle cyclic table references
     return copy_table_recursive(t, {}, depth or math.huge)
 end
 
---functions to replace custom-keybind codes
+---@alias Replacer string|fun(item: Item, s: State): (string|number)
+---@alias ReplacerTable table<string,Replacer>
+
+---functions to replace custom-keybind codes
+---@type ReplacerTable
 fb_utils.code_fns = {
     ["%"] = "%",
 
@@ -437,7 +561,8 @@ fb_utils.code_fns = {
     n = function(item, s) return item and (item.label or item.name) or "" end,
     i = function(item, s)
             local i = fb_utils.list.indexOf(s.list, item)
-            return i ~= -1 and ('%0'..math.ceil(math.log10(#s.list))..'d'):format(i) or 0
+            if #s.list == 0 then return 0 end
+            return ('%0'..math.ceil(math.log10(#s.list))..'d'):format(i ~= -1 and i or 0)
         end,
     j = function (item, s)
             return fb_utils.list.indexOf(s.list, item) ~= -1 and math.abs(fb_utils.list.indexOf( fb_utils.sort_keys(s.selection) , item)) or 0
@@ -449,8 +574,10 @@ fb_utils.code_fns = {
     r = function(_, s) return s.parser.keybind_name or s.parser.name or "" end,
 }
 
--- programatically creates a pattern that matches any key code
--- this will result in some duplicates but that shouldn't really matter
+---Programatically creates a pattern that matches any key code.
+---This will result in some duplicates but that shouldn't really matter.
+---@param codes ReplacerTable
+---@return string
 function fb_utils.get_code_pattern(codes)
     local CUSTOM_KEYBIND_CODES = ""
     for key in pairs(codes) do CUSTOM_KEYBIND_CODES = CUSTOM_KEYBIND_CODES..key:lower()..key:upper() end
@@ -462,26 +589,35 @@ end
 -- overrides is a map of characters->strings|functions that determines the replacement string is
 -- item and state are values passed to functions in the map
 -- modifier_fn is given the replacement substrings before they are placed in the main string (the return value is the new replacement string)
+---comment
+---@param str string
+---@param overrides ReplacerTable
+---@param item Item
+---@param state State
+---@param modifier_fn fun(new_str: string): string
+---@return string
 function fb_utils.substitute_codes(str, overrides, item, state, modifier_fn)
     local replacers = overrides and setmetatable(fb_utils.copy_table(overrides), {__index = fb_utils.code_fns}) or fb_utils.code_fns
     item = item or g.state.list[g.state.selected]
     state = state or g.state
 
     return (string.gsub(str, fb_utils.get_code_pattern(replacers), function(code)
+        ---@type string|number
         local result
+        local replacer = replacers[code]
 
-        if type(replacers[code]) == "string" then
-            result = replacers[code]
+        if type(replacer) == "string" then
+            result = replacer
         --encapsulates the string if using an uppercase code
-        elseif not replacers[code] then
+        elseif not replacer then
             local lower_fn = replacers[code:lower()]
             if not lower_fn then return end
             result = string.format("%q", lower_fn(item, state))
         else
-            result = replacers[code](item, state)
+            result = replacer(item, state)
         end
 
-        if modifier_fn then return modifier_fn(result) end
+        if modifier_fn then return modifier_fn(tostring(result)) end
         return result
     end))
 end
