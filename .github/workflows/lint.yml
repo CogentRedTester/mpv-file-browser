@@ -1,0 +1,160 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Lint
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the "master" branch
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  Build_LuaLS:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    outputs:
+      luals_version: ${{ steps.get-luaLS-version.outputs.version }}
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - name: Get LuaLS version
+        id: get-luaLS-version
+        run: |
+          version=$(curl https://api.github.com/repos/LuaLS/lua-language-server/releases/latest | jq -r '.tag_name')
+          echo $version
+          echo "version=$version" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Cache Lua Language Server
+        uses: actions/cache@v4
+        id: cache
+        with:
+          key: ${{ steps.get-luaLS-version.outputs.version }}
+          path: ./luals
+
+      - uses: actions/checkout@v4
+        if: steps.cache.outputs.cache-hit != 'true'
+        with:
+          repository: LuaLS/lua-language-server
+          ref: ${{ steps.get-luaLS-version.outputs.version }}
+          path: ./luals
+
+      # Runs a single command using the runners shell
+      - name: Install Lua Language Server
+        if: steps.cache.outputs.cache-hit != 'true'
+        working-directory: ./luals
+        run: |
+          echo Running Lua Language Server build script
+          sudo apt-get update
+          sudo apt-get -y install ninja-build
+          ./make.sh
+  
+  Lint_LuaJit:
+    needs: Build_LuaLS
+    runs-on: ubuntu-latest
+    steps:
+            # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+        with:
+          path: ./file-browser
+      - name: Cache Lua Language Server
+        uses: actions/cache@v4
+        id: cache
+        with:
+          key: ${{ needs.Build_LuaLS.outputs.luals_version }}
+          path: ./luals
+      - name: Run LuaLS
+        run: |
+          jq '."runtime.version" = "LuaJIT"' ./file-browser/.luarc.json > tmp.json
+          mv tmp.json ./file-browser/.luarc.json
+          ./luals/bin/lua-language-server --check=./file-browser --logpath=./log/luajit
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LuaJIT Lint Report
+          path: ./log/luajit/check.json
+      
+      - name: Test output
+        shell: bash
+        run: |
+          FILE="./log/luajit/check.json"
+          if [ "$(jq 'length' "$FILE")" -gt 0 ]; then
+            jq '.' "$FILE" >&2
+            exit 1
+          fi
+
+  Lint_Lua51:
+    needs: Build_LuaLS
+    runs-on: ubuntu-latest
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+        with:
+          path: ./file-browser
+      - name: Cache Lua Language Server
+        uses: actions/cache@v4
+        id: cache
+        with:
+          key: ${{ needs.Build_LuaLS.outputs.luals_version }}
+          path: ./luals
+      - name: Run LuaLS
+        run: |
+          jq '."runtime.version" = "Lua 5.1"' ./file-browser/.luarc.json > tmp.json
+          mv tmp.json ./file-browser/.luarc.json
+          ./luals/bin/lua-language-server --check=./file-browser --logpath=./log/5.1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Lua 5.1 Lint Report
+          path: ./log/5.1/check.json
+      
+      - name: Test output
+        shell: bash
+        run: |
+          FILE="./log/5.1/check.json"
+          if [ "$(jq 'length' "$FILE")" -gt 0 ]; then
+            jq '.' "$FILE" >&2
+            exit 1
+          fi
+
+  Lint_Lua52:
+    needs: Build_LuaLS
+    runs-on: ubuntu-latest
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+        with:
+          path: ./file-browser
+      - name: Cache Lua Language Server
+        uses: actions/cache@v4
+        id: cache
+        with:
+          key: ${{ needs.Build_LuaLS.outputs.luals_version }}
+          path: ./luals
+      - name: Run LuaLS
+        run: |
+          jq '."runtime.version" = "Lua 5.2"' ./file-browser/.luarc.json > tmp.json
+          mv tmp.json ./file-browser/.luarc.json
+          ./luals/bin/lua-language-server --check=./file-browser --logpath=./log/lua5.2
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Lua 5.2 Lint Report
+          path: ./log/lua5.2/check.json
+      
+      - name: Test output
+        shell: bash
+        run: |
+          FILE="./log/lua5.2/check.json"
+          if [ "$(jq 'length' "$FILE")" -gt 0 ]; then
+            jq '.' "$FILE" >&2
+            exit 1
+          fi

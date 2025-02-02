@@ -1,10 +1,14 @@
 {
     "runtime.version": "LuaJIT",
+    "runtime.path": [
+        "?.lua",
+        "?/init.lua",
+        "../../script-modules/?.lua"
+    ],
     "diagnostics.workspaceDelay": 1000,
     "diagnostics.groupFileStatus": {
         "await": "Any",
         "luadoc": "Any",
-        // "strong": "Any",
         "type-check": "Any",
         "unbalanced": "Any"
     },
