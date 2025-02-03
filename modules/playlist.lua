@@ -88,6 +88,7 @@ local concurrent_loadlist_wrapper
 
 ---This function recursively loads directories concurrently in separate coroutines.
 ---Results are saved in a tree of tables that allows asynchronous access.
+---@async
 ---@param directory string
 ---@param load_opts LoadOpts
 ---@param prev_dirs Set<string>
@@ -98,7 +99,7 @@ local function concurrent_loadlist_parse(directory, load_opts, prev_dirs, item_t
     if prev_dirs[directory] then return end
     prev_dirs[directory] = true
 
-    local list, list_opts = scanning.scan_directory(directory, { source = "loadlist" })
+    local list, list_opts = scanning.scan_directory(directory, { source = 'loadlist' })
     if list == g.root then return end
 
     --if we can't parse the directory then append it and hope mpv fares better
@@ -174,6 +175,7 @@ end
 
 ---Recursive function to load directories serially.
 ---Returns true if any items were appended to the playlist.
+---@async
 ---@param directory string
 ---@param load_opts LoadOpts
 ---@param prev_dirs Set<string>

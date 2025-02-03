@@ -1,4 +1,4 @@
----@meta ParserDefs
+---@meta _
 
 ---A ParserConfig object returned by addons
 ---@class ParserConfig
@@ -6,8 +6,8 @@
 ---@field api_version string    The minimum API version the string requires.
 ---@field version string?        The minimum API version the string requires. @deprecated.
 ---
----@field can_parse (fun(self: Parser, directory: string, parse_state: ParseState): boolean)?
----@field parse (fun(self: Parser, directory: string, parse_state: ParseState): List?, Opts?)?
+---@field can_parse (async fun(self: Parser, directory: string, parse_state: ParseState): boolean)?
+---@field parse (async fun(self: Parser, directory: string, parse_state: ParseState): List?, Opts?)?
 ---@field setup fun(self: Parser)?
 ---
 ---@field name string?
@@ -18,13 +18,20 @@
 ---The parser object used by file-browser once the parsers have been loaded and initialised.
 ---@class Parser: ParserConfig, ParserAPI
 ---@field name string
----@field can_parse fun(self: Parser, directory: string, parse_state: ParseState): boolean
----@field parse fun(self: Parser, directory: string, parse_state: ParseState): List?, Opts?
+---@field can_parse async fun(self: Parser, directory: string, parse_state: ParseState): boolean
+---@field parse async fun(self: Parser, directory: string, parse_state: ParseState): List?, Opts?
+
+
+---@alias ParseStateSource 'browser'|'loadlist'|'script-message'|'addon'|string
+
+
+---The ParseStateTemplate object passed to the parse functions
+---@class ParseStateTemplate: table
+---@field source ParseStateSource?
 
 
 ---The Parse State object passed to the can_parse and parse methods
----@class ParseState: ParseStateAPI
----@field source 'browser'|'loadlist'|'script-message'|'addon'|string
+---@class ParseState: ParseStateAPI,ParseStateTemplate
+---@field source ParseStateSource
 ---@field directory string
 ---@field already_deferred boolean?
----@field yield fun(self: ParseState, ...:unknown): ...
