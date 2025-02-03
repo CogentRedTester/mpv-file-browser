@@ -11,7 +11,8 @@ local o = require 'modules.options'
 --sets the version for the file-browser API
 globals.API_VERSION = "1.7.0"
 
---gets the current platform (only works in mpv v0.36+)
+---gets the current platform (only works in mpv v0.36+)
+---@type string?
 globals.PLATFORM = mp.get_property_native('platform')
 
 --the osd_overlay API was not added until v0.31. The expand-path command was not added until 0.30
@@ -45,6 +46,7 @@ globals.style = {
     selection_marker = ([[{\alpha&H%s}]]):format(o.font_opacity_selection_marker),
 }
 
+---@type State
 globals.state = {
     list = {},
     selected = 1,
@@ -55,7 +57,8 @@ globals.state = {
     parser = nil,
     directory = nil,
     directory_label = nil,
-    prev_directory = "",
+    prev_directory = '',
+    empty_text = 'Empty Directory',
     co = nil,
 
     multiselect_start = nil,
@@ -63,6 +66,11 @@ globals.state = {
     selection = {}
 }
 
+---@class ParserRef
+---@field id string
+---@field index number?
+
+---@type table<number,Parser>|table<string,Parser>|table<Parser,ParserRef>>
 --the parser table actually contains 3 entries for each parser
 --a numeric entry which represents the priority of the parsers and has the parser object as the value
 --a string entry representing the id of each parser and with the parser object as the value
@@ -74,19 +82,32 @@ globals.parsers = {}
 --field in the table will be removed by the garbage collector
 globals.parse_states = setmetatable({}, { __mode = "k"})
 
+---@type table<string,boolean>
 globals.extensions = {}
+
+---@type table<string,boolean>
 globals.sub_extensions = {}
+
+---@type table<string,boolean>
 globals.audio_extensions = {}
+
+---@type table<string,boolean>
 globals.parseable_extensions = {}
 
---This table contains mappings to convert external directories to cannonical
+---This table contains mappings to convert external directories to cannonical
 --locations within the file-browser file tree. The keys of the table are Lua
 --patterns used to evaluate external directory paths. The value is the path
 --that should replace the part of the path than matched the pattern.
 --These mappings should only applied at the edges where external paths are
 --ingested by file-browser.
+---@type table<string,string>
 globals.directory_mappings = {}
 
+---@class CurrentFile
+---@field directory string?
+---@field name string?
+---@field path string?
+---@field original_path string?
 globals.current_file = {
     directory = nil,
     name = nil,
@@ -94,6 +115,7 @@ globals.current_file = {
     original_path = nil,
 }
 
+---@type List
 globals.root = {}
 
 --default list of compatible file extensions

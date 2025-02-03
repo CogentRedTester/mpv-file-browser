@@ -11,7 +11,10 @@ local parser_API = require 'modules.apis.parser'
 local API_MAJOR, API_MINOR, API_PATCH = g.API_VERSION:match("(%d+)%.(%d+)%.(%d+)")
 API_MAJOR, API_MINOR, API_PATCH = tonumber(API_MAJOR), tonumber(API_MINOR), tonumber(API_PATCH)
 
---checks if the given parser has a valid version number
+---checks if the given parser has a valid version number
+---@param parser Parser|Keybind
+---@param id string
+---@return boolean?
 local function check_api_version(parser, id)
     if parser.version then
         msg.warn(('%s: use of the `version` field is deprecated - use `api_version` instead'):format(id))
@@ -34,7 +37,8 @@ local function check_api_version(parser, id)
     return true
 end
 
---create a unique id for the given parser
+---create a unique id for the given parser
+---@param parser Parser
 local function set_parser_id(parser)
     local name = parser.name
     if g.parsers[name] then
@@ -50,14 +54,16 @@ local function set_parser_id(parser)
     g.parsers[parser] = { id = name }
 end
 
---runs an addon in a separate environment
+---runs an addon in a separate environment
+---@param path string
+---@return ParserConfig|ParserConfig[]|nil
 local function run_addon(path)
     local name_sqbr = string.format("[%s]", path:match("/([^/]*)%.lua$"))
     local addon_environment = fb_utils.redirect_table(_G)
-    addon_environment._G = addon_environment
+    addon_environment._G = addon_environment    ---@diagnostic disable-line inject-field
 
     --gives each addon custom debug messages
-    addon_environment.package = fb_utils.redirect_table(addon_environment.package)
+    addon_environment.package = fb_utils.redirect_table(addon_environment.package)  ---@diagnostic disable-line inject-field
     addon_environment.package.loaded = fb_utils.redirect_table(addon_environment.package.loaded)
     local msg_module = {
         log = function(level, ...) msg.log(level, name_sqbr, ...) end,
@@ -69,9 +75,9 @@ local function run_addon(path)
         debug = function(...) return msg.debug(name_sqbr, ...) end,
         trace = function(...) return msg.trace(name_sqbr, ...) end,
     }
-    addon_environment.print = msg_module.info
+    addon_environment.print = msg_module.info   ---@diagnostic disable-line inject-field
 
-    addon_environment.require = function(module)
+    addon_environment.require = function(module)    ---@diagnostic disable-line inject-field
         if module == "mp.msg" then return msg_module end
         return require(module)
     end
@@ -92,9 +98,17 @@ local function run_addon(path)
     return success and result or nil
 end
 
---setup an internal or external parser
+---Setup an internal or external parser.
+---Note that we're somewhat bypassing the type system here as we're converting from a
+---ParserConfig object to a Parser object. As such we need to make sure that the
+---we're doing everything correctly. A 2.0 release of the addon API could simplify
+---this by formally separating ParserConfigs from Parsers and providing an
+---API to register parsers.
+---@param parser ParserConfig
+---@param file string
+---@return nil
 local function setup_parser(parser, file)
-    parser = setmetatable(parser, { __index = parser_API })
+    parser = setmetatable(parser, { __index = parser_API }) --[[@as Parser]]
     parser.name = parser.name or file:gsub("%-browser%.lua$", ""):gsub("%.lua$", "")
 
     set_parser_id(parser)
@@ -114,7 +128,10 @@ local function setup_parser(parser, file)
     table.insert(g.parsers, parser)
 end
 
---load an external addon
+---load an external addon
+---@param file string
+---@param path string
+---@return nil
 local function setup_addon(file, path)
     if file:sub(-4) ~= ".lua" then return msg.verbose(path, "is not a lua file - aborting addon setup") end
 
@@ -130,7 +147,8 @@ local function setup_addon(file, path)
     end
 end
 
---loading external addons
+---loading external addons
+---@param directory string
 local function load_addons(directory)
     directory = fb_utils.fix_path(directory, true)
 
@@ -158,12 +176,15 @@ local function load_addons(directory)
 end
 
 local function load_internal_parsers()
-    local internal_addon_dir = mp.get_script_directory()..'/modules/parsers/'
+    local script_dir = mp.get_script_directory()
+    if not script_dir then return msg.error('script is not being run as a directory script!') end
+    local internal_addon_dir = script_dir..'/modules/parsers/'
     load_addons(internal_addon_dir)
 end
 
 local function load_external_addons()
-    local addon_dir = mp.command_native({"expand-path", o.addon_directory..'/'})
+    local addon_dir = mp.command_native({"expand-path", o.addon_directory..'/'}) --[[@as string|nil]]
+    if not addon_dir then return msg.error('could not resolve', o.addon_directory) end
     load_addons(addon_dir)
 end
 
