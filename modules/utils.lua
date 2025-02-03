@@ -549,13 +549,13 @@ function fb_utils.copy_table(t, depth)
     return copy_table_recursive(t, {}, depth or math.huge)
 end
 
----@alias Replacer string|fun(item: Item, s: State): (string|number)
+---@alias Replacer fun(item: Item, s: State): (string|number)
 ---@alias ReplacerTable table<string,Replacer>
 
 ---functions to replace custom-keybind codes
 ---@type ReplacerTable
 fb_utils.code_fns = {
-    ["%"] = "%",
+    ["%"] = function() return "%" end,
 
     f = function(item, s) return item and fb_utils.get_full_path(item, s.directory) or "" end,
     n = function(item, s) return item and (item.label or item.name) or "" end,
@@ -594,7 +594,7 @@ end
 ---@param overrides ReplacerTable
 ---@param item Item
 ---@param state State
----@param modifier_fn fun(new_str: string): string
+---@param modifier_fn? fun(new_str: string): string
 ---@return string
 function fb_utils.substitute_codes(str, overrides, item, state, modifier_fn)
     local replacers = overrides and setmetatable(fb_utils.copy_table(overrides), {__index = fb_utils.code_fns}) or fb_utils.code_fns

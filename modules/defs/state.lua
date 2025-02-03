@@ -7,7 +7,7 @@
 ---@field selected number
 ---@field hidden boolean
 ---@field flag_update boolean
----@field keybinds Keybind[]?
+---@field keybinds KeybindList?
 ---
 ---@field parser Parser?
 ---@field directory string?
