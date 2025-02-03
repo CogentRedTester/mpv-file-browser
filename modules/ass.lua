@@ -21,9 +21,11 @@ local function remove()
     ass:remove()
 end
 
+---@type string[]
 local string_buffer = {}
 
---appends the entered text to the overlay
+---appends the entered text to the overlay
+---@param ... string
 local function append(...)
     for i = 1, select("#", ...) do
         table.insert(string_buffer, select(i, ...) or '' )
@@ -40,15 +42,19 @@ local function flush_buffer()
     string_buffer = {}
 end
 
---detects whether or not to highlight the given entry as being played
+---detects whether or not to highlight the given entry as being played
+---@param v Item
+---@return boolean
 local function highlight_entry(v)
     if g.current_file.path == nil then return false end
     local full_path = fb_utils.get_full_path(v)
     local alt_path = v.name and g.state.directory..v.name or nil
 
     if fb_utils.parseable_item(v) then
-        return string.find(g.current_file.directory, full_path, 1, true)
+        return (
+            string.find(g.current_file.directory, full_path, 1, true)
             or (alt_path and string.find(g.current_file.directory, alt_path, 1, true))
+        ) ~= nil
     else
         return g.current_file.path == full_path
             or (alt_path and g.current_file.path == alt_path)
@@ -57,7 +63,9 @@ end
 
 local ass_cache = setmetatable({}, {__mode = 'k'})
 
--- escape ass values and replace newlines
+---escape ass values and replace newlines
+---@param str string
+---@return string
 local function ass_escape(str)
     if ass_cache[str] then return ass_cache[str] end
     local escaped = fb_utils.ass_escape(str, true)

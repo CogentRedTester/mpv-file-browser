@@ -591,9 +591,9 @@ end
 -- modifier_fn is given the replacement substrings before they are placed in the main string (the return value is the new replacement string)
 ---comment
 ---@param str string
----@param overrides ReplacerTable
----@param item Item
----@param state State
+---@param overrides? ReplacerTable
+---@param item? Item
+---@param state? State
 ---@param modifier_fn? fun(new_str: string): string
 ---@return string
 function fb_utils.substitute_codes(str, overrides, item, state, modifier_fn)
