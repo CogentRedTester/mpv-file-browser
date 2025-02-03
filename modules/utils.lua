@@ -466,11 +466,11 @@ local function json_safe_recursive(t)
 end
 
 ---Formats a table into a json string but ensures there are no invalid datatypes inside the table first.
----@param t table
----@return true|nil
----@return table?
----@overload fun(t: table): (true, table)
----@overload fun(t: table): (nil, string)
+---@param t any
+---@return table|nil
+---@return unknown|nil
+---@overload fun(t: table): (table)
+---@overload fun(t: table): (nil, unknown)
 function fb_utils.format_json_safe(t)
     --operate on a copy of the table to prevent any data loss in the original table
     t = json_safe_recursive(fb_utils.copy_table(t))
@@ -540,7 +540,7 @@ local function copy_table_recursive(t, references, depth)
 end
 
 ---A wrapper around copy_table to provide the reference table.
----@generic T: table
+---@generic T
 ---@param t T
 ---@param depth? number
 ---@return T
