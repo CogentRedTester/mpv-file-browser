@@ -24,14 +24,10 @@
 
 ---@alias ParseStateSource 'browser'|'loadlist'|'script-message'|'addon'|string
 
-
----The ParseStateTemplate object passed to the parse functions
----@class ParseStateTemplate: table
----@field source ParseStateSource?
-
-
 ---The Parse State object passed to the can_parse and parse methods
----@class ParseState: ParseStateAPI,ParseStateTemplate
+---@class ParseState: ParseStateAPI
 ---@field source ParseStateSource
 ---@field directory string
 ---@field already_deferred boolean?
+
+---@class (partial) ParseStateTemplate: ParseState

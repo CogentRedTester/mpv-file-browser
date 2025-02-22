@@ -44,7 +44,7 @@ end
 ---Sets up the parse_state table and runs the parse operation.
 ---@async
 ---@param directory string
----@param parse_state ParseState
+---@param parse_state ParseStateTemplate
 ---@return List|nil
 ---@return Opts
 local function run_parse(directory, parse_state)
@@ -52,7 +52,7 @@ local function run_parse(directory, parse_state)
     parse_state.directory = directory
 
     local co = coroutine.running()
-    g.parse_states[co] = setmetatable(parse_state, { __index = parse_state_API })
+    g.parse_states[co] = fb_utils.set_prototype(parse_state, parse_state_API)
 
     local list, opts = choose_and_parse(directory, 1)
 
