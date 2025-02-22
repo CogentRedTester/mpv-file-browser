@@ -23,7 +23,7 @@ fb_utils.coroutine = {}
 
 --implements table.pack if on lua 5.1
 if not table.pack then
-    table.unpack = unpack
+    table.unpack = unpack  ---@diagnostic disable-line deprecated
 ---@diagnostic disable-next-line: duplicate-set-field
     function table.pack(...)
         local t = {n = select("#", ...), ...}
@@ -504,11 +504,11 @@ function fb_utils.evaluate_string(str, chunkname, custom_env, env_defaults)
     end
 
     local chunk, err
-    if setfenv then
-        chunk, err = loadstring(str, chunkname)
-        if chunk then setfenv(chunk, env) end
+    if setfenv then  ---@diagnostic disable-line deprecated
+        chunk, err = loadstring(str, chunkname)  ---@diagnostic disable-line deprecated
+        if chunk then setfenv(chunk, env) end  ---@diagnostic disable-line deprecated
     else
-        chunk, err = load(str, chunkname, 't', env)
+        chunk, err = load(str, chunkname, 't', env) ---@diagnostic disable-line redundant-parameter
     end
     if not chunk then
         msg.warn('failed to load string:', str)
@@ -563,7 +563,7 @@ fb_utils.code_fns = {
     i = function(item, s)
             local i = fb_utils.list.indexOf(s.list, item)
             if #s.list == 0 then return 0 end
-            return ('%0'..math.ceil(math.log10(#s.list))..'d'):format(i ~= -1 and i or 0)
+            return ('%0'..math.ceil(math.log10(#s.list))..'d'):format(i ~= -1 and i or 0)  ---@diagnostic disable-line deprecated
         end,
     j = function (item, s)
             return fb_utils.list.indexOf(s.list, item) ~= -1 and math.abs(fb_utils.list.indexOf( fb_utils.sort_keys(s.selection) , item)) or 0

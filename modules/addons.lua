@@ -83,14 +83,14 @@ local function run_addon(path)
     end
 
     local chunk, err
-    if setfenv then
+    if setfenv then ---@diagnostic disable-line deprecated
         --since I stupidly named a function loadfile I need to specify the global one
         --I've been using the name too long to want to change it now
         chunk, err = _G.loadfile(path)
         if not chunk then return msg.error(err) end
-        setfenv(chunk, addon_environment)
+        setfenv(chunk, addon_environment)  ---@diagnostic disable-line deprecated
     else
-        chunk, err = _G.loadfile(path, "bt", addon_environment)
+        chunk, err = _G.loadfile(path, "bt", addon_environment) ---@diagnostic disable-line redundant-parameter
         if not chunk then return msg.error(err) end
     end
 

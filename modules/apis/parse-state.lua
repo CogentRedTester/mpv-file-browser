@@ -26,7 +26,7 @@ function parse_state_API:yield(...)
         msg.verbose("browser no longer waiting for list - aborting parse for", self.directory)
         error(g.ABORT_ERROR)
     end
-    return unpack(result, 1, result.n)
+    return table.unpack(result, 1, result.n)
 end
 
 ---Checks if the current coroutine is the one handling the browser's request.
