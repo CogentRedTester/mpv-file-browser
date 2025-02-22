@@ -80,18 +80,19 @@ globals.parsers = {}
 --this table contains the parse_state tables for every parse operation indexed with the coroutine used for the parse
 --this table has weakly referenced keys, meaning that once the coroutine for a parse is no-longer used by anything that
 --field in the table will be removed by the garbage collector
+---@type table<thread,ParseState>
 globals.parse_states = setmetatable({}, { __mode = "k"})
 
----@type table<string,boolean>
+---@type Set<string>
 globals.extensions = {}
 
----@type table<string,boolean>
+---@type Set<string>
 globals.sub_extensions = {}
 
----@type table<string,boolean>
+---@type Set<string>
 globals.audio_extensions = {}
 
----@type table<string,boolean>
+---@type Set<string>
 globals.parseable_extensions = {}
 
 ---This table contains mappings to convert external directories to cannonical
@@ -130,6 +131,7 @@ globals.compatible_file_extensions = {
     "wv","x264","x265","xvid","y4m","yuv"
 }
 
+---@class BrowserAbortError
 globals.ABORT_ERROR = {
     msg = "browser is no longer waiting for list - aborting parse"
 }

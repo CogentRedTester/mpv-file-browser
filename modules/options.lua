@@ -1,6 +1,7 @@
 local utils = require 'mp.utils'
 local opt = require 'mp.options'
 
+---@class Options
 local o = {
     --root directories
     root = "~/",
