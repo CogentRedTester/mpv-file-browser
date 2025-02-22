@@ -86,6 +86,8 @@ end
 
 local concurrent_loadlist_wrapper
 
+---@alias ConcurrentRefMap table<List|Item,{directory: string, sublist: List}>
+
 ---This function recursively loads directories concurrently in separate coroutines.
 ---Results are saved in a tree of tables that allows asynchronous access.
 ---@async
@@ -93,8 +95,9 @@ local concurrent_loadlist_wrapper
 ---@param load_opts LoadOpts
 ---@param prev_dirs Set<string>
 ---@param item_t Item
+---@param refs ConcurrentRefMap
 ---@return boolean?
-local function concurrent_loadlist_parse(directory, load_opts, prev_dirs, item_t)
+local function concurrent_loadlist_parse(directory, load_opts, prev_dirs, item_t, refs)
     --prevents infinite recursion from the item.path or opts.directory fields
     if prev_dirs[directory] then return end
     prev_dirs[directory] = true
@@ -114,8 +117,8 @@ local function concurrent_loadlist_parse(directory, load_opts, prev_dirs, item_t
 
     --we must declare these before we start loading sublists otherwise the append thread will
     --need to wait until the whole list is loaded (when synchronous IO is used)
-    item_t._sublist = list or {}
-    list._directory = directory
+    refs[item_t].sublist = list or {}
+    refs[list].directory = directory
 
     --launches new parse operations for directories, each in a different coroutine
     for _, item in ipairs(list) do
@@ -132,7 +135,8 @@ end
 ---@param opts LoadOpts
 ---@param prev_dirs Set<string>
 ---@param item Item
-function concurrent_loadlist_wrapper(directory, opts, prev_dirs, item)
+---@param refs ConcurrentRefMap
+function concurrent_loadlist_wrapper(directory, opts, prev_dirs, item, refs)
     --ensures that only a set number of concurrent parses are operating at any one time.
     --the mpv event queue is seemingly limited to 1000 items, but only async mpv actions like
     --command_native_async should use that, events like mp.add_timeout (which coroutine.sleep() uses) should
@@ -142,9 +146,9 @@ function concurrent_loadlist_wrapper(directory, opts, prev_dirs, item)
     end
     opts.concurrency = opts.concurrency + 1
 
-    local success = concurrent_loadlist_parse(directory, opts, prev_dirs, item)
+    local success = concurrent_loadlist_parse(directory, opts, prev_dirs, item, refs)
     opts.concurrency = opts.concurrency - 1
-    if not success then item._sublist = {} end
+    if not success then refs[item].sublist = {} end
     if coroutine.status(opts.co) == "suspended" then fb_utils.coroutine.resume_err(opts.co) end
 end
 
@@ -153,19 +157,20 @@ end
 ---@async
 ---@param list List
 ---@param load_opts LoadOpts
-local function concurrent_loadlist_append(list, load_opts)
-    local directory = list._directory
+---@param refs ConcurrentRefMap
+local function concurrent_loadlist_append(list, load_opts, refs)
+    local directory = refs[list].directory
 
     for _, item in ipairs(list) do
         if not g.sub_extensions[ fb_utils.get_extension(item.name, "") ]
         and not g.audio_extensions[ fb_utils.get_extension(item.name, "") ]
         then
-            while (not item._sublist and fb_utils.parseable_item(item)) do
+            while (not refs[item].sublist and fb_utils.parseable_item(item)) do
                 coroutine.yield()
             end
 
             if fb_utils.parseable_item(item) then
-                concurrent_loadlist_append(item._sublist, load_opts)
+                concurrent_loadlist_append(refs[item].sublist, load_opts, refs)
             else
                 loadfile(fb_utils.get_full_path(item, directory), load_opts, item.mpv_options)
             end
@@ -226,10 +231,12 @@ local function loadlist(item, opts)
         opts.co = fb_utils.coroutine.assert()
         opts.concurrency = 0
 
+        local refs = setmetatable({}, {__mode = 'k'})
+
         --we need the current coroutine to suspend before we run the first parse operation, so
         --we schedule the coroutine to run on the mpv event queue
-        fb_utils.coroutine.queue(concurrent_loadlist_wrapper, dir, opts, {}, item)
-        concurrent_loadlist_append({item, _directory = opts.directory}, opts)
+        fb_utils.coroutine.queue(concurrent_loadlist_wrapper, dir, opts, {}, item, refs)
+        concurrent_loadlist_append({item, _directory = opts.directory}, opts, refs)
     else
         custom_loadlist_recursive(dir, opts, {})
     end
