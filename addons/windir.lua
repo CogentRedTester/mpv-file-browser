@@ -17,6 +17,8 @@ ffi.cdef([[
 
 --converts a UTF16 string to a UTF8 string
 --this function was adapted from https://github.com/mpv-player/mpv/issues/10139#issuecomment-1117954648
+---@param WideCharStr any
+---@return string?
 local function utf8(WideCharStr)
     WideCharStr = ffi.cast("wchar_t*", WideCharStr)
     if not WideCharStr then return nil end
@@ -32,6 +34,7 @@ local function utf8(WideCharStr)
     end
 end
 
+---@type ParserConfig
 local dir = {
     priority = 109,
     api_version = "1.1.0",
@@ -39,6 +42,11 @@ local dir = {
     keybind_name = "file"
 }
 
+---@async
+---@param args string[]
+---@param parse_state ParseState
+---@return string|nil
+---@return string?
 local function command(args, parse_state)
     local _, cmd = parse_state:yield(
         mp.command_native_async({
@@ -59,10 +67,11 @@ local function command(args, parse_state)
 end
 
 function dir:can_parse(directory)
-    if directory == "" then return end
+    if directory == "" then return false end
     return not fb.get_protocol(directory)
 end
 
+---@async
 function dir:parse(directory, parse_state)
     local list = {}
     local files, dirs, err

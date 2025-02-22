@@ -10,12 +10,14 @@
 
 local rf = require "read-file"
 
+---@type ParserConfig
 local m3u = {
     priority = 100,
     api_version = "1.0.0",
     name = "m3u"
 }
 
+---@type table<string,string>
 local full_paths = {}
 
 function m3u:setup()
@@ -24,7 +26,7 @@ function m3u:setup()
 end
 
 function m3u:can_parse(directory)
-    return directory:find("m3u8?/?$")
+    return directory:find("m3u8?/?$") ~= nil
 end
 
 function m3u:parse(directory)

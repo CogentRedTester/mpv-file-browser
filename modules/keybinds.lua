@@ -248,7 +248,7 @@ local function run_keybind_coroutine(key)
 end
 
 ---Scans the given command table to identify if they contain any custom keybind codes.
----@param command_table function|KeybindCommandTable[]
+---@param command_table KeybindCommand
 ---@param codes Set<string>
 ---@return Set<string>
 local function scan_for_codes(command_table, codes)

@@ -2,7 +2,7 @@
 
 ---A ParserConfig object returned by addons
 ---@class (partial) ParserConfig: ParserAPI
----@field priority number
+---@field priority number?
 ---@field api_version string    The minimum API version the string requires.
 ---@field version string?        The minimum API version the string requires. @deprecated.
 ---

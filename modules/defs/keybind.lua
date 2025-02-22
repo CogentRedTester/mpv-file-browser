@@ -31,6 +31,8 @@
 ---@field addon boolean?    Whether the keybind was created by an addon.
 
 
----@alias KeybindCommand function|KeybindCommandTable[]
----@alias KeybindTuple [string,string,table|function,KeybindFlags?]
+---@alias KeybindFunctionCallback async fun(keybind: Keybind, state: State, co: thread)
+
+---@alias KeybindCommand KeybindFunctionCallback|KeybindCommandTable[]
+---@alias KeybindTuple [string,string,KeybindCommand,KeybindFlags?]
 ---@alias KeybindList (Keybind|KeybindTuple)[]

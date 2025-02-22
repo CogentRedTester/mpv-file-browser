@@ -20,20 +20,29 @@ do
     end
 end
 
+---@type ParserConfig
 local apache = {
     priority = 80,
     api_version = "1.1.0"
 }
 
+---@param name string
+---@return boolean
 function apache:can_parse(name)
-    return name:find("^https?://")
+    return name:find("^https?://") ~= nil
 end
 
---send curl errors through the browser empty_text
-function apache:send_error(str)
+---Send curl errors through the browser empty_text.
+---@param str string
+---@return List
+---@return Opts
+local function send_error(str)
     return {}, {empty_text = "curl error: "..str}
 end
 
+---@async
+---@param args string[]
+---@return any
 local function execute(args)
     msg.trace(utils.to_string(args))
     local _, cmd = fb.get_parse_state():yield(
@@ -48,16 +57,17 @@ local function execute(args)
     return cmd
 end
 
+---@async
 function apache:parse(directory)
     msg.verbose(directory)
 
     local test = execute({"curl", "-k", "-l", "-I", directory})
     local response = test.stdout:match("(%d%d%d [^\n\r]+)")
     if test.stdout:match("Content%-Type: ([^\r\n/]+)") ~= "text" then return nil end
-    if response ~= "200 OK" then return self:send_error(response) end
+    if response ~= "200 OK" then return send_error(response) end
 
     local html = execute({"curl", "-k", "-l", directory})
-    if html.status ~= 0 then return self:send_error(tostring(html.status))
+    if html.status ~= 0 then return send_error(tostring(html.status))
     elseif not html.stdout:find("%[PARENTDIR%]") then return nil end
 
     html = html.stdout

@@ -16,12 +16,20 @@ local fb = require "file-browser"
 local input_loaded, input = pcall(require, "mp.input")
 local user_input_loaded, user_input = pcall(require, "user-input-module")
 
+---@type ParserConfig
 local find = {
     api_version = "1.3.0"
 }
+
+---@type thread|nil
 local latest_coroutine = nil
+
+---@type State
 local global_fb_state = getmetatable(fb.get_state()).__original
 
+---@param name string
+---@param query string
+---@return boolean
 local function compare(name, query)
     if name:find(query) then return true end
     if name:lower():find(query) then return true end
@@ -30,6 +38,11 @@ local function compare(name, query)
     return false
 end
 
+---@async
+---@param key Keybind
+---@param state State
+---@param co thread
+---@return boolean?
 local function main(key, state, co)
     if not state.list then return false end
 
@@ -75,6 +88,7 @@ local function main(key, state, co)
     --keep cycling through the search results if any are found
     --putting this into a separate coroutine removes any passthrough ambiguity
     --the final return statement should return to `step_find` not any other function
+    ---@async
     fb.coroutine.run(function()
         latest_coroutine = coroutine.running()
         local rindex = 1
@@ -89,7 +103,7 @@ local function main(key, state, co)
 
             if parse_id ~= global_fb_state.co then
                 latest_coroutine = nil
-                return false
+                return
             end
         end
     end)
