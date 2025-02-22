@@ -18,7 +18,7 @@ function parser_api:get_id() return g.parsers[self].id end
 ---A newer API for adding items to the root.
 ---Only adds the item if the same item does not already exist in the root.
 ---Wrapper around `fb.register_root_item`.
----@param item number
+---@param item Item|string
 ---@param priority? number  The priority for the added item. Uses the parsers priority by default.
 ---@return boolean
 function parser_api:register_root_item(item, priority)

@@ -1,7 +1,7 @@
 ---@meta _
 
 ---A ParserConfig object returned by addons
----@class ParserConfig
+---@class (partial) ParserConfig: ParserAPI
 ---@field priority number
 ---@field api_version string    The minimum API version the string requires.
 ---@field version string?        The minimum API version the string requires. @deprecated.
@@ -12,12 +12,14 @@
 ---
 ---@field name string?
 ---@field keybind_name string?
----@field keybinds Keybind[]?
+---@field keybinds KeybindList?
 
 
 ---The parser object used by file-browser once the parsers have been loaded and initialised.
----@class Parser: ParserConfig, ParserAPI
+---@class Parser: ParserAPI, ParserConfig
 ---@field name string
+---@field priority number
+---@field api_version string
 ---@field can_parse async fun(self: Parser, directory: string, parse_state: ParseState): boolean
 ---@field parse async fun(self: Parser, directory: string, parse_state: ParseState): List?, Opts?
 

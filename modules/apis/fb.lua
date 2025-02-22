@@ -1,3 +1,5 @@
+---@meta file-browser
+
 local mp = require 'mp'
 local msg = require 'mp.msg'
 local utils = require 'mp.utils'
@@ -95,14 +97,14 @@ end
 
 ---A newer API for adding items to the root.
 ---Only adds the item if the same item does not already exist in the root.
----@param item any
+---@param item Item|string
 ---@param priority? number Specifies the insertion location, a lower priority
 ---                        is placed higher in the list and the default is 100.
 ---@return boolean
 function fb.register_root_item(item, priority)
     msg.verbose('registering root item:', utils.to_string(item))
     if type(item) == 'string' then
-        item = {name = item}
+        item = {name = item, type = 'dir'}
     end
 
     -- if the item is already in the list then do nothing
