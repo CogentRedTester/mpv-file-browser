@@ -122,7 +122,7 @@ function fb.get_parse_state(co) return g.parse_states[co or coroutine.running() 
 -- deprecated
 function fb.get_dvd_device()
     local dvd_device = mp.get_property('dvd-device')
-    if not dvd_device then return nil end
+    if not dvd_device or dvd_device == '' then return nil end
     return fb_utils.fix_path(dvd_device, true)
 end
 
