@@ -75,21 +75,7 @@ jobs:
         run: |
           jq '."runtime.version" = "LuaJIT"' ./file-browser/.luarc.json > tmp.json
           mv tmp.json ./file-browser/.luarc.json
-          ./luals/bin/lua-language-server --check=./file-browser --logpath=./log/luajit
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: LuaJIT Lint Report
-          path: ./log/luajit/check.json
-      
-      - name: Test output
-        shell: bash
-        run: |
-          FILE="./log/luajit/check.json"
-          if [ "$(jq 'length' "$FILE")" -gt 0 ]; then
-            jq '.' "$FILE" >&2
-            exit 1
-          fi
+          ./luals/bin/lua-language-server --check=./file-browser
 
   Lint_Lua51:
     needs: Build_LuaLS
@@ -109,21 +95,7 @@ jobs:
         run: |
           jq '."runtime.version" = "Lua 5.1"' ./file-browser/.luarc.json > tmp.json
           mv tmp.json ./file-browser/.luarc.json
-          ./luals/bin/lua-language-server --check=./file-browser --logpath=./log/5.1
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Lua 5.1 Lint Report
-          path: ./log/5.1/check.json
-      
-      - name: Test output
-        shell: bash
-        run: |
-          FILE="./log/5.1/check.json"
-          if [ "$(jq 'length' "$FILE")" -gt 0 ]; then
-            jq '.' "$FILE" >&2
-            exit 1
-          fi
+          ./luals/bin/lua-language-server --check=./file-browser
 
   Lint_Lua52:
     needs: Build_LuaLS
@@ -143,18 +115,4 @@ jobs:
         run: |
           jq '."runtime.version" = "Lua 5.2"' ./file-browser/.luarc.json > tmp.json
           mv tmp.json ./file-browser/.luarc.json
-          ./luals/bin/lua-language-server --check=./file-browser --logpath=./log/lua5.2
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Lua 5.2 Lint Report
-          path: ./log/lua5.2/check.json
-      
-      - name: Test output
-        shell: bash
-        run: |
-          FILE="./log/lua5.2/check.json"
-          if [ "$(jq 'length' "$FILE")" -gt 0 ]; then
-            jq '.' "$FILE" >&2
-            exit 1
-          fi
+          ./luals/bin/lua-language-server --check=./file-browser
