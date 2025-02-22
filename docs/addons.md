@@ -1,4 +1,4 @@
-# How to Write an Addon - API v1.7.0
+# How to Write an Addon - API v1.7.1
 
 Addons provide ways for file-browser to parse non-native directory structures. This document describes how one can create their own custom addon.
 
@@ -859,8 +859,9 @@ Used for custom-keybind filtering.
 
 The current directory open in the browser.
 
-#### `fb.get_dvd_device(): string`
+#### ~~`fb.get_dvd_device(): string`~~
 
+*DEPRECATED*.
 The current dvd-device as reported by mpv's `dvd-device` property.
 Formatted to work with file-browser.
 

@@ -1,3 +1,4 @@
+local mp = require 'mp'
 local msg = require 'mp.msg'
 local utils = require 'mp.utils'
 
@@ -106,7 +107,6 @@ function fb.get_sub_extensions() return fb.copy_table(g.sub_extensions) end
 function fb.get_audio_extensions() return fb.copy_table(g.audio_extensions) end
 function fb.get_parseable_extensions() return fb.copy_table(g.parseable_extensions) end
 function fb.get_state() return fb.copy_table(g.state) end
-function fb.get_dvd_device() return g.dvd_device end
 function fb.get_parsers() return fb.copy_table(g.parsers) end
 function fb.get_root() return fb.copy_table(g.root) end
 function fb.get_directory() return g.state.directory end
@@ -118,6 +118,13 @@ function fb.get_selected_index() return g.state.selected end
 function fb.get_selected_item() return fb.copy_table(g.state.list[g.state.selected]) end
 function fb.get_open_status() return not g.state.hidden end
 function fb.get_parse_state(co) return g.parse_states[co or coroutine.running() or ""] end
+
+-- deprecated
+function fb.get_dvd_device()
+    local dvd_device = mp.get_property('dvd-device')
+    if not dvd_device then return nil end
+    return fb_utils.fix_path(dvd_device, true)
+end
 
 function fb.set_empty_text(str)
     g.state.empty_text = str
