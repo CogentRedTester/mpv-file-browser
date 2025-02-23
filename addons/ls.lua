@@ -9,6 +9,7 @@ local mp = require "mp"
 local msg = require "mp.msg"
 local fb = require "file-browser"
 
+---@type ParserConfig
 local ls = {
     priority = 109,
     api_version = "1.1.0",
@@ -16,6 +17,10 @@ local ls = {
     keybind_name = "file"
 }
 
+---@async
+---@param args string[]
+---@param parse_state ParseState
+---@return string|nil
 local function command(args, parse_state)
     local _, cmd = parse_state:yield(
         mp.command_native_async({
@@ -34,6 +39,7 @@ function ls:can_parse(directory)
     return directory ~= '' and not fb.get_protocol(directory)
 end
 
+---@async
 function ls:parse(directory, parse_state)
     local list = {}
     local files = command({"ls", "-1", "-p", "-A", "-N", "--zero", directory}, parse_state)

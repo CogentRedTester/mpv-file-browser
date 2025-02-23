@@ -5,7 +5,7 @@
 local mp = require "mp"
 local fb = require "file-browser"
 
-local home = fb.fix_path(mp.command_native({"expand-path", "~/"}), true)
+local home = fb.fix_path(mp.command_native({"expand-path", "~/"}) --[[@as string]], true)
 
 local home_label = {
     priority = 100,

@@ -10,6 +10,7 @@ local movement = require 'modules.navigation.directory-movement'
 local ass = require 'modules.ass'
 local cursor = require 'modules.navigation.cursor'
 
+---@class controls
 local controls = {}
 
 --opens the browser
@@ -70,12 +71,15 @@ function controls.escape()
     controls.close()
 end
 
---opens a specific directory
+---opens a specific directory
+---@param directory string
+---@param open_browser? boolean
+---@return thread|nil
 function controls.browse_directory(directory, open_browser)
     if not directory then return end
     if open_browser == nil then open_browser = true end
 
-    directory = mp.command_native({"expand-path", directory}) or ''
+    directory = mp.command_native({"expand-path", directory}, '') --[[@as string]]
     -- directory = join_path( mp.get_property("working-directory", ""), directory )
 
     if directory ~= "" then directory = fb_utils.fix_path(directory, true) end

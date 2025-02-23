@@ -1,0 +1,25 @@
+{
+    "runtime.version": "LuaJIT",
+    "runtime.path": [
+        "?.lua",
+        "?/init.lua",
+        "../../script-modules/?.lua"
+    ],
+    "diagnostics.workspaceDelay": 1000,
+    "diagnostics.groupFileStatus": {
+        "await": "Any",
+        "luadoc": "Any",
+        "type-check": "Any",
+        "unbalanced": "Any"
+    },
+    "diagnostics.groupSeverity": {
+        "await": "Error"
+    },
+    "diagnostics.severity": {
+        "missing-return": "Error!",
+        "missing-return-value": "Error!",
+        "cast-type-mismatch": "Error!",
+        "assign-type-mismatch": "Error!",
+        "global-element": "Warning!"
+    }
+}
