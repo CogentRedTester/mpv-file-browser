@@ -198,6 +198,7 @@ local function rescan(moving_adjacent)
     return g.state.co
 end
 
+---@class scanning
 return {
     rescan = rescan,
     scan_directory = parse_directory,

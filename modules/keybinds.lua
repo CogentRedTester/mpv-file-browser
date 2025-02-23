@@ -341,6 +341,7 @@ local function setup_keybinds()
     end
 end
 
+---@class keybinds
 return {
     setup_keybinds = setup_keybinds,
 }
