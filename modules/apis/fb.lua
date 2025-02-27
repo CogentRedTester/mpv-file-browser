@@ -22,7 +22,7 @@ fb.redraw = ass.update_ass
 fb.browse_directory = controls.browse_directory
 
 ---Clears the directory cache.
----@return thread?
+---@return thread
 function fb.rescan()
     cache:clear({g.state.directory})
     return scanning.rescan()

@@ -168,7 +168,7 @@ end
 
 ---rescans the folder and updates the list.
 ---@param moving_adjacent? number|boolean
----@return thread? # The coroutine for the triggered parse operation. May be aborted early if directory is in the cache.
+---@return thread # The coroutine for the triggered parse operation. May be aborted early if directory is in the cache.
 local function rescan(moving_adjacent)
     if moving_adjacent == nil then moving_adjacent = 0 end
 
@@ -183,7 +183,7 @@ local function rescan(moving_adjacent)
     --the directory is always handled within a coroutine to allow addons to
     --pause execution for asynchronous operations
     ---@async
-    g.state.co = fb_utils.coroutine.queue(function()
+    local co = fb_utils.coroutine.queue(function()
         update_list(moving_adjacent)
         if g.state.empty_text == "~" then g.state.empty_text = "empty directory" end
 
@@ -195,7 +195,8 @@ local function rescan(moving_adjacent)
         ass.update_ass()
     end)
 
-    return g.state.co
+    g.state.co = co
+    return co
 end
 
 ---@class scanning
