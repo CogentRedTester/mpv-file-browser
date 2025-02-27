@@ -6,6 +6,7 @@
 local msg = require 'mp.msg'
 local utils = require 'mp.utils'
 
+local o = require 'modules.options'
 local g = require 'modules.globals'
 local fb_utils = require 'modules.utils'
 
@@ -57,6 +58,10 @@ function cache:replace_dangling_refs(directory, ref)
 end
 
 function cache:add_current_state()
+    -- We won't actually store any cache details here if
+    -- the option is not enabled.
+    if not o.cache then return end
+
     local directory = g.state.directory
     if directory == nil then return end
 
