@@ -10,7 +10,7 @@ local o = require 'modules.options'
 local globals = {}
 
 --sets the version for the file-browser API
-globals.API_VERSION = "1.7.1"
+globals.API_VERSION = "1.8.0"
 
 ---gets the current platform (only works in mpv v0.36+)
 ---@type string?
