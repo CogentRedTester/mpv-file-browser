@@ -20,9 +20,8 @@ fb.browse_directory = controls.browse_directory
 
 function fb.rescan()
     cache:clear({g.state.directory})
-    scanning.rescan()
+    return scanning.rescan()
 end
-
 
 function fb.clear_cache()
     cache:clear()
