@@ -6,6 +6,7 @@
 local msg = require 'mp.msg'
 local utils = require 'mp.utils'
 
+local o = require 'modules.options'
 local g = require 'modules.globals'
 local fb_utils = require 'modules.utils'
 
@@ -57,6 +58,10 @@ function cache:replace_dangling_refs(directory, ref)
 end
 
 function cache:add_current_state()
+    -- We won't actually store any cache details here if
+    -- the option is not enabled.
+    if not o.cache then return end
+
     local directory = g.state.directory
     if directory == nil then return end
 
@@ -124,7 +129,23 @@ function cache:clear_traversal_stack()
     self.traversal_stack = {}
 end
 
-function cache:clear()
+function cache:clear(directories)
+    if directories then
+        msg.verbose('clearing cache', utils.to_string(directories))
+        for _, dir in ipairs(directories) do
+            self.cache[dir] = nil
+            for _, v in ipairs(self.traversal_stack) do
+                if v.directory == dir then v.ref = nil end
+            end
+            for _, v in ipairs(self.history) do
+                if v.directory == dir then v.ref = nil end
+            end
+            self.dangling_refs[dir] = nil
+        end
+        return
+    end
+
+    msg.verbose('clearing cache')
     self.cache = setmetatable({}, {__mode = 'kv'})
     for _, v in ipairs(self.traversal_stack) do
         v.ref = nil
