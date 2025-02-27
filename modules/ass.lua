@@ -59,6 +59,7 @@ local function highlight_entry(v)
     end
 end
 
+---@type table<string,string>
 local ass_cache = setmetatable({}, {__mode = 'k'})
 
 ---escape ass values and replace newlines
@@ -90,12 +91,15 @@ local function update_ass()
         return
     end
 
+    ---@type number
     local start = 1
+    ---@type number
     local finish = start+o.num_entries-1
 
     --handling cursor positioning
     local mid = math.ceil(o.num_entries/2)+1
     if state.selected+mid > finish then
+        ---@type number
         local offset = state.selected - finish + mid
 
         --if we've overshot the end of the list then undo some of the offset

@@ -55,7 +55,7 @@ end
 
 ---runs an addon in a separate environment
 ---@param path string
----@return ParserConfig|ParserConfig[]|nil
+---@return unknown
 local function run_addon(path)
     local name_sqbr = string.format("[%s]", path:match("/([^/]*)%.lua$"))
     local addon_environment = fb_utils.redirect_table(_G)
@@ -81,6 +81,7 @@ local function run_addon(path)
         return require(module)
     end
 
+    ---@type function?, string?
     local chunk, err
     if setfenv then ---@diagnostic disable-line deprecated
         --since I stupidly named a function loadfile I need to specify the global one
@@ -93,6 +94,7 @@ local function run_addon(path)
         if not chunk then return msg.error(err) end
     end
 
+    ---@diagnostic disable-next-line no-unknown
     local success, result = xpcall(chunk, fb_utils.traceback)
     return success and result or nil
 end
@@ -134,14 +136,14 @@ end
 local function setup_addon(file, path)
     if file:sub(-4) ~= ".lua" then return msg.verbose(path, "is not a lua file - aborting addon setup") end
 
-    local addon_parsers = run_addon(path)
+    local addon_parsers = run_addon(path) --[=[@as ParserConfig|ParserConfig[]]=]
     if addon_parsers and not next(addon_parsers) then return msg.verbose('addon', path, 'returned empry table - special case, ignoring') end
     if not addon_parsers or type(addon_parsers) ~= "table" then return msg.error("addon", path, "did not return a table") end
 
     --if the table contains a priority key then we assume it isn't an array of parsers
     if not addon_parsers[1] then addon_parsers = {addon_parsers} end
 
-    for _, parser in ipairs(addon_parsers) do
+    for _, parser in ipairs(addon_parsers --[=[@as ParserConfig[]]=]) do
         setup_parser(parser, file)
     end
 end

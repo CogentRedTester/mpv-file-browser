@@ -49,9 +49,9 @@ function mp.commandv(...) end
 ---@generic T
 ---@param t table
 ---@param def? T
----@return table|T result
+---@return table|string|T result
 ---@return string? error
----@overload fun(t: table): (table|nil, string?)
+---@overload fun(t: table): (table|string|nil, string?)
 function mp.command_native(t, def) end
 
 ---@nodiscard

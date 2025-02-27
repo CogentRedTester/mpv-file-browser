@@ -47,6 +47,7 @@ end
 ---Makes chaining script-messages much easier.
 ---@param ... string
 function script_messages.chain(...)
+    ---@type string[]
     local command = table.pack('script-message', ...)
     for i, v in ipairs(command) do
         if v == '=>' then command[i] = 'script-message' end
@@ -81,12 +82,14 @@ end
 ---Expressions must be surrounded by !{}. Another ! before the { will escape the evaluation.
 ---@param ... string
 function script_messages.evaluate_expressions(...)
+    ---@type string[]
     local args = table.pack(...)
     fb_utils.coroutine.run(function()
         for i, arg in ipairs(args) do
             args[i] = arg:gsub('(!+)(%b{})', function(lead, expression)
                 if #lead % 2 == 0 then return string.rep('!', #lead/2)..expression end
 
+                ---@type any
                 local eval = fb_utils.evaluate_string('return '..expression:sub(2, -2))
                 return type(eval) == "table" and utils.to_string(eval) or tostring(eval)
             end)

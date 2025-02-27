@@ -52,7 +52,7 @@ end
 ---@param fn fun(v: T, i: number, t: T[]): boolean
 ---@return boolean
 function fb_utils.list.some(t, fn)
-    for i, v in ipairs(t) do
+    for i, v in ipairs(t --[=[@as any[]]=]) do
         if fn(v, i, t) then return true end
     end
     return false
@@ -67,8 +67,8 @@ end
 ---@return R[]
 function fb_utils.list.map(t, fn)
     local new_t = {}
-    for i, v in ipairs(t) do
-        new_t[i] = fn(v, i, t)
+    for i, v in ipairs(t --[=[@as any[]]=]) do
+        new_t[i] = fn(v, i, t) ---@diagnostic disable-line no-unknown
     end
     return new_t
 end
@@ -263,7 +263,7 @@ function fb_utils.ass_escape(str, replace_newline)
     str = str:gsub('^ ', '\\h')
 
     if replace_newline then
-        str = str:gsub("\\N", replace_newline)
+        str = string.gsub(str, "\\N", replace_newline)
     end
     return str
 end
@@ -317,11 +317,13 @@ function fb_utils.sort(t)
     end
 
     --appends the letter d or f to the start of the comparison to sort directories and folders as well
+    ---@type [string,Item][]
     local tuples = {}
     for i, f in ipairs(t) do
         tuples[i] = {f.type:sub(1, 1) .. (f.label or f.name):lower():gsub("0*(%d+)%.?(%d*)", padnum), f}
     end
     table.sort(tuples, function(a, b)
+        -- pretty sure that `#b[2] < #a[2]` does not do anything as they are both Item tables and not strings or arrays
         return a[1] == b[1] and #b[2] < #a[2] or a[1] < b[1]
     end)
     for i, tuple in ipairs(tuples) do t[i] = tuple[2] end
@@ -449,7 +451,7 @@ local function json_safe_recursive(t)
     local array_length = get_length(t)
     local isarray = array_length > 0
 
-    for key, value in pairs(t) do
+    for key, value in pairs(t --[[@as table<any,any>]]) do
         local ktype = type(key)
         local vtype = type(value)
 
@@ -457,8 +459,10 @@ local function json_safe_recursive(t)
             and ((  isarray and ktype == "number" and key <= array_length)
                     or (not isarray and ktype == "string"))
         then
+            ---@diagnostic disable-next-line no-unknown
             t[key] = json_safe_recursive(t[key])
         elseif key then
+            ---@diagnostic disable-next-line no-unknown
             t[key] = nil
             if isarray then array_length = get_length(t) end
         end
@@ -486,6 +490,7 @@ end
 ---@param env_defaults? boolean Load lua defaults in environment, as well as mpv and file-browser modules. Defaults to `true`.
 ---@return unknown
 function fb_utils.evaluate_string(str, chunkname, custom_env, env_defaults)
+    ---@type table
     local env
     if env_defaults ~= false then
         ---@type table
@@ -501,6 +506,7 @@ function fb_utils.evaluate_string(str, chunkname, custom_env, env_defaults)
         env = custom_env or {}
     end
 
+    ---@type function, any
     local chunk, err
     if setfenv then  ---@diagnostic disable-line deprecated
         chunk, err = loadstring(str, chunkname)  ---@diagnostic disable-line deprecated
@@ -531,9 +537,9 @@ local function copy_table_recursive(t, references, depth)
     local copy = setmetatable({}, { __original = t })
     references[t] = copy
 
-    for key, value in pairs(t) do
+    for key, value in pairs(t --[[@as table<any,any>]]) do
         key = copy_table_recursive(key, references, depth - 1)
-        copy[key] = copy_table_recursive(value, references, depth - 1)
+        copy[key] = copy_table_recursive(value, references, depth - 1) ---@diagnostic disable-line no-unknown
     end
     return copy
 end
@@ -548,7 +554,7 @@ function fb_utils.copy_table(t, depth)
     return copy_table_recursive(t, {}, depth or math.huge)
 end
 
----@alias Replacer fun(item: Item, s: State): (string|number)
+---@alias Replacer fun(item: Item, s: State): (string|number|nil)
 ---@alias ReplacerTable table<string,Replacer>
 
 ---functions to replace custom-keybind codes
@@ -578,9 +584,13 @@ fb_utils.code_fns = {
 ---@param codes ReplacerTable
 ---@return string
 function fb_utils.get_code_pattern(codes)
+    ---@type string
     local CUSTOM_KEYBIND_CODES = ""
     for key in pairs(codes) do CUSTOM_KEYBIND_CODES = CUSTOM_KEYBIND_CODES..key:lower()..key:upper() end
-    for key in pairs((getmetatable(codes) or {}).__index or {}) do CUSTOM_KEYBIND_CODES = CUSTOM_KEYBIND_CODES..key:lower()..key:upper() end
+    for key in pairs((getmetatable(codes) or {}).__index or {} --[[@as ReplacerTable]]) do
+        ---@type string
+        CUSTOM_KEYBIND_CODES = CUSTOM_KEYBIND_CODES..key:lower()..key:upper()
+    end
     return('%%%%([%s])'):format(fb_utils.pattern_escape(CUSTOM_KEYBIND_CODES))
 end
 
@@ -601,7 +611,7 @@ function fb_utils.substitute_codes(str, overrides, item, state, modifier_fn)
     state = state or g.state
 
     return (string.gsub(str, fb_utils.get_code_pattern(replacers), function(code)
-        ---@type string|number
+        ---@type string|number|nil
         local result
         local replacer = replacers[code]
 
@@ -616,7 +626,7 @@ function fb_utils.substitute_codes(str, overrides, item, state, modifier_fn)
             result = replacer(item, state)
         end
 
-        if modifier_fn then return modifier_fn(tostring(result)) end
+        if result and modifier_fn then return modifier_fn(tostring(result)) end
         return result
     end))
 end

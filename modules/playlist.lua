@@ -34,10 +34,11 @@ local state = g.state
 ---for the options argument using the `command-list` property.
 ---@return integer
 local function get_loadfile_options_arg_index()
+    ---@type table[]
     local command_list = mp.get_property_native('command-list', {})
     for _, command in ipairs(command_list) do
         if command.name == 'loadfile' then
-            for i, arg in ipairs(command.args or {}) do
+            for i, arg in ipairs(command.args or {} --[=[@as table[]]=]) do
                 if arg.name == 'options' then
                     return i
                 end
@@ -69,7 +70,7 @@ end
 ---@param mpv_opts? string|table<string,unknown>
 local function loadfile(file, opts, mpv_opts)
     if o.substitute_backslash and not fb_utils.get_protocol(file) then
-        file = file:gsub("/", "\\")
+        file = string.gsub(file, "/", "\\")
     end
 
     if opts.flag == "replace" then msg.verbose("Playling file", file)
@@ -84,6 +85,7 @@ local function loadfile(file, opts, mpv_opts)
     opts.items_appended = opts.items_appended + 1
 end
 
+---@diagnostic disable-next-line no-unknown
 local concurrent_loadlist_wrapper
 
 ---@alias ConcurrentRefMap table<List|Item,{directory: string, sublist: List}>

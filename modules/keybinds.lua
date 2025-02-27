@@ -72,6 +72,7 @@ local item_specific_codes = 'fnij'
 ---@param state State
 ---@return string
 local function substitute_codes(str, cmd, items, state)
+    ---@type ReplacerTable
     local overrides = {}
 
     for code in item_specific_codes:gmatch('.') do
@@ -91,8 +92,10 @@ end
 local function format_command_table(cmd, items, state)
     local command = cmd.command
     if type(command) == 'function' then return command end
+    ---@type string[][]
     local copy = {}
     for i = 1, #command do
+        ---@type string[]
         copy[i] = {}
 
         for j = 1, #command[i] do
@@ -118,7 +121,9 @@ local function run_custom_command(cmd, items, state)
     end
 end
 
---returns true if the given code set has item specific codes (%f, %i, etc)
+---returns true if the given code set has item specific codes (%f, %i, etc)
+---@param codes Set<string>
+---@return boolean
 local function has_item_codes(codes)
     for code in pairs(codes) do
         if item_specific_codes:find(code:lower(), 1, true) then return true end
@@ -140,6 +145,7 @@ local function run_custom_keybind(cmd, state, co)
     end
 
     -- evaluates the string condition to decide if the keybind should be run
+    ---@type boolean
     local do_item_condition
     if cmd.condition then
         if has_item_codes(cmd.condition_codes) then
@@ -324,7 +330,7 @@ local function setup_keybinds()
 
     --loads custom keybinds from file-browser-keybinds.json
     if o.custom_keybinds then
-        local path = mp.command_native({"expand-path", "~~/script-opts"}).."/file-browser-keybinds.json"
+        local path = mp.command_native({"expand-path", "~~/script-opts/file-browser-keybinds.json"}) --[[@as string]]
         local custom_keybinds, err = io.open( path )
         if not custom_keybinds then return error(err) end
 
@@ -334,7 +340,7 @@ local function setup_keybinds()
         json = utils.parse_json(json)
         if not json then return error("invalid json syntax for "..path) end
 
-        for i, keybind in ipairs(json) do
+        for i, keybind in ipairs(json --[[@as KeybindList]]) do
             keybind.name = "custom/"..(keybind.name or tostring(i))
             insert_custom_keybind(keybind)
         end

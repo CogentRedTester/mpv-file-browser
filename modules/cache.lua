@@ -16,7 +16,7 @@ local fb_utils = require 'modules.utils'
 ---@return T[]
 local function get_keys(t)
     local keys = {}
-    for key in pairs(t) do
+    for key in pairs(t --[[@as table<any,any>]]) do
         table.insert(keys, key)
     end
     return keys
@@ -82,7 +82,7 @@ function cache:add_current_state()
 
     local t = self.cache[directory] or {}
     for _, value in ipairs(self.cached_values) do
-        t[value] = g.state[value]
+        t[value] = g.state[value] ---@diagnostic disable-line no-unknown
     end
 
     self.cache[directory] = t
@@ -130,7 +130,7 @@ function cache:apply(directory)
 
     for _, value in ipairs(self.cached_values) do
         msg.debug('setting', value, 'to', t[value])
-        g.state[value] = t[value]
+        g.state[value] = t[value] ---@diagnostic disable-line no-unknown
     end
 
     return true

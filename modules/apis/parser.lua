@@ -2,7 +2,7 @@ local msg = require 'mp.msg'
 
 local g = require 'modules.globals'
 local scanning = require 'modules.navigation.scanning'
-local fb = require 'modules.apis.fb'
+local fb = require 'file-browser'
 
 ---@class ParserAPI: FbAPI
 local parser_api = setmetatable({}, { __index = fb })

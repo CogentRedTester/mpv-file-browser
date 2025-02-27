@@ -23,6 +23,7 @@ end
 ---@return Opts?
 local function choose_and_parse(directory, index)
     msg.debug(("finding parser for %q"):format(directory))
+    ---@type Parser, List?, Opts?
     local parser, list, opts
     local parse_state = g.parse_states[coroutine.running() or ""]
     while list == nil and not parse_state.already_deferred and index <= #g.parsers do
