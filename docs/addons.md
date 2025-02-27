@@ -550,10 +550,12 @@ that were removed.
 
 ### Advanced Functions
 
-#### `fb.clear_cache(): void`
+#### `fb.clear_cache(directories?: string[]): void`
 
 Clears the directory cache. Use this if you are modifying the contents of directories other
 than the current one to ensure that their contents will be rescanned when next opened.
+An an array of directory strings is passed to the function only those directories
+will be cleared from the cache.
 
 #### `fb.coroutine.assert(err?: string): coroutine`
 
