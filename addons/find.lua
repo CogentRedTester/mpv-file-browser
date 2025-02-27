@@ -46,6 +46,7 @@ end
 local function main(key, state, co)
     if not state.list then return false end
 
+    ---@type string
     local text
     if key.name == "find/find" then text = "Find: enter search string"
     else text = "Find: enter advanced search string" end
@@ -91,6 +92,7 @@ local function main(key, state, co)
     ---@async
     fb.coroutine.run(function()
         latest_coroutine = coroutine.running()
+        ---@type number
         local rindex = 1
         while (true) do
 
@@ -98,7 +100,7 @@ local function main(key, state, co)
             elseif rindex == #results + 1 then rindex = 1 end
 
             fb.set_selected_index(results[rindex])
-            local direction = coroutine.yield(true)
+            local direction = coroutine.yield(true) --[[@as number]]
             rindex = rindex + direction
 
             if parse_id ~= global_fb_state.co then
@@ -111,6 +113,7 @@ end
 
 local function step_find(key)
     if not latest_coroutine then return false end
+    ---@type number
     local direction
     if key.name == "find/next" then direction = 1
     elseif key.name == "find/prev" then direction = -1 end

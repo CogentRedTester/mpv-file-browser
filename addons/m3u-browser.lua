@@ -8,6 +8,7 @@
     https://github.com/CogentRedTester/mpv-read-file
 ]]--
 
+---@type any
 local rf = require "read-file"
 
 ---@type ParserConfig
@@ -30,10 +31,11 @@ function m3u:can_parse(directory)
 end
 
 function m3u:parse(directory)
-    directory = directory:gsub("/$", "")
+    directory = string.gsub(directory, "/$", "")
     local list = {}
 
     local path = full_paths[ directory ] or directory
+    ---@type file*
     local playlist = rf.get_file_handler( path )
 
     --if we can't read the path then stop here
@@ -41,6 +43,7 @@ function m3u:parse(directory)
 
     local parent = self.fix_path(path:match("^(.+/[^/]+)/"), true)
 
+    ---@type string
     local lines = playlist:read("*a")
 
     for item in lines:gmatch("[^%c]+") do

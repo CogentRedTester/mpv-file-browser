@@ -21,9 +21,10 @@ end
 ---this fuction retries the request a few times just in case.
 ---@async
 ---@param args string[]
----@return any
+---@return MPVSubprocessResult
 local function execute(args)
     msg.debug(utils.to_string(args))
+    ---@type boolean, MPVSubprocessResult
     local _, cmd = fb.get_parse_state():yield(
         mp.command_native_async({
             name = "subprocess",

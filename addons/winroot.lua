@@ -14,6 +14,7 @@ local fb = require 'file-browser'
 ---returns a list of windows drives
 ---@return string[]?
 local function get_drives()
+    ---@type MPVSubprocessResult?, string?
     local result, err = mp.command_native({
         name = 'subprocess',
         playback_only = false,

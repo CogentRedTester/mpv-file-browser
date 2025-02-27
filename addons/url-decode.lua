@@ -10,6 +10,7 @@ local urldecode = {
 
 --decodes a URL address
 --this piece of code was taken from: https://stackoverflow.com/questions/20405985/lua-decodeuri-luvit/20406960#20406960
+---@type fun(s: string): string
 local decodeURI
 do
     local char, gsub, tonumber = string.char, string.gsub, tonumber

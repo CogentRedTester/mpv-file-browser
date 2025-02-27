@@ -35,6 +35,7 @@ end
 ---@return string|nil
 ---@return string
 local function command(args, parse_state)
+    ---@type boolean, MPVSubprocessResult
     local _, cmd = parse_state:yield(
         mp.command_native_async({
             name = "subprocess",

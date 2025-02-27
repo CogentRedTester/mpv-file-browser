@@ -17,15 +17,17 @@ ffi.cdef([[
 
 --converts a UTF16 string to a UTF8 string
 --this function was adapted from https://github.com/mpv-player/mpv/issues/10139#issuecomment-1117954648
----@param WideCharStr any
+---@param WideCharStr string|ffi.cdata*
 ---@return string?
 local function utf8(WideCharStr)
     WideCharStr = ffi.cast("wchar_t*", WideCharStr)
     if not WideCharStr then return nil end
 
+    ---@type number
     local utf8_size = ffi.C.WideCharToMultiByte(65001, 0, WideCharStr, -1, nil, 0, nil, nil) --CP_UTF8
     if utf8_size > 0 then
         local utf8_path = ffi.new("char[?]", utf8_size)
+        ---@type number
         local utf8_size = ffi.C.WideCharToMultiByte(65001, 0, WideCharStr, -1, utf8_path, utf8_size, nil, nil)
         if utf8_size > 0 then
             --removes the trailing `\0` character which can break things
@@ -48,6 +50,7 @@ local dir = {
 ---@return string|nil
 ---@return string?
 local function command(args, parse_state)
+    ---@type boolean, MPVSubprocessResult
     local _, cmd = parse_state:yield(
         mp.command_native_async({
             name = "subprocess",
@@ -57,8 +60,8 @@ local function command(args, parse_state)
             args = args,
         }, fb.coroutine.callback() )
     )
-    cmd.stdout = utf8(cmd.stdout)
-    cmd.stderr = utf8(cmd.stderr)
+    cmd.stdout = utf8(cmd.stdout) or ''
+    cmd.stderr = utf8(cmd.stderr) or ''
 
     --dir returns this exact error message if the directory is empty
     if cmd.status == 1 and cmd.stderr == "File Not Found\r\n" then cmd.status = 0 end
@@ -77,7 +80,7 @@ function dir:parse(directory, parse_state)
     local files, dirs, err
 
     -- the dir command expects backslashes for our paths
-    directory = directory:gsub("/", "\\")
+    directory = string.gsub(directory, "/", "\\")
 
     dirs, err = command({ "cmd", "/U", "/c", "dir", "/b", "/ad", directory }, parse_state)
     if not dirs then return msg.error(err) end

@@ -28,6 +28,8 @@ local favs = {
 }
 
 local use_virtual_directory = true
+
+---@type table<string,string>
 local full_paths = {}
 
 ---@param str string
