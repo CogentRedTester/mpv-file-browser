@@ -169,8 +169,9 @@ end
 
 ---rescans the folder and updates the list.
 ---@param moving_adjacent? number|boolean
+---@param cb function
 ---@return thread # The coroutine for the triggered parse operation. May be aborted early if directory is in the cache.
-local function rescan(moving_adjacent)
+local function rescan(moving_adjacent, cb)
     if moving_adjacent == nil then moving_adjacent = 0 end
 
     --we can only make assumptions about the directory label when moving from adjacent directories
@@ -194,6 +195,7 @@ local function rescan(moving_adjacent)
         if not cache.traversal_stack[1] then cache:push() end
 
         ass.update_ass()
+        if cb then fb_utils.coroutine.run(cb) end
     end)
 
     g.state.co = co

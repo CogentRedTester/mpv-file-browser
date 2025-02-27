@@ -26,6 +26,13 @@ function fb.rescan()
     return scanning.rescan()
 end
 
+function fb.rescan_await()
+    cache:clear({g.state.directory})
+    local co = scanning.rescan(nil, fb_utils.coroutine.callback())
+    coroutine.yield()
+    return co
+end
+
 function fb.clear_cache()
     cache:clear()
 end
