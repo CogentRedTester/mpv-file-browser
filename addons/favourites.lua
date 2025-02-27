@@ -124,15 +124,12 @@ end
 
 --update the browser with new contents of the file
 local function update_browser()
-    if fb.get_directory():find("[fF]avourites/") then
-        if fb.get_directory():find("[fF]avourites/$") then
-            local cursor = fb.get_selected_index()
-            fb.rescan()
-            fb.set_selected_index(cursor)
-            fb.redraw()
-        else
-            fb.clear_cache()
-        end
+    if favs.get_directory():find("^[fF]avourites/$") then
+        local cursor = favs.get_selected_index()
+        fb.rescan_await()
+        fb.set_selected_index(cursor)
+    else
+        fb.clear_cache({'favourites/', 'Favourites/'})
     end
 end
 
@@ -195,10 +192,6 @@ local function move_key(cmd, state, co)
 end
 
 update_favourites()
-mp.register_script_message("favourites/add_favourite", add_favourite)
-mp.register_script_message("favourites/remove_favourite", remove_favourite)
-mp.register_script_message("favourites/move_up", function(path) move_favourite(path, -1) end)
-mp.register_script_message("favourites/move_down", function(path) move_favourite(path, 1) end)
 
 favs.keybinds = {
     { "F", "toggle_favourite", toggle_favourite, {}, },
