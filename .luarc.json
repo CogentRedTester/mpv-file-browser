@@ -10,10 +10,12 @@
         "await": "Any",
         "luadoc": "Any",
         "type-check": "Any",
-        "unbalanced": "Any"
+        "unbalanced": "Any",
+        "strong": "Any"
     },
     "diagnostics.groupSeverity": {
-        "await": "Error"
+        "await": "Warning",
+        "strong": "Warning"
     },
     "diagnostics.severity": {
         "missing-return": "Error!",
