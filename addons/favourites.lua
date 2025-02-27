@@ -17,7 +17,7 @@ end
 
 local favourites = nil
 local favs = {
-    api_version = "1.4.0",
+    api_version = "1.8.0",
     priority = 30,
     cursor = 1
 }
