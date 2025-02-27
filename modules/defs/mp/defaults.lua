@@ -21,6 +21,13 @@ local mp = {}
 ---@field update fun(self:OSDOverlay)
 ---@field remove fun(self: OSDOverlay)
 
+---@class MPVSubprocessResult
+---@field status number
+---@field stdout string
+---@field stderr string
+---@field error_string ''|'killed'|'init'
+---@field killed_by_us boolean
+
 ---@param key string
 ---@param name_or_fn string|function
 ---@param fn? async fun()
@@ -49,9 +56,9 @@ function mp.commandv(...) end
 ---@generic T
 ---@param t table
 ---@param def? T
----@return table|string|T result
+---@return unknown|T result
 ---@return string? error
----@overload fun(t: table): (table|string|nil, string?)
+---@overload fun(t: table): (unknown|nil, string?)
 function mp.command_native(t, def) end
 
 ---@nodiscard
