@@ -19,10 +19,15 @@ package.loaded["file-browser"] = setmetatable({}, { __index = fb })
 
 --these functions we'll provide as-is
 fb.redraw = ass.update_ass
-fb.rescan = scanning.rescan
 fb.browse_directory = controls.browse_directory
 
 ---Clears the directory cache.
+---@return thread?
+function fb.rescan()
+    cache:clear({g.state.directory})
+    return scanning.rescan()
+end
+
 function fb.clear_cache()
     cache:clear()
 end

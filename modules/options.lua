@@ -58,6 +58,13 @@ local o = {
     --property (mpv v0.36+) to decide. If the property is unavailable it defaults to `yes`.
     normalise_backslash = 'auto',
 
+    --a directory cache to improve directory reading time,
+    --enable if it takes a long time to load directories.
+    --may cause 'ghost' files to be shown that no-longer exist or
+    --fail to show files that have recently been created. Use Ctrl+r to
+    --forcibly clear the cache when enabled.
+    cache = false,
+
     --this option reverses the behaviour of the alt+ENTER keybind
     --when disabled the keybind is required to enable autoload for the file
     --when enabled the keybind disables autoload for the file
