@@ -15,7 +15,7 @@ local user_input_loaded, user_input = pcall(require, 'user-input-module')
 
 --creates a table for the API functions
 --adds one metatable redirect to prevent addon authors from accidentally breaking file-browser
----@class FBUtils
+---@class fb_utils
 local fb_utils = { API_VERSION = g.API_VERSION }
 
 fb_utils.list = {}

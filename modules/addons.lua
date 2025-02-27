@@ -4,7 +4,6 @@ local utils = require 'mp.utils'
 
 local o = require 'modules.options'
 local g = require 'modules.globals'
-local fb = require 'modules.apis.fb'
 local fb_utils = require 'modules.utils'
 local parser_API = require 'modules.apis.parser'
 
@@ -188,6 +187,7 @@ local function load_external_addons()
     load_addons(addon_dir)
 end
 
+---@class addons
 return {
     check_api_version = check_api_version,
     load_internal_parsers = load_internal_parsers,

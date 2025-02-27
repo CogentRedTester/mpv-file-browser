@@ -4,9 +4,10 @@
 --------------------------------------------------------------------------------------------------------
 
 local mp = require 'mp'
-
-local globals = {}
 local o = require 'modules.options'
+
+---@class globals
+local globals = {}
 
 --sets the version for the file-browser API
 globals.API_VERSION = "1.7.1"

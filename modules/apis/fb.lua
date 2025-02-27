@@ -13,7 +13,7 @@ local scanning = require 'modules.navigation.scanning'
 local cache = require 'modules.cache'
 local controls = require 'modules.controls'
 
----@class FbAPI: FBUtils
+---@class FbAPI: fb_utils
 local fb = setmetatable({}, { __index = setmetatable({}, { __index = fb_utils }) })
 package.loaded["file-browser"] = setmetatable({}, { __index = fb })
 

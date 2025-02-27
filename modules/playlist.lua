@@ -346,6 +346,7 @@ local function open_file(flag, autoload)
     fb_utils.coroutine.resume_err(opts.co, opts)
 end
 
+---@class playlist
 return {
     add_files = open_file,
 }

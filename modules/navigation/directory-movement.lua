@@ -10,6 +10,7 @@ local cache = require 'modules.cache'
 local scanning = require 'modules.navigation.scanning'
 local fb_utils = require 'modules.utils'
 
+---@class directory_movement
 local directory_movement = {}
 
 function directory_movement.set_current_file(filepath)

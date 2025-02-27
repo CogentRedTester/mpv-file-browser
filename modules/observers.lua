@@ -3,6 +3,7 @@ local directory_movement = require 'modules.navigation.directory-movement'
 local fb = require 'modules.apis.fb'
 local fb_utils = require 'modules.utils'
 
+---@class observers
 local observers ={}
 
 ---saves the directory and name of the currently playing file

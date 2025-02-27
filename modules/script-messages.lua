@@ -7,6 +7,7 @@ local g = require 'modules.globals'
 local fb_utils = require 'modules.utils'
 local scanning = require 'modules.navigation.scanning'
 
+---@class script_messages
 local script_messages = {}
 
 ---Allows other scripts to request directory contents from file-browser.

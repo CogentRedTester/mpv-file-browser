@@ -46,6 +46,7 @@ local function setup_root()
     end
 end
 
+---@class setup
 return {
     extensions_list = setup_extensions_list,
     root = setup_root,

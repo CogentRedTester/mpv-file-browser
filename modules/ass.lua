@@ -3,8 +3,6 @@
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
 
-local utils = require 'mp.utils'
-
 local g = require 'modules.globals'
 local o = require 'modules.options'
 local fb_utils = require 'modules.utils'
@@ -175,6 +173,7 @@ local function update_ass()
     draw()
 end
 
+---@class ass
 return {
     update_ass = update_ass,
     highlight_entry = highlight_entry,

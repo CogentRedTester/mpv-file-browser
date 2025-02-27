@@ -7,6 +7,7 @@ local g = require 'modules.globals'
 local fb_utils = require 'modules.utils'
 local ass = require 'modules.ass'
 
+---@class cursor
 local cursor = {}
 
 --disables multiselect

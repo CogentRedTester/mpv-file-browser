@@ -10,6 +10,7 @@ local movement = require 'modules.navigation.directory-movement'
 local ass = require 'modules.ass'
 local cursor = require 'modules.navigation.cursor'
 
+---@class controls
 local controls = {}
 
 --opens the browser
