@@ -1,6 +1,7 @@
 local utils = require 'mp.utils'
 local opt = require 'mp.options'
 
+---@class options
 local o = {
     --root directories
     root = "~/",
@@ -149,6 +150,7 @@ local o = {
 
 opt.read_options(o, 'file_browser')
 
+---@diagnostic disable-next-line deprecated
 o.set_shared_script_properties = o.set_shared_script_properties and utils.shared_script_property_set
 
 return o

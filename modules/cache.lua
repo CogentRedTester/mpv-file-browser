@@ -10,14 +10,27 @@ local o = require 'modules.options'
 local g = require 'modules.globals'
 local fb_utils = require 'modules.utils'
 
+---Returns an array of keys in a table.
+---@generic T
+---@param t table<T,any>
+---@return T[]
 local function get_keys(t)
     local keys = {}
-    for key in pairs(t) do
+    for key in pairs(t --[[@as table<any,any>]]) do
         table.insert(keys, key)
     end
     return keys
 end
 
+---@class CacheRef
+---@field directory string
+---@field ref State?
+
+---@class Cache
+---@field traversal_stack CacheRef[]
+---@field history CacheRef[]
+---@field cache table<string,State>
+---@field dangling_refs Set<string>
 local cache = {
     cache = setmetatable({}, {__mode = 'kv'}),
     traversal_stack = {},
@@ -42,16 +55,18 @@ function cache:print_debug_info()
     msg.debug(utils.to_string(fb_utils.list.map(self.history, function(ref) return ref.directory end)))
 end
 
-function cache:replace_dangling_refs(directory, ref)
+---@param directory string
+---@param state State
+function cache:replace_dangling_refs(directory, state)
     for _, v in ipairs(self.traversal_stack) do
         if v.directory == directory then
-            v.ref = ref
+            v.ref = state
             self.dangling_refs[directory] = nil
         end
     end
     for _, v in ipairs(self.history) do
         if v.directory == directory then
-            v.ref = ref
+            v.ref = state
             self.dangling_refs[directory] = nil
         end
     end
@@ -67,7 +82,7 @@ function cache:add_current_state()
 
     local t = self.cache[directory] or {}
     for _, value in ipairs(self.cached_values) do
-        t[value] = g.state[value]
+        t[value] = g.state[value] ---@diagnostic disable-line no-unknown
     end
 
     self.cache[directory] = t
@@ -76,8 +91,10 @@ function cache:add_current_state()
     end
 end
 
--- Creates a reference to the cache of a particular directory to prevent it
--- from being garbage collected.
+---Creates a reference to the cache of a particular directory to prevent it
+---from being garbage collected.
+---@param directory string
+---@return CacheRef
 function cache:get_cache_ref(directory)
    return {
         directory = directory,
@@ -96,10 +113,14 @@ function cache:append_history()
     if (history_size + 1) > 100 then table.remove(self.history, 1) end
 end
 
+---@param directory string
+---@return boolean
 function cache:in_cache(directory)
     return self.cache[directory] ~= nil
 end
 
+---@param directory string
+---@return boolean
 function cache:apply(directory)
     directory = directory or g.state.directory
     local t = self.cache[directory]
@@ -109,7 +130,7 @@ function cache:apply(directory)
 
     for _, value in ipairs(self.cached_values) do
         msg.debug('setting', value, 'to', t[value])
-        g.state[value] = t[value]
+        g.state[value] = t[value] ---@diagnostic disable-line no-unknown
     end
 
     return true
@@ -129,6 +150,7 @@ function cache:clear_traversal_stack()
     self.traversal_stack = {}
 end
 
+---@param directories? string[]
 function cache:clear(directories)
     if directories then
         msg.verbose('clearing cache', utils.to_string(directories))
