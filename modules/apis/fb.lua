@@ -33,8 +33,8 @@ function fb.rescan_await()
     return co
 end
 
-function fb.clear_cache()
-    cache:clear()
+function fb.clear_cache(directories)
+    cache:clear(directories)
 end
 
 ---A wrapper around scan_directory for addon API.
