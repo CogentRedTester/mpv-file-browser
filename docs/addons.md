@@ -646,9 +646,14 @@ any additional arguments. The (not yet started) coroutine is returned by the fun
 
 #### `fb.rescan(): coroutine`
 
-Rescans the current directory. Equivalent to Ctrl+r without the cache refresh for higher level directories.
+Rescans the current directory. Equivalent to Ctrl+r without the cache refresh any other directory.
 Returns the coroutine of the upcoming parse operation. The parse is queued and run when the script thread next goes idle,
 allowing one to store this value and use it to identify the triggered parse operation.
+
+#### `fb.rescan_await(): coroutine`
+
+Same as `fb.rescan()`, but if called from within a coroutine then the function will not
+return until then scan operation is complete.
 
 #### `fb.redraw(): void`
 
