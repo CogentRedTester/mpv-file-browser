@@ -1,4 +1,4 @@
-# How to Write an Addon - API v1.7.1
+# How to Write an Addon - API v1.8.0
 
 Addons provide ways for file-browser to parse non-native directory structures. This document describes how one can create their own custom addon.
 
@@ -550,10 +550,12 @@ that were removed.
 
 ### Advanced Functions
 
-#### `fb.clear_cache(): void`
+#### `fb.clear_cache(directories?: string[]): void`
 
 Clears the directory cache. Use this if you are modifying the contents of directories other
 than the current one to ensure that their contents will be rescanned when next opened.
+An an array of directory strings is passed to the function only those directories
+will be cleared from the cache.
 
 #### `fb.coroutine.assert(err?: string): coroutine`
 
@@ -646,9 +648,14 @@ any additional arguments. The (not yet started) coroutine is returned by the fun
 
 #### `fb.rescan(): coroutine`
 
-Rescans the current directory. Equivalent to Ctrl+r without the cache refresh for higher level directories.
+Rescans the current directory. Equivalent to Ctrl+r without the cache refresh for any other directory.
 Returns the coroutine of the upcoming parse operation. The parse is queued and run when the script thread next goes idle,
 allowing one to store this value and use it to identify the triggered parse operation.
+
+#### `fb.rescan_await(): coroutine`
+
+Same as `fb.rescan()`, but if called from within a coroutine then the function will not
+return until the scan operation is complete.
 
 #### `fb.redraw(): void`
 

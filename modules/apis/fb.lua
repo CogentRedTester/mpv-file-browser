@@ -23,8 +23,15 @@ function fb.rescan()
     return scanning.rescan()
 end
 
-function fb.clear_cache()
-    cache:clear()
+function fb.rescan_await()
+    cache:clear({g.state.directory})
+    local co = scanning.rescan(nil, fb_utils.coroutine.callback())
+    coroutine.yield()
+    return co
+end
+
+function fb.clear_cache(directories)
+    cache:clear(directories)
 end
 
 --a wrapper around scan_directory for addon API
