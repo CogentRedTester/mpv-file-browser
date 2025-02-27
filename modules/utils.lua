@@ -468,10 +468,8 @@ end
 
 ---Formats a table into a json string but ensures there are no invalid datatypes inside the table first.
 ---@param t any
----@return table|nil
----@return unknown|nil
----@overload fun(t: table): (table)
----@overload fun(t: table): (nil, unknown)
+---@return string|nil
+---@return string|nil err
 function fb_utils.format_json_safe(t)
     --operate on a copy of the table to prevent any data loss in the original table
     t = json_safe_recursive(fb_utils.copy_table(t))

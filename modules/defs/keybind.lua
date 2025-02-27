@@ -35,4 +35,5 @@
 
 ---@alias KeybindCommand KeybindFunctionCallback|KeybindCommandTable[]
 ---@alias KeybindTuple [string,string,KeybindCommand,KeybindFlags?]
+---@alias KeybindTupleStrict [string,string,KeybindFunctionCallback,KeybindFlags?]
 ---@alias KeybindList (Keybind|KeybindTuple)[]

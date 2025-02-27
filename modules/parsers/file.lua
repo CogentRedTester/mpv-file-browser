@@ -33,6 +33,7 @@ function file_parser:parse(directory)
 
     --appends files to the list of directory items
     local list2 = utils.readdir(directory, 'files')
+    if list2 == nil then return nil end
     for i=1, #list2 do
         local item = list2[i]
 

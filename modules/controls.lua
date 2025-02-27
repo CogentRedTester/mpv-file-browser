@@ -21,7 +21,7 @@ function controls.open()
         mp.add_forced_key_binding(v[1], 'dynamic/'..v[2], v[3], v[4])
     end
 
-    if o.set_shared_script_properties then utils.shared_script_property_set('file_browser-open', 'yes') end
+    if o.set_shared_script_properties then utils.shared_script_property_set('file_browser-open', 'yes') end ---@diagnostic disable-line deprecated
     if o.set_user_data then mp.set_property_bool('user-data/file_browser/open', true) end
 
     if o.toggle_idlescreen then mp.commandv('script-message', 'osc-idlescreen', 'no', 'no_osd') end
@@ -44,7 +44,7 @@ function controls.close()
         mp.remove_key_binding('dynamic/'..v[2])
     end
 
-    if o.set_shared_script_properties then utils.shared_script_property_set("file_browser-open", "no") end
+    if o.set_shared_script_properties then utils.shared_script_property_set("file_browser-open", "no") end ---@diagnostic disable-line deprecated
     if o.set_user_data then mp.set_property_bool('user-data/file_browser/open', false) end
 
     if o.toggle_idlescreen then mp.commandv('script-message', 'osc-idlescreen', 'yes', 'no_osd') end

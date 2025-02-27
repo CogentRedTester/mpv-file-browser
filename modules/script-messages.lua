@@ -32,14 +32,13 @@ function script_messages.get_directory_contents(directory, response_str)
         local list, opts = scanning.scan_directory(directory, { source = "script-message" } )
         if opts then opts.API_VERSION = g.API_VERSION end
 
-        local err
-        list, err = fb_utils.format_json_safe(list)
-        if not list then msg.error(err) end
+        local list_str, err = fb_utils.format_json_safe(list)
+        if not list_str then msg.error(err) end
 
-        opts, err = fb_utils.format_json_safe(opts)
-        if not opts then msg.error(err) end
+        local opts_str, err2 = fb_utils.format_json_safe(opts)
+        if not opts_str then msg.error(err2) end
 
-        mp.commandv("script-message", response_str, list or "", opts or "")
+        mp.commandv("script-message", response_str, list_str or "", opts_str or "")
     end)
 end
 
