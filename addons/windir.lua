@@ -10,23 +10,24 @@ local msg = require "mp.msg"
 local fb = require "file-browser"
 
 --this is a LuaJit module this addon will not load if not using LuaJit
-local ffi = require 'ffi'
+local ffi = require 'ffi' ---@diagnostic disable-line no-unknown
 ffi.cdef([[
     int __stdcall WideCharToMultiByte(unsigned int CodePage, unsigned int dwFlags, const wchar_t *lpWideCharStr, int cchWideChar, char *lpMultiByteStr, int cbMultiByte, const char *lpDefaultChar, bool *lpUsedDefaultChar);
 ]])
 
 --converts a UTF16 string to a UTF8 string
 --this function was adapted from https://github.com/mpv-player/mpv/issues/10139#issuecomment-1117954648
+---@diagnostic disable-next-line undefined-doc-name
 ---@param WideCharStr string|ffi.cdata*
 ---@return string?
 local function utf8(WideCharStr)
-    WideCharStr = ffi.cast("wchar_t*", WideCharStr)
+    WideCharStr = ffi.cast("wchar_t*", WideCharStr) ---@diagnostic disable-line no-unknown
     if not WideCharStr then return nil end
 
     ---@type number
     local utf8_size = ffi.C.WideCharToMultiByte(65001, 0, WideCharStr, -1, nil, 0, nil, nil) --CP_UTF8
     if utf8_size > 0 then
-        local utf8_path = ffi.new("char[?]", utf8_size)
+        local utf8_path = ffi.new("char[?]", utf8_size) ---@diagnostic disable-line no-unknown
         ---@type number
         local utf8_size = ffi.C.WideCharToMultiByte(65001, 0, WideCharStr, -1, utf8_path, utf8_size, nil, nil)
         if utf8_size > 0 then
