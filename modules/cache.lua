@@ -124,7 +124,23 @@ function cache:clear_traversal_stack()
     self.traversal_stack = {}
 end
 
-function cache:clear()
+function cache:clear(directories)
+    if directories then
+        msg.verbose('clearing cache', utils.to_string(directories))
+        for _, dir in ipairs(directories) do
+            self.cache[dir] = nil
+            for _, v in ipairs(self.traversal_stack) do
+                if v.directory == dir then v.ref = nil end
+            end
+            for _, v in ipairs(self.history) do
+                if v.directory == dir then v.ref = nil end
+            end
+            self.dangling_refs[dir] = nil
+        end
+        return
+    end
+
+    msg.verbose('clearing cache')
     self.cache = setmetatable({}, {__mode = 'kv'})
     for _, v in ipairs(self.traversal_stack) do
         v.ref = nil
