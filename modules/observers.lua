@@ -1,6 +1,6 @@
 
 local directory_movement = require 'modules.navigation.directory-movement'
-local fb = require 'file-browser'
+local fb = require 'modules.apis.fb'
 local fb_utils = require 'modules.utils'
 
 ---@class observers

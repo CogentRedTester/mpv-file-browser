@@ -1,5 +1,3 @@
----@meta file-browser
-
 local mp = require 'mp'
 local msg = require 'mp.msg'
 local utils = require 'mp.utils'
