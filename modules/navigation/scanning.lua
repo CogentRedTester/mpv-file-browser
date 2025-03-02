@@ -169,7 +169,7 @@ end
 
 ---rescans the folder and updates the list.
 ---@param moving_adjacent? number|boolean
----@param cb function
+---@param cb? function
 ---@return thread # The coroutine for the triggered parse operation. May be aborted early if directory is in the cache.
 local function rescan(moving_adjacent, cb)
     if moving_adjacent == nil then moving_adjacent = 0 end

@@ -123,6 +123,7 @@ local function get_favourite(path)
 end
 
 --update the browser with new contents of the file
+---@async
 local function update_browser()
     if favs.get_directory():find("^[fF]avourites/$") then
         local cursor = favs.get_selected_index()
@@ -168,6 +169,7 @@ local function move_favourite(path, direction)
     write_to_file()
 end
 
+---@async
 local function toggle_favourite(cmd, state, co)
     local path = fb.get_full_path(state.list[state.selected], state.directory)
 
@@ -176,6 +178,7 @@ local function toggle_favourite(cmd, state, co)
     update_browser()
 end
 
+---@async
 local function move_key(cmd, state, co)
     if not state.directory:find("[fF]avourites/") then return false end
     local path = fb.get_full_path(state.list[state.selected], state.directory)

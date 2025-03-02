@@ -26,6 +26,8 @@ function fb.rescan()
     return scanning.rescan()
 end
 
+---@async
+---@return thread
 function fb.rescan_await()
     cache:clear({g.state.directory})
     local co = scanning.rescan(nil, fb_utils.coroutine.callback())
