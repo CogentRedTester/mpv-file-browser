@@ -10,9 +10,11 @@ local msg = require 'mp.msg'
 
 local fb = require 'file-browser'
 
-local state_file = mp.command_native({'expand-path', '~~state/last_opened_directory'})
+local state_file = mp.command_native({'expand-path', '~~state/last_opened_directory'}) --[[@as string]]
 msg.verbose('using', state_file)
 
+---@param directory? string
+---@return nil
 local function write_directory(directory)
     local file = io.open(state_file, 'w+')
 
@@ -24,7 +26,7 @@ local function write_directory(directory)
     file:close()
 end
 
-
+---@type ParserConfig
 local addon = {
     api_version = '1.7.0',
     priority = 0,

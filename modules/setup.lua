@@ -37,7 +37,7 @@ end
 --splits the string into a table on the separators
 local function setup_root()
     for str in fb_utils.iterate_opt(o.root) do
-        local path = mp.command_native({'expand-path', str})
+        local path = mp.command_native({'expand-path', str}) --[[@as string]]
         path = fb_utils.fix_path(path, true)
 
         local temp = {name = path, type = 'dir', label = str, ass = fb_utils.ass_escape(str, true)}
@@ -46,6 +46,7 @@ local function setup_root()
     end
 end
 
+---@class setup
 return {
     extensions_list = setup_extensions_list,
     root = setup_root,

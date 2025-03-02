@@ -1,9 +1,8 @@
 
 local g = require 'modules.globals'
 
---parser object for the root
---not inserted to the parser list as it has special behaviour
---it does get added to parsers under its ID to prevent confusing duplicates
+---Parser for the root.
+---@type ParserConfig
 local root_parser = {
     name = "root",
     priority = math.huge,
