@@ -22,7 +22,7 @@ local favourites_loaded = false
 
 ---@type ParserConfig
 local favs = {
-    api_version = "1.4.0",
+    api_version = "1.8.0",
     priority = 30,
     cursor = 1
 }
@@ -123,16 +123,14 @@ local function get_favourite(path)
 end
 
 --update the browser with new contents of the file
+---@async
 local function update_browser()
-    if fb.get_directory():find("[fF]avourites/") then
-        if fb.get_directory():find("[fF]avourites/$") then
-            local cursor = fb.get_selected_index()
-            fb.rescan()
-            fb.set_selected_index(cursor)
-            fb.redraw()
-        else
-            fb.clear_cache()
-        end
+    if favs.get_directory():find("^[fF]avourites/$") then
+        local cursor = favs.get_selected_index()
+        fb.rescan_await()
+        fb.set_selected_index(cursor)
+    else
+        fb.clear_cache({'favourites/', 'Favourites/'})
     end
 end
 
@@ -171,6 +169,7 @@ local function move_favourite(path, direction)
     write_to_file()
 end
 
+---@async
 local function toggle_favourite(cmd, state, co)
     local path = fb.get_full_path(state.list[state.selected], state.directory)
 
@@ -179,6 +178,7 @@ local function toggle_favourite(cmd, state, co)
     update_browser()
 end
 
+---@async
 local function move_key(cmd, state, co)
     if not state.directory:find("[fF]avourites/") then return false end
     local path = fb.get_full_path(state.list[state.selected], state.directory)
@@ -195,10 +195,6 @@ local function move_key(cmd, state, co)
 end
 
 update_favourites()
-mp.register_script_message("favourites/add_favourite", add_favourite)
-mp.register_script_message("favourites/remove_favourite", remove_favourite)
-mp.register_script_message("favourites/move_up", function(path) move_favourite(path, -1) end)
-mp.register_script_message("favourites/move_down", function(path) move_favourite(path, 1) end)
 
 favs.keybinds = {
     { "F", "toggle_favourite", toggle_favourite, {}, },
