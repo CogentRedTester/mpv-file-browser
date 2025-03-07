@@ -1,5 +1,6 @@
 local mp = require 'mp'
 local msg = require 'mp.msg'
+local utils = require 'mp.utils'
 
 local o = require 'modules.options'
 local fb = require 'file-browser'
@@ -28,8 +29,8 @@ local function clear_cache(directories)
         msg.debug('clearing cache', table.concat(directories, '\n'))
         for _, dir in ipairs(directories) do
             if cache[dir] then
-            cache[dir].timeout:kill()
-            cache[dir] = nil
+                cache[dir].timeout:kill()
+                cache[dir] = nil
             end
         end
     else
@@ -93,12 +94,12 @@ function cacheParser:parse(directory)
 
     -- pending will be truthy for the original parse and falsy for any parses that were pending
     if pending then
-    msg.debug('storing', directory, 'contents in cache')
-    cache[directory] = {
-        list = list,
-        opts = opts,
+        msg.debug('storing', directory, 'contents in cache')
+        cache[directory] = {
+            list = list,
+            opts = opts,
             timeout = mp.add_timeout(120, function() cache[directory] = nil end),
-    }
+        }
     end
 
     return list, opts
@@ -113,5 +114,18 @@ if o.cache then
         }
     }
 end
+
+-- provide method of clearing the cache through script messages
+mp.register_script_message('cache/clear', function(dirs)
+    if not dirs then
+        return clear_cache()
+    end
+
+    ---@type string[]?
+    local directories = utils.parse_json(dirs)
+    if not directories then msg.error('unable to parse', dirs) end
+
+    clear_cache(directories)
+end)
 
 return cacheParser
