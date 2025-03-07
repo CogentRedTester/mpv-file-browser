@@ -52,7 +52,7 @@ function directory_movement.append_history(directory)
     g.history.size = g.history.size + 1
     g.history.position = g.history.position + 1
 
-    if g.history.size > 100 then
+    if g.history.size > o.history_size then
         table.remove(g.history.list, 1)
         g.history.size = g.history.size - 1
     end
@@ -96,7 +96,7 @@ function directory_movement.goto_directory(directory, moving_adjacent, store_his
         end
     end
 
-    if store_history == nil or store_history then
+    if o.history_size > 0 and store_history == nil or store_history then
         directory_movement.append_history(directory)
     end
     return scanning.rescan(moving_adjacent or false)

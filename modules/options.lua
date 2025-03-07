@@ -12,6 +12,9 @@ local o = {
     --number of entries to show on the screen at once
     num_entries = 20,
 
+    --number of directories to keep in the history
+    history_size = 100,
+
     --wrap the cursor around the top and bottom of the list
     wrap = false,
 
