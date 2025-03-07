@@ -25,12 +25,15 @@ local pending_parses = {}
 ---@param directories? string[]
 local function clear_cache(directories)
     if directories then
+        msg.debug('clearing cache', table.concat(directories, '\n'))
         for _, dir in ipairs(directories) do
+            if cache[dir] then
             cache[dir].timeout:kill()
             cache[dir] = nil
+            end
         end
     else
-
+        msg.debug('clearing cache')
         for _, entry in pairs(cache) do
             entry.timeout:kill()
         end
@@ -38,8 +41,20 @@ local function clear_cache(directories)
     end
 end
 
-function cacheParser:can_parse(directory)
-    return o.cache and directory ~= ''
+---@type string
+local prev_directory = ''
+
+function cacheParser:can_parse(directory, parse_state)
+    if not o.cache or directory == '' then return false end 
+
+    -- clear the cache if reloading the current directory in the browser
+    -- this means that fb.rescan() should maintain expected behaviour
+    if parse_state.source == 'browser' then
+        prev_directory = directory
+        if prev_directory == directory then clear_cache({directory}) end
+    end
+
+    return true
 end
 
 ---@async
@@ -92,10 +107,9 @@ end
 if o.cache then
     cacheParser.keybinds = {
         {
-            key = 'Ctrl+r',
-            name = 'reload',
-            command = function() clear_cache() end,
-            passthrough = true,
+            key = 'Ctrl+Shift+r',
+            name = 'clear_cache',
+            command = function() clear_cache() ; fb.rescan() end,
         }
     }
 end
