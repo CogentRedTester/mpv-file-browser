@@ -35,6 +35,7 @@ function fb.rescan_await()
     return co
 end
 
+---@param directories? string[]
 function fb.clear_cache(directories)
     cache:clear(directories)
 end

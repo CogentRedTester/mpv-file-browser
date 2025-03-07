@@ -101,6 +101,9 @@ function mp.get_property_native(name, def) end
 ---@return string|nil
 function mp.get_script_directory() end
 
+---@return string
+function mp.get_script_name() end
+
 ---@param name string
 ---@param type 'native'|'bool'|'string'|'number'
 ---@param fn fun(name: string, v: unknown)
@@ -112,7 +115,7 @@ function mp.observe_property(name, type, fn) end
 function mp.register_event(name, fn) end
 
 ---@param name string
----@param fn function
+---@param fn fun(...: string)
 function mp.register_script_message(name, fn) end
 
 ---@param name string
