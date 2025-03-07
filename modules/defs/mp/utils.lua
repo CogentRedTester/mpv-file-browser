@@ -15,7 +15,7 @@ function utils.join_path(p1, p2) end
 
 ---@param str string
 ---@param trail? boolean
----@return table? t
+---@return (table|unknown[])? t
 ---@return string? err # error
 ---@return string trail # trailing characters
 function utils.parse_json(str, trail) end

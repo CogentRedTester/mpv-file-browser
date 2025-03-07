@@ -4,7 +4,6 @@ local utils = require 'mp.utils'
 
 local g = require 'modules.globals'
 local fb_utils = require 'modules.utils'
-local cache = require 'modules.cache'
 local cursor = require 'modules.navigation.cursor'
 local ass = require 'modules.ass'
 
@@ -12,7 +11,6 @@ local parse_state_API = require 'modules.apis.parse-state'
 
 local function clear_non_adjacent_state()
     g.state.directory_label = nil
-    cache:clear_traversal_stack()
 end
 
 ---parses the given directory or defers to the next parser if nil is returned
@@ -105,13 +103,6 @@ local function update_list(moving_adjacent)
     g.state.selected = 1
     g.state.selection = {}
 
-    --loads the current directry from the cache to save loading time
-    if cache:in_cache(g.state.directory) then
-        msg.verbose('found directory in cache')
-        cache:apply(g.state.directory)
-        g.state.prev_directory = g.state.directory
-        return
-    end
     local directory = g.state.directory
     local list, opts = parse_directory(g.state.directory, { source = "browser" })
 
@@ -124,13 +115,7 @@ local function update_list(moving_adjacent)
     end
 
     --apply fallbacks if the scan failed
-    if not list and cache:in_cache(g.state.prev_directory) then
-        --switches settings back to the previously opened directory
-        --to the user it will be like the directory never changed
-        msg.warn("could not read directory", g.state.directory)
-        cache:apply(g.state.prev_directory)
-        return
-    elseif not list then
+    if not list then
         --opens the root instead
         msg.warn("could not read directory", g.state.directory, "redirecting to root")
         list, opts = parse_directory("", { source = "browser" })
@@ -188,11 +173,6 @@ local function rescan(moving_adjacent, cb)
     local co = fb_utils.coroutine.queue(function()
         update_list(moving_adjacent)
         if g.state.empty_text == "~" then g.state.empty_text = "empty directory" end
-
-        cache:append_history()
-        if type(moving_adjacent) == 'number' and moving_adjacent < 0 then cache:pop()
-        else cache:push() end
-        if not cache.traversal_stack[1] then cache:push() end
 
         ass.update_ass()
         if cb then fb_utils.coroutine.run(cb) end

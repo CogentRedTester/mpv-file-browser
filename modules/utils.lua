@@ -143,7 +143,7 @@ end
 ---If the time limit expires the coroutine will be resumed. The first return value will be true
 ---if the callback was resumed within the time limit and false otherwise.
 ---If time_limit is falsy then there will be no time limit and there will be no additional return value.
----@param time_limit? number
+---@param time_limit? number seconds
 ---@return fun(...)
 function fb_utils.coroutine.callback(time_limit)
     local co = fb_utils.coroutine.assert("cannot create a coroutine callback for the main thread")

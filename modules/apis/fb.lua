@@ -8,7 +8,6 @@ local fb_utils = require 'modules.utils'
 local ass = require 'modules.ass'
 local directory_movement = require 'modules.navigation.directory-movement'
 local scanning = require 'modules.navigation.scanning'
-local cache = require 'modules.cache'
 local controls = require 'modules.controls'
 
 ---@class FbAPI: fb_utils
@@ -22,21 +21,24 @@ fb.browse_directory = controls.browse_directory
 ---Clears the directory cache.
 ---@return thread
 function fb.rescan()
-    cache:clear({g.state.directory})
     return scanning.rescan()
 end
 
 ---@async
 ---@return thread
 function fb.rescan_await()
-    cache:clear({g.state.directory})
     local co = scanning.rescan(nil, fb_utils.coroutine.callback())
     coroutine.yield()
     return co
 end
 
+---@param directories? string[]
 function fb.clear_cache(directories)
-    cache:clear(directories)
+    if directories then
+        mp.commandv('script-message-to', mp.get_script_name(), 'cache/clear', utils.format_json(directories))
+    else
+        mp.commandv('script-message-to', mp.get_script_name(), 'cache/clear')
+    end
 end
 
 ---A wrapper around scan_directory for addon API.

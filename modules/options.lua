@@ -61,8 +61,7 @@ local o = {
     --a directory cache to improve directory reading time,
     --enable if it takes a long time to load directories.
     --may cause 'ghost' files to be shown that no-longer exist or
-    --fail to show files that have recently been created. Use Ctrl+r to
-    --forcibly clear the cache when enabled.
+    --fail to show files that have recently been created.
     cache = false,
 
     --this option reverses the behaviour of the alt+ENTER keybind

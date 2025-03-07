@@ -556,6 +556,10 @@ Clears the directory cache. Use this if you are modifying the contents of direct
 than the current one to ensure that their contents will be rescanned when next opened.
 An an array of directory strings is passed to the function only those directories
 will be cleared from the cache.
+The cache is cleared asynchronously, it may not, and probably will not, have been cleared
+when the function returns. This may change in the future.
+
+The cache is implemented as an [internal parser](../modules/parsers/cache.lua).
 
 #### `fb.coroutine.assert(err?: string): coroutine`
 
@@ -648,7 +652,7 @@ any additional arguments. The (not yet started) coroutine is returned by the fun
 
 #### `fb.rescan(): coroutine`
 
-Rescans the current directory. Equivalent to Ctrl+r without the cache refresh for any other directory.
+Rescans the current directory. Equivalent to Ctrl+r.
 Returns the coroutine of the upcoming parse operation. The parse is queued and run when the script thread next goes idle,
 allowing one to store this value and use it to identify the triggered parse operation.
 
