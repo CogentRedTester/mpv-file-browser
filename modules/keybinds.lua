@@ -16,7 +16,6 @@ local controls = require 'modules.controls'
 local movement = require 'modules.navigation.directory-movement'
 local scanning = require 'modules.navigation.scanning'
 local cursor = require 'modules.navigation.cursor'
-local cache = require 'modules.cache'
 
 g.state.keybinds = {
     {'ENTER',       'play',         function() playlist.add_files('replace', false) end},
@@ -33,7 +32,7 @@ g.state.keybinds = {
     {'Shift+PGUP',  'list_top',     function() cursor.scroll(-math.huge) end},
     {'HOME',        'goto_current', movement.goto_current_dir},
     {'Shift+HOME',  'goto_root',    movement.goto_root},
-    {'Ctrl+r',      'reload',       function() cache:clear(); scanning.rescan() end},
+    {'Ctrl+r',      'reload',       function() scanning.rescan() end},
     {'s',           'select_mode',  cursor.toggle_select_mode},
     {'S',           'select_item',  cursor.toggle_selection},
     {'Ctrl+a',      'select_all',   cursor.select_all}

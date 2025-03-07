@@ -6,7 +6,6 @@ local utils = require 'mp.utils'
 local o = require 'modules.options'
 local g = require 'modules.globals'
 local ass = require 'modules.ass'
-local cache = require 'modules.cache'
 local scanning = require 'modules.navigation.scanning'
 local fb_utils = require 'modules.utils'
 
@@ -35,9 +34,6 @@ end
 
 --the base function for moving to a directory
 function directory_movement.goto_directory(directory, moving_adjacent)
-    -- update cache to the lastest state values before changing the current directory
-    cache:add_current_state()
-
     local current = g.state.list[g.state.selected]
     g.state.directory = directory
 
