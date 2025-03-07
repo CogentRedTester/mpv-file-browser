@@ -54,6 +54,7 @@ local function update_favourites()
     local file = io.open(save_path, "r")
     if not file then return end
 
+    favourites = {}
     for str in file:lines() do
         table.insert(favourites, create_favourite_object(str))
     end
