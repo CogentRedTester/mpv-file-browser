@@ -9,7 +9,7 @@ local fb = require 'file-browser'
 local cacheParser = {
     name = 'cache',
     priority = 0,
-    api_version = '1.8',
+    api_version = '1.6',
 }
 
 ---@class CacheEntry
@@ -46,7 +46,9 @@ end
 local prev_directory = ''
 
 function cacheParser:can_parse(directory, parse_state)
-    if not o.cache or directory == '' then return false end 
+    -- the script message is guaranteed to always bypass the cache
+    if parse_state.source == 'script-message' then return false end
+    if not o.cache or directory == '' then return false end
 
     -- clear the cache if reloading the current directory in the browser
     -- this means that fb.rescan() should maintain expected behaviour
@@ -76,15 +78,15 @@ function cacheParser:parse(directory)
         list, opts = self:defer(directory)
     else
         msg.debug('parse for', directory, 'already running - waiting for other parse to finish...')
-        table.insert(pending_parses[directory], fb.coroutine.callback())
+        table.insert(pending_parses[directory], fb.coroutine.callback(30))
         list, opts = coroutine.yield()
     end
 
     local pending = pending_parses[directory]
-    if pending then
-        -- need to clear the pending parses before resuming them or they will also attempt to resume the parses
-        pending_parses[directory] = nil
-        msg.debug('resuming', #pending,'pending parses for', directory)
+    -- need to clear the pending parses before resuming them or they will also attempt to resume the parses
+    pending_parses[directory] = nil
+    if pending and #pending > 0 then
+        msg.debug('resuming', #pending, 'pending parses for', directory)
         for _, cb in ipairs(pending) do
             cb(list, opts)
         end
@@ -105,15 +107,13 @@ function cacheParser:parse(directory)
     return list, opts
 end
 
-if o.cache then
-    cacheParser.keybinds = {
-        {
-            key = 'Ctrl+Shift+r',
-            name = 'clear_cache',
-            command = function() clear_cache() ; fb.rescan() end,
-        }
+cacheParser.keybinds = {
+    {
+        key = 'Ctrl+Shift+r',
+        name = 'clear_cache',
+        command = function() clear_cache() ; fb.rescan() end,
     }
-end
+}
 
 -- provide method of clearing the cache through script messages
 mp.register_script_message('cache/clear', function(dirs)
