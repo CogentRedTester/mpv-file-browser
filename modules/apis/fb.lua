@@ -34,7 +34,11 @@ end
 
 ---@param directories? string[]
 function fb.clear_cache(directories)
-    cache:clear(directories)
+    if directories then
+        mp.commandv('script-message-to', mp.get_script_name(), 'cache/clear', utils.format_json(directories))
+    else
+        mp.commandv('script-message-to', mp.get_script_name(), 'cache/clear')
+    end
 end
 
 ---A wrapper around scan_directory for addon API.
