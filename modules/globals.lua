@@ -120,6 +120,17 @@ globals.current_file = {
 ---@type List
 globals.root = {}
 
+---@class (strict) History
+---@field list string[]
+---@field size number
+---@field position number
+globals.history = {
+    list = {},
+    size = 0,
+    position = 0,
+}
+
+
 --default list of compatible file extensions
 --adding an item to this list is a valid request on github
 globals.compatible_file_extensions = {

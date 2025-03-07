@@ -110,7 +110,7 @@ end
 cacheParser.keybinds = {
     {
         key = 'Ctrl+Shift+r',
-        name = 'clear_cache',
+        name = 'clear',
         command = function() clear_cache() ; fb.rescan() end,
     }
 }

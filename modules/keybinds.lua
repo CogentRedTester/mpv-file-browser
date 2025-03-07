@@ -18,24 +18,26 @@ local scanning = require 'modules.navigation.scanning'
 local cursor = require 'modules.navigation.cursor'
 
 g.state.keybinds = {
-    {'ENTER',       'play',         function() playlist.add_files('replace', false) end},
-    {'Shift+ENTER', 'play_append',  function() playlist.add_files('append-play', false) end},
-    {'Alt+ENTER',   'play_autoload',function() playlist.add_files('replace', true) end},
-    {'ESC',         'close',        controls.escape},
-    {'RIGHT',       'down_dir',     movement.down_dir},
-    {'LEFT',        'up_dir',       movement.up_dir},
-    {'DOWN',        'scroll_down',  function() cursor.scroll(1, o.wrap) end,           {repeatable = true}},
-    {'UP',          'scroll_up',    function() cursor.scroll(-1, o.wrap) end,          {repeatable = true}},
-    {'PGDWN',       'page_down',    function() cursor.scroll(o.num_entries) end,       {repeatable = true}},
-    {'PGUP',        'page_up',      function() cursor.scroll(-o.num_entries) end,      {repeatable = true}},
-    {'Shift+PGDWN', 'list_bottom',  function() cursor.scroll(math.huge) end},
-    {'Shift+PGUP',  'list_top',     function() cursor.scroll(-math.huge) end},
-    {'HOME',        'goto_current', movement.goto_current_dir},
-    {'Shift+HOME',  'goto_root',    movement.goto_root},
-    {'Ctrl+r',      'reload',       scanning.rescan},
-    {'s',           'select_mode',  cursor.toggle_select_mode},
-    {'S',           'select_item',  cursor.toggle_selection},
-    {'Ctrl+a',      'select_all',   cursor.select_all}
+    {'ENTER',       'play',             function() playlist.add_files('replace', false) end},
+    {'Shift+ENTER', 'play_append',      function() playlist.add_files('append-play', false) end},
+    {'Alt+ENTER',   'play_autoload',    function() playlist.add_files('replace', true) end},
+    {'ESC',         'close',            controls.escape},
+    {'RIGHT',       'down_dir',         movement.down_dir},
+    {'LEFT',        'up_dir',           movement.up_dir},
+    {'Alt+RIGHT',   'history_forward',  movement.forwards_history},
+    {'Alt+LEFT',    'history_back',     movement.back_history},
+    {'DOWN',        'scroll_down',      function() cursor.scroll(1, o.wrap) end,           {repeatable = true}},
+    {'UP',          'scroll_up',        function() cursor.scroll(-1, o.wrap) end,          {repeatable = true}},
+    {'PGDWN',       'page_down',        function() cursor.scroll(o.num_entries) end,       {repeatable = true}},
+    {'PGUP',        'page_up',          function() cursor.scroll(-o.num_entries) end,      {repeatable = true}},
+    {'Shift+PGDWN', 'list_bottom',      function() cursor.scroll(math.huge) end},
+    {'Shift+PGUP',  'list_top',         function() cursor.scroll(-math.huge) end},
+    {'HOME',        'goto_current',     movement.goto_current_dir},
+    {'Shift+HOME',  'goto_root',        movement.goto_root},
+    {'Ctrl+r',      'reload',           scanning.rescan},
+    {'s',           'select_mode',      cursor.toggle_select_mode},
+    {'S',           'select_item',      cursor.toggle_selection},
+    {'Ctrl+a',      'select_all',       cursor.select_all}
 }
 
 ---a map of key-keybinds - only saves the latest keybind if multiple have the same key code
