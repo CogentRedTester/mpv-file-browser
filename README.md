@@ -113,7 +113,10 @@ The following dynamic keybinds are only set while the browser is open:
 | Shift+PGUP  | list_top      | move selector to the top of the list                                          |
 | HOME        | goto_current  | move to the directory of the currently playing file                           |
 | Shift+HOME  | goto_root     | move to the root directory                                                    |
-| Ctrl+r      | reload        | reload directory and reset cache                                              |
+| Alt+LEFT    | history_back  | move to previously open directory                                             |
+| Alt+RIGHT   | history_forward| move forwards again in history to the next directory                         |
+| Ctrl+r      | reload        | reload current directory                                                      |
+| Ctrl+Shift+r| cache/clear   | clears the directory cache (disabled by default)                              |
 | s           | select_mode   | toggles multiselect mode                                                      |
 | S           | select_item   | toggles selection for the current item                                        |
 | Ctrl+a      | select_all    | select all items in the current directory                                     |
