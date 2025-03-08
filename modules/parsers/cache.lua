@@ -25,9 +25,10 @@ local pending_parses = {}
 ---@param directories? string[]
 local function clear_cache(directories)
     if directories then
-        msg.debug('clearing cache', table.concat(directories, '\n'))
+        msg.debug('clearing cache for', #directories, 'directorie(s)')
         for _, dir in ipairs(directories) do
             if cache[dir] then
+                msg.trace('clearing cache for', dir)
                 cache[dir].timeout:kill()
                 cache[dir] = nil
             end
@@ -48,6 +49,7 @@ function cacheParser:can_parse(directory, parse_state)
     -- allows the cache to be forcibly used or bypassed with the
     -- cache/use parse property.
     if parse_state.properties.cache and parse_state.properties.cache.use ~= nil then
+        if parse_state.source == 'browser' then prev_directory = directory end
         return parse_state.properties.cache.use
     end
 
@@ -58,8 +60,8 @@ function cacheParser:can_parse(directory, parse_state)
     -- clear the cache if reloading the current directory in the browser
     -- this means that fb.rescan() should maintain expected behaviour
     if parse_state.source == 'browser' then
-        prev_directory = directory
         if prev_directory == directory then clear_cache({directory}) end
+        prev_directory = directory
     end
 
     return true
