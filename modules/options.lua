@@ -10,7 +10,7 @@ local o = {
     auto_detect_windows_drives = true,
 
     --characters to use as separators
-    root_separators = ",;",
+    root_separators = ",",
 
     --number of entries to show on the screen at once
     num_entries = 20,
@@ -24,9 +24,8 @@ local o = {
     --only show files compatible with mpv
     filter_files = true,
 
-    --experimental feature that recurses directories concurrently when
-    --appending items to the playlist
-    concurrent_recursion = false,
+    --recurses directories concurrently when appending items to the playlist
+    concurrent_recursion = true,
 
     --maximum number of recursions that can run concurrently
     max_concurrency = 16,
@@ -49,10 +48,12 @@ local o = {
 
     --filter dot directories like .config
     --most useful on linux systems
-    filter_dot_dirs = false,
-    filter_dot_files = false,
+    ---@type 'auto'|'yes'|'no'
+    filter_dot_dirs = 'auto',
+    ---@type 'auto'|'yes'|'no'
+    filter_dot_files = 'auto',
 
-    --substitude forward slashes for backslashes when appending a local file to the playlist
+    --substitute forward slashes for backslashes when appending a local file to the playlist
     --potentially useful on windows systems
     substitute_backslash = false,
 
@@ -62,6 +63,7 @@ local o = {
     --cause mangled paths, though such filenames are rare.
     --Use `yes` and `no` to enable/disable. `auto` tries to use the mpv `platform`
     --property (mpv v0.36+) to decide. If the property is unavailable it defaults to `yes`.
+    ---@type 'auto'|'yes'|'no'
     normalise_backslash = 'auto',
 
     --a directory cache to improve directory reading time,
