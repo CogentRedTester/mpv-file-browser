@@ -12,9 +12,19 @@ local globals = {}
 --sets the version for the file-browser API
 globals.API_VERSION = "1.8.0"
 
----gets the current platform (only works in mpv v0.36+)
----@type string?
+---gets the current platform (in mpv v0.36+)
+---in earlier versions it is set to `windows`, `darwin` or `other`
+---@type 'windows'|'darwin'|'linux'|'android'|'freebsd'|'other'|string|nil
 globals.PLATFORM = mp.get_property_native('platform')
+if not globals.PLATFORM then
+    local _ = {}
+    if mp.get_property_native('options/vo-mmcss-profile', _) ~= _ then
+        globals.PLATFORM = 'windows'
+    elseif mp.get_property_native('options/macos-force-dedicated-gpu', _) ~= _ then
+        globals.PLATFORM = 'darwin'
+    end
+    return 'other'
+end
 
 --the osd_overlay API was not added until v0.31. The expand-path command was not added until 0.30
 assert(mp.create_osd_overlay, "Script requires minimum mpv version 0.33")
