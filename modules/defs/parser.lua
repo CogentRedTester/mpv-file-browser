@@ -25,16 +25,17 @@
 
 
 ---@alias ParseStateSource 'browser'|'loadlist'|'script-message'|'addon'|string
+---@alias ParseProperties table<string,any>
 
 ---The Parse State object passed to the can_parse and parse methods
 ---@class ParseStateFields
 ---@field source ParseStateSource
 ---@field directory string
 ---@field already_deferred boolean?
----@field properties table<string,any>
+---@field properties ParseProperties
 
 ---@class ParseState: ParseStateFields, ParseStateAPI
 
 ---@class ParseStateTemplate
 ---@field source ParseStateSource?
----@field properties table<string,any>?
+---@field properties ParseProperties?

@@ -45,6 +45,12 @@ end
 local prev_directory = ''
 
 function cacheParser:can_parse(directory, parse_state)
+    -- allows the cache to be forcibly used or bypassed with the
+    -- cache/use parse property.
+    if parse_state.properties.cache and parse_state.properties.cache.use ~= nil then
+        return parse_state.properties.cache.use
+    end
+
     -- the script message is guaranteed to always bypass the cache
     if parse_state.source == 'script-message' then return false end
     if not fb.get_opt('cache') or directory == '' then return false end

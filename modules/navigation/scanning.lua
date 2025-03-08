@@ -103,14 +103,15 @@ end
 ---Sends update requests to the different parsers.
 ---@async
 ---@param moving_adjacent? number|boolean
-local function update_list(moving_adjacent)
+---@param parse_properties? ParseProperties
+local function update_list(moving_adjacent, parse_properties)
     msg.verbose('opening directory: ' .. g.state.directory)
 
     g.state.selected = 1
     g.state.selection = {}
 
     local directory = g.state.directory
-    local list, opts = parse_directory(g.state.directory, { source = "browser" })
+    local list, opts = parse_directory(g.state.directory, { source = "browser", properties = parse_properties })
 
     --if the running coroutine isn't the one stored in the state variable, then the user
     --changed directories while the coroutine was paused, and this operation should be aborted
@@ -124,7 +125,7 @@ local function update_list(moving_adjacent)
     if not list then
         --opens the root instead
         msg.warn("could not read directory", g.state.directory, "redirecting to root")
-        list, opts = parse_directory("", { source = "browser" })
+        list, opts = parse_directory("", { source = "browser", properties = parse_properties })
 
         if not list then error(('fatal error - failed to read the root directory')) end
 
@@ -161,8 +162,9 @@ end
 ---rescans the folder and updates the list.
 ---@param moving_adjacent? number|boolean
 ---@param cb? function
+---@param parse_properties? ParseProperties
 ---@return thread # The coroutine for the triggered parse operation. May be aborted early if directory is in the cache.
-local function rescan(moving_adjacent, cb)
+local function rescan(moving_adjacent, cb, parse_properties)
     if moving_adjacent == nil then moving_adjacent = 0 end
 
     --we can only make assumptions about the directory label when moving from adjacent directories
@@ -177,7 +179,7 @@ local function rescan(moving_adjacent, cb)
     --pause execution for asynchronous operations
     ---@async
     local co = fb_utils.coroutine.queue(function()
-        update_list(moving_adjacent)
+        update_list(moving_adjacent, parse_properties)
         if g.state.empty_text == "~" then g.state.empty_text = "empty directory" end
 
         ass.update_ass()

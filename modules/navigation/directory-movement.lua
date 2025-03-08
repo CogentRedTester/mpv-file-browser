@@ -83,8 +83,9 @@ end
 ---@param directory string
 ---@param moving_adjacent? number|false
 ---@param store_history? boolean default `true`
+---@param parse_properties? ParseProperties
 ---@return thread
-function directory_movement.goto_directory(directory, moving_adjacent, store_history)
+function directory_movement.goto_directory(directory, moving_adjacent, store_history, parse_properties)
     local current = g.state.list[g.state.selected]
     g.state.directory = directory
 
@@ -99,7 +100,7 @@ function directory_movement.goto_directory(directory, moving_adjacent, store_his
     if o.history_size > 0 and store_history == nil or store_history then
         directory_movement.append_history(directory)
     end
-    return scanning.rescan(moving_adjacent or false)
+    return scanning.rescan(moving_adjacent or false, nil, parse_properties)
 end
 
 ---Move the browser to a particular point in the browser history.

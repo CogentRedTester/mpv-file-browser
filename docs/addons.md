@@ -115,8 +115,14 @@ Source can have the following values:
 | script-message | triggered by the `get-directory-contents` script-message                                                |
 | addon          | caused by an addon calling the `parse_directory` API function - note that addons can set a custom state |
 
-Note that all calls to any `parse` function during a specific parse request will be given the same parse_state table.
-This allows parsers to communicate with parsers of a lower priority using the `properties` table.
+The `properties` table is designed to be used to send options to parsers.
+It is recommended that addons nest their properties within a second table to avoid conflicts,
+for example the in-built cache parser checks the `properties.cache.use` field,
+and if set will either forcibly enable or bypass the cache for that particular parse.
+All calls to any `parse` function during a specific parse request will be given the same parse_state table.
+This allows parsers to communicate with parsers of a lower priority by modifying the table.
+
+Be aware that this is still an experimental feature, so any properties used by 1st party addons may change at any time.
 
 #### Coroutines
 
@@ -445,7 +451,7 @@ Adds the given extension to the default extension filter whitelist. Can only be 
 
 #### `fb.browse_directory(directory: string, open_browser: bool = true): coroutine`
 
-Clears the cache and opens the given directory in the browser.
+Opens the given directory in the browser. The cache is never used.
 If the `open_browser` argument is truthy or `nil` then the browser will be opened
 if it is currently closed. If `open_browser` is `false` then the directory will
 be opened in the background.
