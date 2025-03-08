@@ -1,4 +1,4 @@
-# How to Write an Addon - API v1.8.0
+# How to Write an Addon - API v1.9.0
 
 Addons provide ways for file-browser to parse non-native directory structures. This document describes how one can create their own custom addon.
 
@@ -96,6 +96,7 @@ The `parse` and `can_parse` functions are passed a state table as its second arg
 | key                  | type    | description                                                                                                                                                                                                           |
 |----------------------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | source               | string  | the source of the parse request                                                                                                                                                                                       |
+| properties           | table<string,any> | A table of arbitrary properties designed to be used by addons.                                                                                                                                              |
 | directory            | string  | the directory of the parse request - for debugging purposes                                                                                                                                                           |
 | already_deferred     | boolean | whether or not [defer](#advanced-functions) was called during this parse, if so then file-browser will not try to query any more parsers after receiving the result - set automatically, but can be manually disabled |
 | yield                | method  | a wrapper around `coroutine.yield()` - see [coroutines](#coroutines)                                                                                                                                                  |
@@ -114,9 +115,14 @@ Source can have the following values:
 | script-message | triggered by the `get-directory-contents` script-message                                                |
 | addon          | caused by an addon calling the `parse_directory` API function - note that addons can set a custom state |
 
-Note that all calls to any `parse` function during a specific parse request will be given the same parse_state table.
-This theoretically allows parsers to communicate with parsers of a lower priority (or modify how they see source information),
-but no guarantees are made that specific keys will remain unused by the API.
+The `properties` table is designed to be used to send options to parsers.
+It is recommended that addons nest their properties within a second table to avoid conflicts,
+for example the in-built cache parser checks the `properties.cache.use` field,
+and if set will either forcibly enable or bypass the cache for that particular parse.
+All calls to any `parse` function during a specific parse request will be given the same parse_state table.
+This allows parsers to communicate with parsers of a lower priority by modifying the table.
+
+Be aware that this is still an experimental feature, so any properties used by 1st party addons may change at any time.
 
 #### Coroutines
 
@@ -445,7 +451,7 @@ Adds the given extension to the default extension filter whitelist. Can only be 
 
 #### `fb.browse_directory(directory: string, open_browser: bool = true): coroutine`
 
-Clears the cache and opens the given directory in the browser.
+Opens the given directory in the browser. The cache is never used.
 If the `open_browser` argument is truthy or `nil` then the browser will be opened
 if it is currently closed. If `open_browser` is `false` then the directory will
 be opened in the background.
@@ -526,8 +532,10 @@ Must be called from inside a [coroutine](#coroutines).
 This function allows addons to request the contents of directories from the loaded parsers. There are no protections
 against infinite recursion, so be careful about calling this from within another parse.
 
-Do not use the same `parse` table for multiple parses, state values for the two operations may intefere with each other
-and cause undefined behaviour. If the `parse.source` field is not set then it will be set to `"addon"`.
+Note that the parse does not use the actual table passed to this function,
+values are copied out. This means that, in practice, only the `source` and
+`properties` fields can be used.
+If the `parse.source` field is not set then it will be set to `"addon"`.
 
 Note that this function is for creating new parse operations, if you wish to create virtual directories or modify
 the results of other parsers then use [`defer`](#parserdeferdirectory-string-list_table-opts_table--nil).
@@ -882,6 +890,17 @@ Returns the set of valid extensions after applying the user's whitelist/blacklis
 The table is in the form `{ mkv = true, mp3 = true, ... }`.
 Sub extensions, audio extensions, and parseable extensions are all included in this set.
 
+#### `fb.get_history(): string[]`
+
+Returns the browser history.
+The history is a linear list of visited directories from oldest to newest.
+If the user changes directories while the current history position is not the head of the list,
+any later directories get cleared and the new directory becomes the new head.
+
+#### `fb.get_history_index(): number`
+
+Returns the index of the current history position.
+
 #### `fb.get_list(): list_table`
 
 The list_table currently open in the browser.
@@ -911,6 +930,11 @@ Every parse operation is guaranteed to have a unique coroutine.
 Returns a set of extensions like [`fb.get_extensions`](#fbget_extensions-table) but for extensions that are
 treated as parseable by the browser.
 All of these are included in `fb.get_extensions`.
+
+#### `fb.get_platform(): string`
+
+Returns the contents of the `platform` property on mpv v0.36+,
+and `windows`, `darwin`, or `other` on older versions.
 
 #### `fb.get_root(): list_table`
 
@@ -954,6 +978,14 @@ The index of the parser in order of preference (based on the priority value).
 `defer` uses this internally.
 
 ### Setters
+
+#### `fb.set_history_index(pos: number): number | false`
+
+Sets the current index in the browser history and triggers the browser to asynchronously
+load that directory.
+If `pos` is out of bounds, it gets clamped to 1 and the history length. The return
+value is the actual history index that the browser ended up.
+If `pos` is not a number, or if the history is empty, then returns `false`.
 
 #### `fb.set_selected_index(pos: number): number | false`
 

@@ -43,15 +43,21 @@ end
 ---Sets up the parse_state table and runs the parse operation.
 ---@async
 ---@param directory string
----@param parse_state ParseStateTemplate
+---@param parse_state_template ParseStateTemplate
 ---@return List|nil
 ---@return Opts
-local function run_parse(directory, parse_state)
+local function run_parse(directory, parse_state_template)
     msg.verbose(("scanning files in %q"):format(directory))
-    parse_state.directory = directory
+
+    ---@type ParseStateFields
+    local parse_state = {
+        source = parse_state_template.source,
+        directory = directory,
+        properties = parse_state_template.properties or {}
+    }
 
     local co = coroutine.running()
-    g.parse_states[co] = fb_utils.set_prototype(parse_state, parse_state_API)
+    g.parse_states[co] = fb_utils.set_prototype(parse_state, parse_state_API) --[[@as ParseState]]
 
     local list, opts = choose_and_parse(directory, 1)
 
@@ -97,14 +103,15 @@ end
 ---Sends update requests to the different parsers.
 ---@async
 ---@param moving_adjacent? number|boolean
-local function update_list(moving_adjacent)
+---@param parse_properties? ParseProperties
+local function update_list(moving_adjacent, parse_properties)
     msg.verbose('opening directory: ' .. g.state.directory)
 
     g.state.selected = 1
     g.state.selection = {}
 
     local directory = g.state.directory
-    local list, opts = parse_directory(g.state.directory, { source = "browser" })
+    local list, opts = parse_directory(g.state.directory, { source = "browser", properties = parse_properties })
 
     --if the running coroutine isn't the one stored in the state variable, then the user
     --changed directories while the coroutine was paused, and this operation should be aborted
@@ -118,7 +125,7 @@ local function update_list(moving_adjacent)
     if not list then
         --opens the root instead
         msg.warn("could not read directory", g.state.directory, "redirecting to root")
-        list, opts = parse_directory("", { source = "browser" })
+        list, opts = parse_directory("", { source = "browser", properties = parse_properties })
 
         if not list then error(('fatal error - failed to read the root directory')) end
 
@@ -155,8 +162,9 @@ end
 ---rescans the folder and updates the list.
 ---@param moving_adjacent? number|boolean
 ---@param cb? function
+---@param parse_properties? ParseProperties
 ---@return thread # The coroutine for the triggered parse operation. May be aborted early if directory is in the cache.
-local function rescan(moving_adjacent, cb)
+local function rescan(moving_adjacent, cb, parse_properties)
     if moving_adjacent == nil then moving_adjacent = 0 end
 
     --we can only make assumptions about the directory label when moving from adjacent directories
@@ -171,7 +179,7 @@ local function rescan(moving_adjacent, cb)
     --pause execution for asynchronous operations
     ---@async
     local co = fb_utils.coroutine.queue(function()
-        update_list(moving_adjacent)
+        update_list(moving_adjacent, parse_properties)
         if g.state.empty_text == "~" then g.state.empty_text = "empty directory" end
 
         ass.update_ass()

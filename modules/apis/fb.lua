@@ -148,6 +148,7 @@ end
 function fb.get_opt(key) return o[key] end
 
 function fb.get_script_opts() return fb.copy_table(o) end
+function fb.get_platform() return g.PLATFORM end
 function fb.get_extensions() return fb.copy_table(g.extensions) end
 function fb.get_sub_extensions() return fb.copy_table(g.sub_extensions) end
 function fb.get_audio_extensions() return fb.copy_table(g.audio_extensions) end
@@ -164,6 +165,8 @@ function fb.get_selected_index() return g.state.selected end
 function fb.get_selected_item() return fb.copy_table(g.state.list[g.state.selected]) end
 function fb.get_open_status() return not g.state.hidden end
 function fb.get_parse_state(co) return g.parse_states[co or coroutine.running() or ""] end
+function fb.get_history() return fb.copy_table(g.history.list) end
+function fb.get_history_index() return g.history.position end
 
 ---@deprecated
 ---@return string|nil
@@ -189,5 +192,7 @@ function fb.set_selected_index(index)
     fb.redraw()
     return index
 end
+
+fb.set_history_index = directory_movement.goto_history
 
 return fb

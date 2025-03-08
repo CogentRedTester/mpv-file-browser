@@ -83,8 +83,9 @@ end
 ---@param directory string
 ---@param moving_adjacent? number|false
 ---@param store_history? boolean default `true`
+---@param parse_properties? ParseProperties
 ---@return thread
-function directory_movement.goto_directory(directory, moving_adjacent, store_history)
+function directory_movement.goto_directory(directory, moving_adjacent, store_history, parse_properties)
     local current = g.state.list[g.state.selected]
     g.state.directory = directory
 
@@ -99,7 +100,25 @@ function directory_movement.goto_directory(directory, moving_adjacent, store_his
     if o.history_size > 0 and store_history == nil or store_history then
         directory_movement.append_history(directory)
     end
-    return scanning.rescan(moving_adjacent or false)
+    return scanning.rescan(moving_adjacent or false, nil, parse_properties)
+end
+
+---Move the browser to a particular point in the browser history.
+---The history is a linear list of visited directories from oldest to newest.
+---If the user changes directories while the current history position is not the head of the list,
+---any later directories get cleared and the new directory becomes the new head.
+---@param pos number The history index to move to. Clamped to [1,history_length]
+---@return number|false # The index actually moved to after clamping. Returns -1 if the index was invalid (can occur if history is empty or disabled)
+function directory_movement.goto_history(pos)
+    if type(pos) ~= "number" then return false end
+
+    if pos < 1 then pos = 1
+    elseif pos > g.history.size then pos = g.history.size end
+    if not g.history.list[pos] then return false end
+
+    g.history.position = pos
+    directory_movement.goto_directory(g.history.list[pos])
+    return pos
 end
 
 --loads the root list
@@ -138,16 +157,14 @@ end
 function directory_movement.back_history()
     msg.debug('moving backwards in history to', g.history.list[g.history.position-1])
     if g.history.position == 1 then return end
-    g.history.position = g.history.position - 1
-    directory_movement.goto_directory(g.history.list[g.history.position])
+    directory_movement.goto_history(g.history.position - 1)
 end
 
 --moves forward through the history
 function directory_movement.forwards_history()
     msg.debug('moving forwards in history to', g.history.list[g.history.position+1])
     if g.history.position == g.history.size then return end
-    g.history.position = g.history.position + 1
-    directory_movement.goto_directory(g.history.list[g.history.position])
+    directory_movement.goto_history(g.history.position + 1)
 end
 
 return directory_movement
