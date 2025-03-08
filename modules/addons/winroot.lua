@@ -3,8 +3,6 @@
     Ctrl+r will add new drives mounted since startup.
 
     Drives will only be added if they are not already present in the root.
-
-    Available at: https://github.com/CogentRedTester/mpv-file-browser/tree/master/addons
 ]]
 
 local mp = require 'mp'
@@ -33,6 +31,8 @@ end
 
 -- adds windows drives to the root if they are not already present
 local function import_drives()
+    if fb.get_platform() ~= 'windows' then return end
+
     local drives = get_drives()
     if not drives then return end
 
@@ -51,7 +51,7 @@ local keybind = {
 
 ---@type ParserConfig
 return {
-    api_version = '1.4.0',
+    api_version = '1.9.0',
     setup = import_drives,
     keybinds = { keybind }
 }
