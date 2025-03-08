@@ -114,7 +114,7 @@ end
 local function step_find(key)
     if not latest_coroutine then return false end
     ---@type number
-    local direction
+    local direction = 0
     if key.name == "find/next" then direction = 1
     elseif key.name == "find/prev" then direction = -1 end
     return fb.coroutine.resume_err(latest_coroutine, direction)
