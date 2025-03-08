@@ -931,6 +931,11 @@ Returns a set of extensions like [`fb.get_extensions`](#fbget_extensions-table) 
 treated as parseable by the browser.
 All of these are included in `fb.get_extensions`.
 
+#### `fb.get_platform(): string`
+
+Returns the contents of the `platform` property on mpv v0.36+,
+and `windows`, `darwin`, or `other` on older versions.
+
 #### `fb.get_root(): list_table`
 
 Returns the root table.
