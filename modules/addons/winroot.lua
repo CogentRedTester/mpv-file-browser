@@ -1,4 +1,7 @@
 --[[
+    This file is an internal file-browser addon.
+    It should not be imported like a normal module.
+
     Automatically populates the root with windows drives on startup.
     Ctrl+r will add new drives mounted since startup.
 

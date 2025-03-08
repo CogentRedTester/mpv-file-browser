@@ -1,3 +1,5 @@
+-- This file is an internal file-browser addon.
+-- It should not be imported like a normal module.
 
 local g = require 'modules.globals'
 
