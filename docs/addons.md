@@ -96,6 +96,7 @@ The `parse` and `can_parse` functions are passed a state table as its second arg
 | key                  | type    | description                                                                                                                                                                                                           |
 |----------------------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | source               | string  | the source of the parse request                                                                                                                                                                                       |
+| properties           | table<string,any> | A table of arbitrary properties designed to be used by addons.                                                                                                                                              |
 | directory            | string  | the directory of the parse request - for debugging purposes                                                                                                                                                           |
 | already_deferred     | boolean | whether or not [defer](#advanced-functions) was called during this parse, if so then file-browser will not try to query any more parsers after receiving the result - set automatically, but can be manually disabled |
 | yield                | method  | a wrapper around `coroutine.yield()` - see [coroutines](#coroutines)                                                                                                                                                  |
@@ -115,8 +116,7 @@ Source can have the following values:
 | addon          | caused by an addon calling the `parse_directory` API function - note that addons can set a custom state |
 
 Note that all calls to any `parse` function during a specific parse request will be given the same parse_state table.
-This theoretically allows parsers to communicate with parsers of a lower priority (or modify how they see source information),
-but no guarantees are made that specific keys will remain unused by the API.
+This allows parsers to communicate with parsers of a lower priority using the `properties` table.
 
 #### Coroutines
 
