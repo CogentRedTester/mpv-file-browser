@@ -2,7 +2,6 @@ local mp = require 'mp'
 local msg = require 'mp.msg'
 local utils = require 'mp.utils'
 
-local o = require 'modules.options'
 local fb = require 'file-browser'
 
 ---@type ParserConfig
@@ -48,7 +47,7 @@ local prev_directory = ''
 function cacheParser:can_parse(directory, parse_state)
     -- the script message is guaranteed to always bypass the cache
     if parse_state.source == 'script-message' then return false end
-    if not o.cache or directory == '' then return false end
+    if not fb.get_opt('cache') or directory == '' then return false end
 
     -- clear the cache if reloading the current directory in the browser
     -- this means that fb.rescan() should maintain expected behaviour
