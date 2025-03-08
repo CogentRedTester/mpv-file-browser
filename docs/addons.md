@@ -532,8 +532,10 @@ Must be called from inside a [coroutine](#coroutines).
 This function allows addons to request the contents of directories from the loaded parsers. There are no protections
 against infinite recursion, so be careful about calling this from within another parse.
 
-Do not use the same `parse` table for multiple parses, state values for the two operations may intefere with each other
-and cause undefined behaviour. If the `parse.source` field is not set then it will be set to `"addon"`.
+Note that the parse does not use the actual table passed to this function,
+values are copied out. This means that, in practice, only the `source` and
+`properties` fields can be used.
+If the `parse.source` field is not set then it will be set to `"addon"`.
 
 Note that this function is for creating new parse operations, if you wish to create virtual directories or modify
 the results of other parsers then use [`defer`](#parserdeferdirectory-string-list_table-opts_table--nil).
