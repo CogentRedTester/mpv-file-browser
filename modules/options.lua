@@ -6,6 +6,9 @@ local o = {
     --root directories
     root = "~/",
 
+    --automatically detect windows drives and adds them to the root.
+    auto_detect_windows_drives = true,
+
     --characters to use as separators
     root_separators = ",;",
 
