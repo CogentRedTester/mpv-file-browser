@@ -882,6 +882,17 @@ Returns the set of valid extensions after applying the user's whitelist/blacklis
 The table is in the form `{ mkv = true, mp3 = true, ... }`.
 Sub extensions, audio extensions, and parseable extensions are all included in this set.
 
+#### `fb.get_history(): string[]`
+
+Returns the browser history.
+The history is a linear list of visited directories from oldest to newest.
+If the user changes directories while the current history position is not the head of the list,
+any later directories get cleared and the new directory becomes the new head.
+
+#### `fb.get_history_index(): number`
+
+Returns the index of the current history position.
+
 #### `fb.get_list(): list_table`
 
 The list_table currently open in the browser.
@@ -954,6 +965,14 @@ The index of the parser in order of preference (based on the priority value).
 `defer` uses this internally.
 
 ### Setters
+
+#### `fb.set_history_index(pos: number): number | false`
+
+Sets the current index in the browser history and triggers the browser to asynchronously
+load that directory.
+If `pos` is out of bounds, it gets clamped to 1 and the history length. The return
+value is the actual history index that the browser ended up.
+If `pos` is not a number, or if the history is empty, then returns `false`.
 
 #### `fb.set_selected_index(pos: number): number | false`
 
