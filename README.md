@@ -120,6 +120,10 @@ The following dynamic keybinds are only set while the browser is open:
 | s           | select_mode   | toggles multiselect mode                                                      |
 | S           | select_item   | toggles selection for the current item                                        |
 | Ctrl+a      | select_all    | select all items in the current directory                                     |
+| Ctrl+f      | find/find     | Opens a text input to search the contents of the folder - requires [mpv-user-input](#mpv-user-input) when mpv < v0.38|
+| Ctrl+F      | find/find_advanced| Allows using [Lua Patterns](https://www.lua.org/manual/5.1/manual.html#5.4.1) in the search input|
+| n           | find/next     | Jumps to the next matching entry for the latest search term                   |
+| N           | find/prev     | Jumps to the previous matching entry for the latest search term               |
 
 When attempting to play or append a subtitle file the script will instead load the subtitle track into the existing video.
 
