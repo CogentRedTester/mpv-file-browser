@@ -179,7 +179,7 @@ end
 local function load_internal_parsers()
     local script_dir = mp.get_script_directory()
     if not script_dir then return msg.error('script is not being run as a directory script!') end
-    local internal_addon_dir = script_dir..'/modules/parsers/'
+    local internal_addon_dir = script_dir..'/modules/addons/'
     load_addons(internal_addon_dir)
 end
 
