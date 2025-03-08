@@ -130,11 +130,9 @@ By default the playlist will only be autoloaded if `Alt+ENTER` is used on a sing
 
 To accomodate for both windows and linux this script has its own virtual root directory where drives and file folders can be manually added. The root directory can only contain folders.
 
-The root directory is set using the `root` option, which is a comma separated list of directories. Entries are sent through mpv's `expand-path` command. By default the only root value is the user's home folder:
-
-`root=~/`
-
-It is highly recommended that this be customised for the computer being used; [file_browser.conf](file_browser.conf) contains commented out suggestions for generic linux and windows systems. For example, my windows root looks like:
+The root directory is set using the `root` option, which is a comma separated list of directories. Entries are sent through mpv's `expand-path` command. By default `~/` and `C:/` are set on Windows
+and `~/` and `/` are set on non-Windows systems.
+Extra locations can be added manually, for example, my Windows root looks like:
 
 `root=~/,C:/,D:/,E:/,Z:/`
 

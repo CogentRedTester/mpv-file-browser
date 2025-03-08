@@ -3,6 +3,7 @@ local mp = require 'mp'
 local o = require 'modules.options'
 local g = require 'modules.globals'
 local fb_utils = require 'modules.utils'
+local fb = require 'modules.apis.fb'
 
 --sets up the compatible extensions list
 local function setup_extensions_list()
@@ -43,6 +44,12 @@ local function setup_root()
         local temp = {name = path, type = 'dir', label = str, ass = fb_utils.ass_escape(str, true)}
 
         g.root[#g.root+1] = temp
+    end
+
+    if g.PLATFORM == 'windows' then
+        fb.register_root_item('C:/')
+    elseif g.PLATFORM ~= nil then
+        fb.register_root_item('/')
     end
 end
 
