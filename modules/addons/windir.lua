@@ -9,6 +9,8 @@ local mp = require "mp"
 local msg = require "mp.msg"
 local fb = require "file-browser"
 
+local PLATFORM = fb.get_platform()
+
 ---@param bytes string
 ---@return fun(): number, number
 local function byte_iterator(bytes)
@@ -137,7 +139,7 @@ end
 ---@type ParserConfig
 local dir = {
     priority = 109,
-    api_version = "1.1.0",
+    api_version = "1.9.0",
     name = "cmd-dir",
     keybind_name = "file"
 }
@@ -172,6 +174,7 @@ local function command(args, parse_state)
 end
 
 function dir:can_parse(directory)
+    if PLATFORM ~= 'windows' then return false end
     if directory == "" then return false end
     return not fb.get_protocol(directory)
 end
