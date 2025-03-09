@@ -148,18 +148,23 @@ local dir = {
 ---@param args string[]
 ---@param parse_state ParseState
 ---@return string|nil
----@return string?
 local function command(args, parse_state)
-    ---@type boolean, MPVSubprocessResult
-    local _, cmd = parse_state:yield(
-        mp.command_native_async({
+    local async = mp.command_native_async({
             name = "subprocess",
             playback_only = false,
             capture_stdout = true,
             capture_stderr = true,
             args = args,
-        }, fb.coroutine.callback() )
-    )
+        }, fb.coroutine.callback(30) )
+
+    ---@type boolean, boolean, MPVSubprocessResult
+    local completed, _, cmd = parse_state:yield()
+    if not completed then
+        msg.warn('read timed out for:', table.unpack(args))
+        mp.abort_async_command(async)
+        return nil
+    end
+
     local success = xpcall(function()
         cmd.stdout = utf8(cmd.stdout) or ''
         cmd.stderr = utf8(cmd.stderr) or ''
@@ -169,8 +174,9 @@ local function command(args, parse_state)
 
     --dir returns this exact error message if the directory is empty
     if cmd.status == 1 and cmd.stderr == "File Not Found\r\n" then cmd.status = 0 end
+    if cmd.status ~= 0 then return msg.error(cmd.stderr) end
 
-    return cmd.status == 0 and cmd.stdout or nil, cmd.stderr
+    return cmd.status == 0 and cmd.stdout or nil
 end
 
 function dir:can_parse(directory)
@@ -182,16 +188,15 @@ end
 ---@async
 function dir:parse(directory, parse_state)
     local list = {}
-    local files, dirs, err
 
     -- the dir command expects backslashes for our paths
     directory = string.gsub(directory, "/", "\\")
 
-    dirs, err = command({ "cmd", "/U", "/c", "dir", "/b", "/ad", directory }, parse_state)
-    if not dirs then return msg.error(err) end
+    local dirs = command({ "cmd", "/U", "/c", "dir", "/b", "/ad", directory }, parse_state)
+    if not dirs then return end
 
-    files, err = command({ "cmd", "/U", "/c", "dir", "/b", "/a-d", directory }, parse_state)
-    if not files then return msg.error(err) end
+    local files = command({ "cmd", "/U", "/c", "dir", "/b", "/a-d", directory }, parse_state)
+    if not files then return end
 
     for name in dirs:gmatch("[^\n\r]+") do
         name = name.."/"
