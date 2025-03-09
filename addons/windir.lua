@@ -9,32 +9,140 @@ local mp = require "mp"
 local msg = require "mp.msg"
 local fb = require "file-browser"
 
---this is a LuaJit module this addon will not load if not using LuaJit
-local ffi = require 'ffi' ---@diagnostic disable-line no-unknown
-ffi.cdef([[
-    int __stdcall WideCharToMultiByte(unsigned int CodePage, unsigned int dwFlags, const wchar_t *lpWideCharStr, int cchWideChar, char *lpMultiByteStr, int cbMultiByte, const char *lpDefaultChar, bool *lpUsedDefaultChar);
-]])
+---@param bytes string
+---@return fun(): number?, number?
+local function byte_iterator(bytes)
+    ---@async
+    ---@return number?
+    local function iter()
+        for i = 1, #bytes do
+            coroutine.yield(i, bytes:byte(i))
+        end
+        return nil
+    end
 
---converts a UTF16 string to a UTF8 string
---this function was adapted from https://github.com/mpv-player/mpv/issues/10139#issuecomment-1117954648
----@diagnostic disable-next-line undefined-doc-name
----@param WideCharStr string|ffi.cdata*
----@return string?
-local function utf8(WideCharStr)
-    WideCharStr = ffi.cast("wchar_t*", WideCharStr) ---@diagnostic disable-line no-unknown
-    if not WideCharStr then return nil end
+    return coroutine.wrap(iter)
+end
 
-    ---@type number
-    local utf8_size = ffi.C.WideCharToMultiByte(65001, 0, WideCharStr, -1, nil, 0, nil, nil) --CP_UTF8
-    if utf8_size > 0 then
-        local utf8_path = ffi.new("char[?]", utf8_size) ---@diagnostic disable-line no-unknown
-        ---@type number
-        local utf8_size = ffi.C.WideCharToMultiByte(65001, 0, WideCharStr, -1, utf8_path, utf8_size, nil, nil)
-        if utf8_size > 0 then
-            --removes the trailing `\0` character which can break things
-            return ffi.string(utf8_path, utf8_size):sub(1, -2)
+---@param iter fun(): number?, number?
+---@return number
+local function get_byte(iter)
+    local _, byte = iter()
+    if not byte then error('malformed utf16le string - expected byte but found end of string') end
+    return byte
+end
+
+---@param bits number
+---@param by number
+---@return number
+local function lshift(bits, by)
+    return bits * 2^by
+end
+
+---@param bits number
+---@param by number
+---@return integer
+local function rshift(bits, by)
+    return math.floor(bits / 2^by)
+end
+
+---@param bits number
+---@param i number
+---@return number
+local function bits_below(bits, i)
+    -- local bitmask = lshift(rshift(bits, i), i)
+    -- return bits - bitmask
+    return bits % 2^i
+end
+
+---@param bits number
+---@param i number exclusive
+---@param j number inclusive
+---@return integer
+local function bits_between(bits, i, j)
+    return rshift(bits_below(bits, j), i)
+end
+
+---@param bytes string
+---@return number[]
+local function utf16le_to_unicode(bytes)
+    ---@type number[]
+    local codepoints = {}
+
+    local iter = byte_iterator(bytes)
+    -- ---@type fun(): number?, number?
+    -- local iter = ipairs({bytes:byte(1, #bytes)})
+
+    local success, err = xpcall(function()
+        while true do
+            -- start of a char
+            local success, little = pcall(get_byte, iter)
+            if not success then break end
+
+            local big = lshift(get_byte(iter), 8)
+            local codepoint = big + little
+
+            -- surrogate pairs
+            if codepoint < 0xd800 or codepoint > 0xdfff then
+                table.insert(codepoints, codepoint)
+            else
+                -- special surrogate handling
+                -- grab the next two bytes to grab the low surrogate
+                local high_pair = codepoint
+                local low_pair = get_byte(iter) + lshift(get_byte(iter), 8)
+
+                if high_pair >= 0xdc00 then error('malformed utf16le string - high surrogate pair is >= 0xdc00') end
+                if low_pair < 0xdc00 then error('malformed utf16le string - low surrogate pair is < 0xdc00') end
+
+                -- The last 10 bits of each surrogate are the two halves of the codepoint
+                -- https://en.wikipedia.org/wiki/UTF-16#Code_points_from_U+010000_to_U+10FFFF
+                local high_bits = bits_below(high_pair, 10)
+                local low_bits = bits_below(low_pair, 10)
+
+                table.insert(codepoints, (low_bits + lshift(high_bits, 10)) + 0x10000)
+            end
+        end
+    end, debug.traceback)
+
+    if not success then
+        msg.error(err)
+        msg.warn(table.concat(codepoints, ' '))
+        msg.warn('read up to', (table.concat(codepoints, ' '):gsub('%d+', function(d) return string.format('0x%02X', d) end)))
+    end
+
+    return codepoints
+end
+
+---@param codepoints number[]
+---@return string
+local function unicode_to_utf8(codepoints)
+    ---@type number[]
+    local bytes = {}
+
+    for _, codepoint in ipairs(codepoints) do
+        if codepoint <= 0x7f then
+            table.insert(bytes, codepoint)
+        elseif codepoint <= 0x7ff then
+            -- 5 most significant bits of the codepoint are in byte 1
+            table.insert(bytes, 0xC0 + rshift(codepoint, 6))
+            table.insert(bytes, 0x80 + bits_below(codepoint, 6))
+        elseif codepoint <= 0xffff then
+            table.insert(bytes, 0xE0 + rshift(codepoint, 12))
+            table.insert(bytes, 0x80 + bits_between(codepoint, 6, 12))
+            table.insert(bytes, 0x80 + bits_below(codepoint, 6))
+        elseif codepoint <= 0x10ffff then
+            table.insert(bytes, 0xF0 + rshift(codepoint, 18))
+            table.insert(bytes, 0x80 + bits_between(codepoint, 12, 18))
+            table.insert(bytes, 0x80 + bits_between(codepoint, 6, 12))
+            table.insert(bytes, 0x80 + bits_below(codepoint, 6))
         end
     end
+
+    return string.char(unpack(bytes))
+end
+
+local function utf8(text)
+    return unicode_to_utf8(utf16le_to_unicode(text))
 end
 
 ---@type ParserConfig
