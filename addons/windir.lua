@@ -70,8 +70,6 @@ local function utf16le_to_unicode(bytes)
     local codepoints = {}
 
     local iter = byte_iterator(bytes)
-    -- ---@type fun(): number?, number?
-    -- local iter = ipairs({bytes:byte(1, #bytes)})
 
     local success, err = xpcall(function()
         while true do
@@ -119,11 +117,11 @@ local function unicode_to_utf8(codepoints)
     ---@type number[]
     local bytes = {}
 
+    -- https://en.wikipedia.org/wiki/UTF-8#Description
     for _, codepoint in ipairs(codepoints) do
         if codepoint <= 0x7f then
             table.insert(bytes, codepoint)
         elseif codepoint <= 0x7ff then
-            -- 5 most significant bits of the codepoint are in byte 1
             table.insert(bytes, 0xC0 + rshift(codepoint, 6))
             table.insert(bytes, 0x80 + bits_below(codepoint, 6))
         elseif codepoint <= 0xffff then
@@ -169,8 +167,12 @@ local function command(args, parse_state)
             args = args,
         }, fb.coroutine.callback() )
     )
-    cmd.stdout = utf8(cmd.stdout) or ''
-    cmd.stderr = utf8(cmd.stderr) or ''
+    local success = xpcall(function()
+        cmd.stdout = utf8(cmd.stdout) or ''
+        cmd.stderr = utf8(cmd.stderr) or ''
+    end, fb.traceback)
+
+    if not success then return msg.error('failed to convert utf16-le string to utf8') end
 
     --dir returns this exact error message if the directory is empty
     if cmd.status == 1 and cmd.stderr == "File Not Found\r\n" then cmd.status = 0 end
