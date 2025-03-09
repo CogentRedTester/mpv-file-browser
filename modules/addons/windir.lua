@@ -9,32 +9,129 @@ local mp = require "mp"
 local msg = require "mp.msg"
 local fb = require "file-browser"
 
---this is a LuaJit module this addon will not load if not using LuaJit
-local ffi = require 'ffi' ---@diagnostic disable-line no-unknown
-ffi.cdef([[
-    int __stdcall WideCharToMultiByte(unsigned int CodePage, unsigned int dwFlags, const wchar_t *lpWideCharStr, int cchWideChar, char *lpMultiByteStr, int cbMultiByte, const char *lpDefaultChar, bool *lpUsedDefaultChar);
-]])
+---@param bytes string
+---@return fun(): number, number
+local function byte_iterator(bytes)
+    ---@async
+    ---@return number?
+    local function iter()
+        for i = 1, #bytes do
+            coroutine.yield(bytes:byte(i), i)
+        end
+        error('malformed utf16le string - expected byte but found end of string')
+    end
 
---converts a UTF16 string to a UTF8 string
---this function was adapted from https://github.com/mpv-player/mpv/issues/10139#issuecomment-1117954648
----@diagnostic disable-next-line undefined-doc-name
----@param WideCharStr string|ffi.cdata*
----@return string?
-local function utf8(WideCharStr)
-    WideCharStr = ffi.cast("wchar_t*", WideCharStr) ---@diagnostic disable-line no-unknown
-    if not WideCharStr then return nil end
+    return coroutine.wrap(iter)
+end
 
-    ---@type number
-    local utf8_size = ffi.C.WideCharToMultiByte(65001, 0, WideCharStr, -1, nil, 0, nil, nil) --CP_UTF8
-    if utf8_size > 0 then
-        local utf8_path = ffi.new("char[?]", utf8_size) ---@diagnostic disable-line no-unknown
-        ---@type number
-        local utf8_size = ffi.C.WideCharToMultiByte(65001, 0, WideCharStr, -1, utf8_path, utf8_size, nil, nil)
-        if utf8_size > 0 then
-            --removes the trailing `\0` character which can break things
-            return ffi.string(utf8_path, utf8_size):sub(1, -2)
+---@param bits number
+---@param by number
+---@return number
+local function lshift(bits, by)
+    return bits * 2^by
+end
+
+---@param bits number
+---@param by number
+---@return integer
+local function rshift(bits, by)
+    return math.floor(bits / 2^by)
+end
+
+---@param bits number
+---@param i number
+---@return number
+local function bits_below(bits, i)
+    return bits % 2^i
+end
+
+---@param bits number
+---@param i number exclusive
+---@param j number inclusive
+---@return integer
+local function bits_between(bits, i, j)
+    return rshift(bits_below(bits, j), i)
+end
+
+---@param bytes string
+---@return number[]
+local function utf16le_to_unicode(bytes)
+    msg.trace('converting from utf16-le to unicode codepoints')
+
+    ---@type number[]
+    local codepoints = {}
+
+    local get_byte = byte_iterator(bytes)
+
+    while true do
+        -- start of a char
+        local success, little, i = pcall(get_byte)
+        if not success then break end
+
+        local big = lshift(get_byte(), 8)
+        local codepoint = big + little
+
+        if codepoint < 0xd800 or codepoint > 0xdfff then
+            table.insert(codepoints, codepoint)
+        else
+            -- handling surrogate pairs
+            -- grab the next two bytes to grab the low surrogate
+            local high_pair = codepoint
+            local low_pair = get_byte() + lshift(get_byte(), 8)
+
+            if high_pair >= 0xdc00 then
+                error(('malformed utf16le string at byte #%d (0x%04X) - high surrogate pair should be >= 0xdc00'):format(i+2, high_pair))
+            elseif low_pair < 0xdc00 then
+                error(('malformed utf16le string at byte #%d (0x%04X) - low surrogate pair should be < 0xdc00'):format(i+3, low_pair))
+            end
+
+            -- The last 10 bits of each surrogate are the two halves of the codepoint
+            -- https://en.wikipedia.org/wiki/UTF-16#Code_points_from_U+010000_to_U+10FFFF
+            local high_bits = bits_below(high_pair, 10)
+            local low_bits = bits_below(low_pair, 10)
+            local surrogate_par = (low_bits + lshift(high_bits, 10)) + 0x10000
+
+            table.insert(codepoints, surrogate_par)
         end
     end
+
+    return codepoints
+end
+
+---@param codepoints number[]
+---@return string
+local function unicode_to_utf8(codepoints)
+    ---@type number[]
+    local bytes = {}
+
+    -- https://en.wikipedia.org/wiki/UTF-8#Description
+    for i, codepoint in ipairs(codepoints) do
+        if codepoint >= 0xd800 and codepoint <= 0xdfff then
+            error(('codepoint %d (U+%05X) is within the reserved surrogate pair range (U+D800-U+DFFF)'):format(i, codepoint))
+        elseif codepoint <= 0x7f then
+            table.insert(bytes, codepoint)
+        elseif codepoint <= 0x7ff then
+            table.insert(bytes, 0xC0 + rshift(codepoint, 6))
+            table.insert(bytes, 0x80 + bits_below(codepoint, 6))
+        elseif codepoint <= 0xffff then
+            table.insert(bytes, 0xE0 + rshift(codepoint, 12))
+            table.insert(bytes, 0x80 + bits_between(codepoint, 6, 12))
+            table.insert(bytes, 0x80 + bits_below(codepoint, 6))
+        elseif codepoint <= 0x10ffff then
+            table.insert(bytes, 0xF0 + rshift(codepoint, 18))
+            table.insert(bytes, 0x80 + bits_between(codepoint, 12, 18))
+            table.insert(bytes, 0x80 + bits_between(codepoint, 6, 12))
+            table.insert(bytes, 0x80 + bits_below(codepoint, 6))
+        else
+            error(('codepoint %d (U+%05X) is larger than U+10FFFF'):format(i, codepoint))
+        end
+    end
+
+    return string.char(table.unpack(bytes))
+end
+
+local function utf8(text)
+    return unicode_to_utf8(utf16le_to_unicode(text))
 end
 
 ---@type ParserConfig
@@ -61,8 +158,12 @@ local function command(args, parse_state)
             args = args,
         }, fb.coroutine.callback() )
     )
-    cmd.stdout = utf8(cmd.stdout) or ''
-    cmd.stderr = utf8(cmd.stderr) or ''
+    local success = xpcall(function()
+        cmd.stdout = utf8(cmd.stdout) or ''
+        cmd.stderr = utf8(cmd.stderr) or ''
+    end, fb.traceback)
+
+    if not success then return msg.error('failed to convert utf16-le string to utf8') end
 
     --dir returns this exact error message if the directory is empty
     if cmd.status == 1 and cmd.stderr == "File Not Found\r\n" then cmd.status = 0 end
