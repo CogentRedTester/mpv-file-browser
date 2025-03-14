@@ -70,8 +70,8 @@ local function utf16le_to_unicode(bytes)
         local success, little, i = pcall(get_byte)
         if not success then break end
 
-        local big = lshift(get_byte(), 8)
-        local codepoint = big + little
+        local big = get_byte()
+        local codepoint = little + lshift(big, 8)
 
         if codepoint < 0xd800 or codepoint > 0xdfff then
             table.insert(codepoints, codepoint)
@@ -82,9 +82,9 @@ local function utf16le_to_unicode(bytes)
             local low_pair = get_byte() + lshift(get_byte(), 8)
 
             if high_pair >= 0xdc00 then
-                error(('malformed utf16le string at byte #%d (0x%04X) - high surrogate pair should be >= 0xdc00'):format(i+2, high_pair))
+                error(('malformed utf16le string at byte #%d (0x%04X) - high surrogate pair should be < 0xDC00'):format(i, high_pair))
             elseif low_pair < 0xdc00 then
-                error(('malformed utf16le string at byte #%d (0x%04X) - low surrogate pair should be < 0xdc00'):format(i+3, low_pair))
+                error(('malformed utf16le string at byte #%d (0x%04X) - low surrogate pair should be >= 0xDC00'):format(i+2, low_pair))
             end
 
             -- The last 10 bits of each surrogate are the two halves of the codepoint

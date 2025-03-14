@@ -342,7 +342,7 @@ end
 ---@param file string
 ---@return boolean
 function fb_utils.valid_file(file)
-    if o.filter_dot_dirs == 'yes' or o.filter_dot_dirs == 'auto' and g.PLATFORM ~= 'windows' then
+    if o.filter_dot_files == 'yes' or o.filter_dot_files == 'auto' and g.PLATFORM ~= 'windows' then
         if string.sub(file, 1, 1) == "." then return false end
     end
     if o.filter_files and not g.extensions[ fb_utils.get_extension(file, "") ] then return false end
