@@ -120,6 +120,10 @@ The following dynamic keybinds are only set while the browser is open:
 | s           | select_mode   | toggles multiselect mode                                                      |
 | S           | select_item   | toggles selection for the current item                                        |
 | Ctrl+a      | select_all    | select all items in the current directory                                     |
+| Ctrl+f      | find/find     | Opens a text input to search the contents of the folder - requires [mpv-user-input](#mpv-user-input) when mpv < v0.38|
+| Ctrl+F      | find/find_advanced| Allows using [Lua Patterns](https://www.lua.org/manual/5.1/manual.html#5.4.1) in the search input|
+| n           | find/next     | Jumps to the next matching entry for the latest search term                   |
+| N           | find/prev     | Jumps to the previous matching entry for the latest search term               |
 
 When attempting to play or append a subtitle file the script will instead load the subtitle track into the existing video.
 
@@ -130,11 +134,9 @@ By default the playlist will only be autoloaded if `Alt+ENTER` is used on a sing
 
 To accomodate for both windows and linux this script has its own virtual root directory where drives and file folders can be manually added. The root directory can only contain folders.
 
-The root directory is set using the `root` option, which is a comma separated list of directories. Entries are sent through mpv's `expand-path` command. By default the only root value is the user's home folder:
-
-`root=~/`
-
-It is highly recommended that this be customised for the computer being used; [file_browser.conf](file_browser.conf) contains commented out suggestions for generic linux and windows systems. For example, my windows root looks like:
+The root directory is set using the `root` option, which is a comma separated list of directories. Entries are sent through mpv's `expand-path` command. By default `~/` and `C:/` are set on Windows
+and `~/` and `/` are set on non-Windows systems.
+Extra locations can be added manually, for example, my Windows root looks like:
 
 `root=~/,C:/,D:/,E:/,Z:/`
 

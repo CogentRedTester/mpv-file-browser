@@ -1,14 +1,8 @@
 --[[
-    An addon for mpv-file-browser for searching the current directory
-    Available at: https://github.com/CogentRedTester/mpv-file-browser/tree/master/addons
+    This file is an internal file-browser addon.
+    It should not be imported like a normal module.
 
-    Requires mpv-user-input: https://github.com/CogentRedTester/mpv-user-input
-
-    Keybinds:
-        Ctrl+f  open search box
-        Ctrl+F  open advanced search box (supports Lua patterns)
-        n       cycle to next valid item
-        N       cycle to prev valid item
+    Allows searching the current directory.
 ]]--
 
 local msg = require "mp.msg"
@@ -114,7 +108,7 @@ end
 local function step_find(key)
     if not latest_coroutine then return false end
     ---@type number
-    local direction
+    local direction = 0
     if key.name == "find/next" then direction = 1
     elseif key.name == "find/prev" then direction = -1 end
     return fb.coroutine.resume_err(latest_coroutine, direction)
