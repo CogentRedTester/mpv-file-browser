@@ -49,14 +49,14 @@ system. The [`docs/file_browser.conf`](docs/file_browser.conf) file contains the
 
 ### Advanced
 
-To setup [custom keybinds](docs/custom-keybinds.md) enable the `custom_keybinds` option in `file_browser.conf` and
-create a `~~/script-opts/file-browser-keybinds.json` file. Do **not** copy the `file-browser-keybinds.json` file
+To setup [custom keybinds](docs/custom-keybinds.md) create a `~~/script-opts/file-browser-keybinds.json` file.
+Do **not** copy the `file-browser-keybinds.json` file
 stored in this repository, that file is a collection of random examples, many of which are for completely different
 operating systems. Use them and the [docs](docs/custom-keybinds.md) to create your own collection of keybinds.
 
 To use [addons](addons/README.md) place addon files in the `~~/script-modules/file-browser-addons/` directory.
 
-If you are not going to enable custom keybinds or addons then there is no reason to
+If you are not going to use custom keybinds or addons then there is no reason to
 create `file-browser-keybinds.json` or `script-modules/file-browser-addons/`.
 
 <details>

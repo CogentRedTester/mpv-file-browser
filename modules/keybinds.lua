@@ -329,7 +329,11 @@ local function setup_keybinds()
     if o.custom_keybinds then
         local path = mp.command_native({"expand-path", "~~/script-opts/file-browser-keybinds.json"}) --[[@as string]]
         local custom_keybinds, err = io.open( path )
-        if not custom_keybinds then return error(err) end
+        if not custom_keybinds then
+            msg.debug(err)
+            msg.verbose('could not read custom keybind file', path)
+            return
+        end
 
         local json = custom_keybinds:read("*a")
         custom_keybinds:close()

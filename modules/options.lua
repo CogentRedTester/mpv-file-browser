@@ -31,7 +31,7 @@ local o = {
     max_concurrency = 16,
 
     --enable custom keybinds
-    custom_keybinds = false,
+    custom_keybinds = true,
 
     --blacklist compatible files, it's recommended to use this rather than to edit the
     --compatible list directly. A semicolon separated list of extensions without spaces
