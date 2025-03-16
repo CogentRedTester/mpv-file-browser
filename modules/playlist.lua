@@ -88,7 +88,7 @@ end
 ---@diagnostic disable-next-line no-unknown
 local concurrent_loadlist_wrapper
 
----@alias ConcurrentRefMap table<List|Item,{directory: string, sublist: List}>
+---@alias ConcurrentRefMap table<List|Item,{directory: string?, sublist: List?, recurse: boolean?}>
 
 ---This function recursively loads directories concurrently in separate coroutines.
 ---Results are saved in a tree of tables that allows asynchronous access.
@@ -100,6 +100,8 @@ local concurrent_loadlist_wrapper
 ---@param refs ConcurrentRefMap
 ---@return boolean?
 local function concurrent_loadlist_parse(directory, load_opts, prev_dirs, item_t, refs)
+    if not refs[item_t] then refs[item_t] = {} end
+
     --prevents infinite recursion from the item.path or opts.directory fields
     if prev_dirs[directory] then return end
     prev_dirs[directory] = true
@@ -110,22 +112,23 @@ local function concurrent_loadlist_parse(directory, load_opts, prev_dirs, item_t
     --if we can't parse the directory then append it and hope mpv fares better
     if list == nil then
         msg.warn("Could not parse", directory, "appending to playlist anyway")
-        item_t.type = "file"
+        refs[item_t].recurse = false
         return
     end
 
     directory = list_opts.directory or directory
-    if directory == "" then return end
 
     --we must declare these before we start loading sublists otherwise the append thread will
     --need to wait until the whole list is loaded (when synchronous IO is used)
     refs[item_t].sublist = list or {}
-    refs[list].directory = directory
+    refs[list] = {directory = directory}
+
+    if directory == "" then return end
 
     --launches new parse operations for directories, each in a different coroutine
     for _, item in ipairs(list) do
         if fb_utils.parseable_item(item) then
-            fb_utils.coroutine.run(concurrent_loadlist_wrapper, fb_utils.get_new_directory(item, directory), load_opts, prev_dirs, item)
+            fb_utils.coroutine.run(concurrent_loadlist_wrapper, fb_utils.get_new_directory(item, directory), load_opts, prev_dirs, item, refs)
         end
     end
     return true
@@ -167,11 +170,11 @@ local function concurrent_loadlist_append(list, load_opts, refs)
         if not g.sub_extensions[ fb_utils.get_extension(item.name, "") ]
         and not g.audio_extensions[ fb_utils.get_extension(item.name, "") ]
         then
-            while (not refs[item].sublist and fb_utils.parseable_item(item)) do
+            while fb_utils.parseable_item(item) and (not refs[item] or not refs[item].sublist) do
                 coroutine.yield()
             end
 
-            if fb_utils.parseable_item(item) then
+            if fb_utils.parseable_item(item) and refs[item] ~= false then
                 concurrent_loadlist_append(refs[item].sublist, load_opts, refs)
             else
                 loadfile(fb_utils.get_full_path(item, directory), load_opts, item.mpv_options)
@@ -233,12 +236,15 @@ local function loadlist(item, opts)
         opts.co = fb_utils.coroutine.assert()
         opts.concurrency = 0
 
-        local refs = setmetatable({}, {__mode = 'k'})
+        ---@type List
+        local v_list = {item}
+        ---@type ConcurrentRefMap
+        local refs = setmetatable({[v_list] = {directory = opts.directory}}, {__mode = 'k'})
 
         --we need the current coroutine to suspend before we run the first parse operation, so
         --we schedule the coroutine to run on the mpv event queue
         fb_utils.coroutine.queue(concurrent_loadlist_wrapper, dir, opts, {}, item, refs)
-        concurrent_loadlist_append({item, _directory = opts.directory}, opts, refs)
+        concurrent_loadlist_append(v_list, opts, refs)
     else
         custom_loadlist_recursive(dir, opts, {})
     end
