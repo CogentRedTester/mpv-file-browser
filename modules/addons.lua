@@ -150,11 +150,12 @@ end
 
 ---loading external addons
 ---@param directory string
+---@return nil
 local function load_addons(directory)
     directory = fb_utils.fix_path(directory, true)
 
     local files = utils.readdir(directory)
-    if not files then error("could not read addon directory") end
+    if not files then return msg.verbose('not loading external addons - could not read', o.addon_directory) end
 
     for _, file in ipairs(files) do
         setup_addon(file, directory..file)
@@ -185,7 +186,7 @@ end
 
 local function load_external_addons()
     local addon_dir = mp.command_native({"expand-path", o.addon_directory..'/'}) --[[@as string|nil]]
-    if not addon_dir then return msg.error('could not resolve', o.addon_directory) end
+    if not addon_dir then return msg.verbose('not loading external addons - could not resolve', o.addon_directory) end
     load_addons(addon_dir)
 end
 

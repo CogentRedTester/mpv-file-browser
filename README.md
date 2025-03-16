@@ -54,8 +54,7 @@ create a `~~/script-opts/file-browser-keybinds.json` file. Do **not** copy the `
 stored in this repository, that file is a collection of random examples, many of which are for completely different
 operating systems. Use them and the [docs](docs/custom-keybinds.md) to create your own collection of keybinds.
 
-To setup [addons](addons/README.md) enable the `addons` option in `file_browser.conf` and place the addon files
-in the `~~/script-modules/file-browser-addons/` directory.
+To use [addons](addons/README.md) place addon files in the `~~/script-modules/file-browser-addons/` directory.
 
 If you are not going to enable custom keybinds or addons then there is no reason to
 create `file-browser-keybinds.json` or `script-modules/file-browser-addons/`.

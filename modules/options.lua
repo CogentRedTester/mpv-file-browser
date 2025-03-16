@@ -103,7 +103,7 @@ local o = {
     cursor_icon = [[{\p1}m 14.11 6.86 l 0.34 0.02 b 0.25 -0.02 0.13 -0 0.06 0.08 b -0.01 0.16 -0.02 0.28 0.04 0.36 l 3.38 5.55 l 3.38 5.55 3.67 6.15 3.81 6.79 3.79 7.45 3.61 8.08 3.39 8.5l 0.04 13.77 b -0.02 13.86 -0.01 13.98 0.06 14.06 b 0.11 14.11 0.17 14.13 0.24 14.13 b 0.27 14.13 0.31 14.13 0.34 14.11 l 14.11 7.28 b 14.2 7.24 14.25 7.16 14.25 7.07 b 14.25 6.98 14.2 6.9 14.11 6.86{\p0}\h]],
 
     --enable addons
-    addons = false,
+    addons = true,
     addon_directory = "~~/script-modules/file-browser-addons",
 
     --Enables the internal `ls` addon that parses directories using the `ls` commandline tool.
