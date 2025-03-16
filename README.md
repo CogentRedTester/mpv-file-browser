@@ -25,16 +25,31 @@ You can then pull to receive updates.
 Alternatively, you can download the zip and extract the contents to `~~/scripts/file-browser`.
 `~~/` is the mpv config directory which is typically `~/.config/mpv/` on linux and `%APPDATA%/mpv/` on windows.
 
-Create a `file_browser.conf` file in the `~~/script-opts/` directory and customise the [`root` option](#root-directory) for your
-system. The [`docs/file_browser.conf`](docs/file_browser.conf) file contains the full list of options and their defaults.
+### Configuration
+
+Create a `file_browser.conf` file in the `~~/script-opts/` directory to configure the script.
+See [docs/file_browser.conf](docs/file_browser.conf) for the full list of options and their default values.
+The [`root` option](#root-directory) may be worth tweaking for your system.
+
+### Addons
+
+To use [addons](addons/README.md) place addon files in the `~~/script-modules/file-browser-addons/` directory.
+
+### Custom Keybinds
+To setup [custom keybinds](docs/custom-keybinds.md) create a `~~/script-opts/file-browser-keybinds.json` file.
+Do **not** copy the `file-browser-keybinds.json` file
+stored in this repository, that file is a collection of random examples, many of which are for completely different
+operating systems. Use them and the [docs](docs/custom-keybinds.md) to create your own collection of keybinds.
+
+### File Structure
 
 <details>
-<summary>Expected directory tree:</summary>
+<summary>Expected directory tree (basic):</summary>
 
 ```
 ~~/
 ├── script-opts
-│   └── file-browser.conf
+│   └── file_browser.conf
 └── scripts
     └── file-browser
         ├── addons/
@@ -47,20 +62,8 @@ system. The [`docs/file_browser.conf`](docs/file_browser.conf) file contains the
 ```
 </details>
 
-### Advanced
-
-To setup [custom keybinds](docs/custom-keybinds.md) create a `~~/script-opts/file-browser-keybinds.json` file.
-Do **not** copy the `file-browser-keybinds.json` file
-stored in this repository, that file is a collection of random examples, many of which are for completely different
-operating systems. Use them and the [docs](docs/custom-keybinds.md) to create your own collection of keybinds.
-
-To use [addons](addons/README.md) place addon files in the `~~/script-modules/file-browser-addons/` directory.
-
-If you are not going to use custom keybinds or addons then there is no reason to
-create `file-browser-keybinds.json` or `script-modules/file-browser-addons/`.
-
 <details>
-<summary>Expected directory tree:</summary>
+<summary>Expected directory tree (full):</summary>
 
 ```
 ~~/
@@ -189,11 +192,6 @@ The API_VERSION field of the `opts` table refers to what version of the addon AP
 The `response-string` refers to an arbitrary script-message that the tables should be sent to.
 
 This script-message allows other scripts to utilise file-browser's directory parsing capabilities, as well as those of the file-browser addons.
-
-## Configuration
-
-See [file_browser.conf](docs/file_browser.conf) for the full list of options and their default values.
-The file is placed in the `~~/script-opts/` folder.
 
 ## Conditional Auto-Profiles
 
