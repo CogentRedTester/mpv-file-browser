@@ -106,6 +106,16 @@ local o = {
     addons = false,
     addon_directory = "~~/script-modules/file-browser-addons",
 
+    --Enables the internal `ls` addon that parses directories using the `ls` commandline tool.
+    --Allows directory parsing to run concurrently, which prevents the browser from locking up.
+    --Automatically disables itself on Windows systems.
+    ls_parser = true,
+
+    --Enables the internal `windir` addon that parses directories using the `dir` command in cmd.exe.
+    --Allows directory parsing to run concurrently, which prevents the browser from locking up.
+    --Automatically disables itself on non-Windows systems.
+    windir_parser = true,
+
     --directory to load external modules - currently just user-input-module
     module_directory = "~~/script-modules",
 

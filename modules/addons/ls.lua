@@ -44,6 +44,7 @@ local function command(args, parse_state)
 end
 
 function ls:can_parse(directory)
+    if not fb.get_opt('ls_parser') then return false end
     return PLATFORM ~= 'windows' and directory ~= '' and not fb.get_protocol(directory)
 end
 

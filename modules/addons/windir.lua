@@ -180,9 +180,8 @@ local function command(args, parse_state)
 end
 
 function dir:can_parse(directory)
-    if PLATFORM ~= 'windows' then return false end
-    if directory == "" then return false end
-    return not fb.get_protocol(directory)
+    if not fb.get_opt('windir_parser') then return false end
+    return PLATFORM == 'windows' and directory ~= '' and not fb.get_protocol(directory)
 end
 
 ---@async
