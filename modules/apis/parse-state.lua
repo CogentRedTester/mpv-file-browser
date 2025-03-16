@@ -16,10 +16,6 @@ local parse_state_API = {}
 function parse_state_API:yield(...)
     local co = coroutine.running()
     local is_browser = co == g.state.co
-    if self.source == "browser" and not is_browser then
-        msg.error("current coroutine does not match browser's expected coroutine - did you unsafely yield before this?")
-        error("current coroutine does not match browser's expected coroutine - aborting the parse")
-    end
 
     local result = table.pack(coroutine.yield(...))
     if is_browser and co ~= g.state.co then
