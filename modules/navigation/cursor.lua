@@ -3,8 +3,11 @@
 --------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
 
+local mp = require 'mp'
 local msg = require 'mp.msg'
+local utils = require 'mp.utils'
 
+local o = require 'modules.options'
 local g = require 'modules.globals'
 local fb_utils = require 'modules.utils'
 local ass = require 'modules.ass'
@@ -64,6 +67,12 @@ function cursor.scroll(n, wrap)
     end
 
     if g.state.multiselect_start then drag_select(original_pos, g.state.selected) end
+
+    --moves the scroll window down so that the selected item is in the middle of the screen
+    g.state.scroll_offset = g.state.selected - (math.ceil(o.num_entries/2)-1)
+    if g.state.scroll_offset < 0 then
+        g.state.scroll_offset = 0
+    end
     ass.update_ass()
 end
 
@@ -120,6 +129,77 @@ function cursor.toggle_select_mode()
         cursor.disable_select_mode()
         ass.update_ass()
     end
+end
+
+---@param str string
+---@param substring string
+---@return number
+local function count_substrings(str, substring)
+    local count = 0
+    for match in string.gmatch(str, substring) do
+        count = count + 1
+    end
+    return count
+end
+
+local font_size_body = g.BASE_FONT_SIZE
+local font_size_header = g.BASE_FONT_SIZE * o.scaling_factor_header
+local font_size_wrappers = g.BASE_FONT_SIZE * o.scaling_factor_wrappers
+
+local num_header_lines = count_substrings(o.format_string_header, '\\N') + 1
+local num_twrapper_lines = count_substrings(o.format_string_topwrapper, '\\N') + 1
+local num_bwrapper_lines = count_substrings(o.format_string_bottomwrapper, '\\N') + 1
+
+---update the selected item based on the mouse position
+---@param _? string
+---@param mouse_pos? MPVMousePos
+function cursor.update_mouse_pos(_, mouse_pos)
+    if not o.mouse_mode or g.state.hidden or #g.state.list == 0 then return end
+
+    if not mouse_pos then mouse_pos = mp.get_property_native("mouse-pos", {}) end
+    if not mouse_pos.hover then return end
+    msg.trace('received mouse pos:', utils.to_string(mouse_pos))
+
+    local scale = mp.get_property_number("osd-height", 0) / g.ass.res_y
+    local osd_offset = scale * mp.get_property("osd-margin-y", 22)
+
+    msg.trace('calculating mouse pos for', g.osd_alignment, 'alignment')
+
+    --calculate position when browser is aligned to the top of the screen
+    if g.osd_alignment == "top" then
+        local header_offset = osd_offset + (num_header_lines * scale * font_size_header)
+        if g.state.scroll_offset > 0 then header_offset = header_offset + (num_twrapper_lines * scale * font_size_wrappers) end
+        msg.trace('calculated header offset', header_offset)
+
+        g.state.selected = math.ceil((mouse_pos.y-header_offset) / (scale * font_size_body)) + g.state.scroll_offset
+
+    --calculate position when browser is aligned to the bottom of the screen
+    --this calculation is slightly off when a bottom wrapper exists,
+    --I do not know what causes this.
+    elseif g.osd_alignment == "bottom" then
+        mouse_pos.y = (mp.get_property_number("osd-height", 0)) - mouse_pos.y
+
+        local bottom = math.min(#g.state.list, g.state.scroll_offset + o.num_entries)
+        local footer_offset = (2 * scale * font_size_wrappers) + osd_offset
+        msg.trace('calculated footer offset', footer_offset)
+
+        g.state.selected = bottom - math.floor((mouse_pos.y - footer_offset) / (scale * font_size_body))
+    end
+
+    ass.update_ass()
+end
+
+---scrolls the view window when using mouse mode
+---@param direction number
+function cursor.wheel(direction)
+    g.state.scroll_offset = g.state.scroll_offset + direction
+    if (g.state.scroll_offset + o.num_entries) > #g.state.list then
+        g.state.scroll_offset = #g.state.list - o.num_entries
+    end
+    if g.state.scroll_offset < 0 then
+        g.state.scroll_offset = 0
+    end
+    cursor.update_mouse_pos()
 end
 
 return cursor

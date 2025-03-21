@@ -91,23 +91,17 @@ local function update_ass()
 
     ---@type number
     local start = 1
-    ---@type number
-    local finish = start+o.num_entries-1
+    local finish = start + math.min(o.num_entries, #state.list) - 1
 
-    --handling cursor positioning
-    local mid = math.ceil(o.num_entries/2)+1
-    if state.selected+mid > finish then
-        ---@type number
-        local offset = state.selected - finish + mid
-
-        --if we've overshot the end of the list then undo some of the offset
-        if finish + offset > #state.list then
-            offset = offset - ((finish+offset) - #state.list)
+    --handling the offset caused by scrolling
+    if state.scroll_offset > 0 then
+        if finish + state.scroll_offset > #state.list then
+            state.scroll_offset = #state.list - finish
         end
-
-        start = start + offset
-        finish = finish + offset
     end
+
+    start = start + state.scroll_offset
+    finish = finish + state.scroll_offset
 
     --making sure that we don't overstep the boundaries
     if start < 1 then start = 1 end

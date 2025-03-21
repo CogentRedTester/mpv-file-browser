@@ -32,15 +32,15 @@ assert(mp.create_osd_overlay, "Script requires minimum mpv version 0.33")
 globals.ass = mp.create_osd_overlay("ass-events")
 globals.ass.res_y = 720 / o.scaling_factor_base
 
-local BASE_FONT_SIZE = 25
+globals.BASE_FONT_SIZE = 25
 
 globals.style = {
     global = o.alignment == 0 and "" or ([[{\an%d}]]):format(o.alignment),
 
     -- full line styles
-    header = ([[{\r\q2\b%s\fs%d\fn%s\c&H%s&}]]):format((o.font_bold_header and "1" or "0"), o.scaling_factor_header*BASE_FONT_SIZE, o.font_name_header, o.font_colour_header),
-    body = ([[{\r\q2\fs%d\fn%s\c&H%s&}]]):format(BASE_FONT_SIZE, o.font_name_body, o.font_colour_body),
-    footer_header = ([[{\r\q2\fs%d\fn%s\c&H%s&}]]):format(o.scaling_factor_wrappers*BASE_FONT_SIZE, o.font_name_wrappers, o.font_colour_wrappers),
+    header = ([[{\r\q2\b%s\fs%d\fn%s\c&H%s&}]]):format((o.font_bold_header and "1" or "0"), o.scaling_factor_header*globals.BASE_FONT_SIZE, o.font_name_header, o.font_colour_header),
+    body = ([[{\r\q2\fs%d\fn%s\c&H%s&}]]):format(globals.BASE_FONT_SIZE, o.font_name_body, o.font_colour_body),
+    footer_header = ([[{\r\q2\fs%d\fn%s\c&H%s&}]]):format(o.scaling_factor_wrappers*globals.BASE_FONT_SIZE, o.font_name_wrappers, o.font_colour_wrappers),
 
     --small section styles (for colours)
     multiselect = ([[{\c&H%s&}]]):format(o.font_colour_multiselect),
@@ -62,6 +62,8 @@ globals.style = {
 globals.state = {
     list = {},
     selected = 1,
+    scroll_offset = 0,
+    osd_alignment = "",
     hidden = true,
     flag_update = false,
     keybinds = nil,
@@ -77,6 +79,15 @@ globals.state = {
     initial_selection = nil,
     selection = {}
 }
+
+---@type 'top'|'center'|'bottom'
+globals.osd_alignment = "top"
+
+--if the alignment isn't automated then we'll store a static value
+--numbers defined here: https://aegi.vmoe.info/docs/3.0/ASS_Tags/#index23h3
+if o.alignment >= 7 then globals.osd_alignment = "top"
+elseif o.alignment >= 4 then globals.osd_alignment = "center"
+elseif o.alignment >= 1 then globals.osd_alignment = "bottom" end
 
 ---@class ParserRef
 ---@field id string

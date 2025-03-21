@@ -5,6 +5,7 @@
 ---@class (exact) State
 ---@field list List
 ---@field selected number
+---@field scroll_offset number
 ---@field hidden boolean
 ---@field flag_update boolean
 ---@field keybinds KeybindTupleStrict[]?

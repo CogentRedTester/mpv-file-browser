@@ -34,6 +34,9 @@ local o = {
     custom_keybinds = true,
     custom_keybinds_file = "~~/script-opts/file-browser-keybinds.json",
 
+    --enable experimental mouse mode
+    mouse_mode = false,
+
     --blacklist compatible files, it's recommended to use this rather than to edit the
     --compatible list directly. A comma separated list of extensions without spaces
     extension_blacklist = "",

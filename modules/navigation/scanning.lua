@@ -108,6 +108,7 @@ local function update_list(moving_adjacent, parse_properties)
     msg.verbose('opening directory: ' .. g.state.directory)
 
     g.state.selected = 1
+    g.state.scroll_offset = 0
     g.state.selection = {}
 
     local directory = g.state.directory
