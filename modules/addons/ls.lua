@@ -51,7 +51,7 @@ end
 ---@async
 function ls:parse(directory, parse_state)
     local list = {}
-    local files = command({"ls", "-1", "-p", "-A", "-N", "--zero", directory}, parse_state)
+    local files = command({"ls", "-1", "-p", "-A", "-N", "--zero", "-L", directory}, parse_state)
 
     if not files then return nil end
 
