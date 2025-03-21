@@ -160,7 +160,7 @@ local o = {
 
     scaling_factor_base = 1,
     scaling_factor_header = 1.4,
-    scaling_factor_wrappers = 0.64,
+    scaling_factor_wrappers = 1,
 
     font_name_header = "",
     font_name_body = "",
