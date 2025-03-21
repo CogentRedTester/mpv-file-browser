@@ -227,14 +227,16 @@ Below is a table of suggested priority ranges:
 
 | Range   | Suggested Use                                                                                  | Example parsers                                |
 |---------|------------------------------------------------------------------------------------------------|------------------------------------------------|
-| 0-20    | parsers that purely modify the results of other parsers                                        | [m3u-fixer](m3u-browser.lua)                   |
-| 21-40   | virtual filesystems which need to link to the results of other parsers                         | [favourites](favourites.lua)                   |
+| 0       | priority of the internal cache addon that caches the results of other parsers                  | [cache](../modules/addons/cache.lua)           |
+| 1-20    | parsers that purely modify the results of other parsers                                        | [url-decode](../addons/url-decode.lua)         |
+| 21-40   | virtual filesystems which need to link to the results of other parsers                         | [favourites](../addons/favourites.lua)         |
 | 41-50   | to support specific sites or systems which can be inferred from the path                       |                                                |
-| 51-80   | limitted support for specific protocols which requires complex parsing to verify compatability | [apache](apache-browser.lua)                   |
-| 81-90   | parsers that only need to modify the results of full parsers                                   | [home-label](home-label.lua)                   |
-| 91-100  | use for parsers which fully support a non-native protocol with absolutely no overlap           | [ftp](ftp-browser.lua), [m3u](m3u-browser.lua) |
-| 101-109 | replacements for the native file parser or fallbacks for the full parsers                      | [powershell](powershell.lua)                   |
-| 110     | priority of the native file parser - don't use                                                 |                                                |
+| 51-70   |                                                                                                |                                                |
+| 71-80   | limitted support for specific protocols which requires complex parsing to verify compatability | [apache](../addons/apache-browser.lua)         |
+| 81-90   | parsers that only need to modify the results of full parsers                                   | [home-label](../modules/addons/home-label.lua) |
+| 91-100  | use for parsers which fully support a non-native protocol with absolutely no overlap           | [ftp](../addons/ftp-browser.lua)               |
+| 101-109 | replacements for the native file parser or fallbacks for the full parsers                      | [ls](../modules/addons/ls.lua)                 |
+| 110     | priority of the native file parser - don't use                                                 | [file](../modules/addons/file.lua)             |
 | 111+    | fallbacks for native parser - potentially alternatives to the default root                     |                                                |
 
 ## Keybinds
@@ -994,9 +996,14 @@ If the input is not a number return false, if the input is out of bounds move it
 
 ## Examples
 
-For standard addons that add support for non-native filesystems, but otherwise don't do anything fancy, see [ftp-browser](ftp-browser.lua) and [apache-browser](apache-browser.lua).
+The internal [file](../modules/addons/file.lua), [ls](../modules/addons/ls.lua), and [windir](../modules/addons/windir.lua) addons provide
+support for browsing the native filesystem.
 
-For more simple addons that make a few small modifications to how other parsers are displayed, see [home-label](home-label.lua).
+For standard addons that add support for non-native filesystems, but otherwise don't do anything fancy, see [ftp-browser](../addons/ftp-browser.lua) and [apache-browser](../addons/apache-browser.lua).
+
+For more simple addons that make a few small modifications to how other parsers are displayed, see [home-label](../modules/addons/home-label.lua).
 
 For more complex addons that maintain their own virtual directory structure, see
-[favourites](favourites.lua).
+[favourites](../addons/favourites.lua).
+
+
