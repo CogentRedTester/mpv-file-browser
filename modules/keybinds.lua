@@ -327,7 +327,7 @@ local function setup_keybinds()
 
     --loads custom keybinds from file-browser-keybinds.json
     if o.custom_keybinds then
-        local path = mp.command_native({"expand-path", "~~/script-opts/file-browser-keybinds.json"}) --[[@as string]]
+        local path = mp.command_native({"expand-path", o.custom_keybinds_file}) --[[@as string]]
         local custom_keybinds, err = io.open( path )
         if not custom_keybinds then
             msg.debug(err)
