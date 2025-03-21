@@ -14,6 +14,7 @@ local home_label = {
 }
 
 function home_label:can_parse(directory)
+    if not fb.get_opt('home_label') then return false end
     return directory:sub(1, home:len()) == home
 end
 

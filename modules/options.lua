@@ -101,6 +101,10 @@ local o = {
     --e.g. moving up from `ftp://localhost/` will move straight to the root instead of `ftp://`
     skip_protocol_schemes = true,
 
+    --Replace the user's home directory with `~/` in the header.
+    --Uses the internal home-label addon.
+    home_label = true,
+
     --map optical device paths to their respective file paths,
     --e.g. mapping bd:// to the value of the bluray-device property
     map_bd_device = true,
