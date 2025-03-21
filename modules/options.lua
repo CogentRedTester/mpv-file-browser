@@ -87,6 +87,16 @@ local o = {
     --move the browser there even if this option is set to false
     default_to_working_directory = false,
 
+    --When opening the browser prefer the directory last opened by a previous mpv instance of file-browser.
+    --Overrides the `default_to_working_directory` option.
+    --Requires `save_last_opened_directory` to be true.
+    --Uses the internal `last-opened-directory` addon.
+    default_to_last_opened_directory = false,
+
+    --Whether to save the last opened directory and the file to save this value in.
+    save_last_opened_directory = false,
+    last_opened_directory_file = '~~state/file_browser-last_opened_directory',
+
     --when moving up a directory do not stop on empty protocol schemes like `ftp://`
     --e.g. moving up from `ftp://localhost/` will move straight to the root instead of `ftp://`
     skip_protocol_schemes = true,
