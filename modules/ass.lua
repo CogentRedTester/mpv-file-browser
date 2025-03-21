@@ -72,16 +72,19 @@ local function ass_escape(str)
     return escaped
 end
 
+local header_overrides = {['^'] = style.header}
+
 --refreshes the ass text using the contents of the list
 local function update_ass()
     if state.hidden then state.flag_update = true ; return end
 
     append(style.global)
 
-    local dir_name = state.directory_label or state.directory
-    if dir_name == "" then dir_name = "ROOT" end
     append(style.header)
-    append(fb_utils.substitute_codes(o.format_string_header, nil, nil, nil, ass_escape))
+    append(fb_utils.substitute_codes(o.format_string_header, header_overrides, nil, nil, function(str, code)
+        if code == '^' then return str end
+        return ass_escape(str)
+    end))
     newline()
 
     if #state.list < 1 then
