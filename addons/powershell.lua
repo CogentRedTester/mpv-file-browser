@@ -6,6 +6,7 @@
 ]]--
 
 --list the drive letters to use here (case sensitive)
+---@type string[]
 local drive_letters = {
     "Y", "Z"
 }
@@ -14,19 +15,27 @@ local mp = require "mp"
 local msg = require "mp.msg"
 local fb = require "file-browser"
 
+---@type ParserConfig
 local wn = {
     priority = 109,
-    version = "1.1.0",
+    api_version = "1.1.0",
     name = "powershell",
     keybind_name = "file"
 }
 
+---@type Set<string>
 local drives = {}
 for _, letter in ipairs(drive_letters) do
     drives[letter] = true
 end
 
+---@async
+---@param args string[]
+---@param parse_state ParseState
+---@return string|nil
+---@return string
 local function command(args, parse_state)
+    ---@type boolean, MPVSubprocessResult
     local _, cmd = parse_state:yield(
         mp.command_native_async({
             name = "subprocess",
@@ -41,9 +50,10 @@ local function command(args, parse_state)
 end
 
 function wn:can_parse(directory)
-    return not self.get_protocol(directory) and drives[ directory:sub(1,1) ]
+    return directory ~= '' and not self.get_protocol(directory) and drives[ directory:sub(1,1) ]
 end
 
+---@async
 function wn:parse(directory, parse_state)
     local list = {}
     local files, err = command({"powershell", "-noprofile", "-command", [[

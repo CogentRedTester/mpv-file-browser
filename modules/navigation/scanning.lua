@@ -4,7 +4,6 @@ local utils = require 'mp.utils'
 
 local g = require 'modules.globals'
 local fb_utils = require 'modules.utils'
-local cache = require 'modules.cache'
 local cursor = require 'modules.navigation.cursor'
 local ass = require 'modules.ass'
 
@@ -12,12 +11,17 @@ local parse_state_API = require 'modules.apis.parse-state'
 
 local function clear_non_adjacent_state()
     g.state.directory_label = nil
-    cache:clear()
 end
 
---parses the given directory or defers to the next parser if nil is returned
+---parses the given directory or defers to the next parser if nil is returned
+---@async
+---@param directory string
+---@param index number
+---@return List?
+---@return Opts?
 local function choose_and_parse(directory, index)
     msg.debug(("finding parser for %q"):format(directory))
+    ---@type Parser, List?, Opts?
     local parser, list, opts
     local parse_state = g.parse_states[coroutine.running() or ""]
     while list == nil and not parse_state.already_deferred and index <= #g.parsers do
@@ -36,17 +40,29 @@ local function choose_and_parse(directory, index)
     return list, opts
 end
 
---sets up the parse_state table and runs the parse operation
-local function run_parse(directory, parse_state)
+---Sets up the parse_state table and runs the parse operation.
+---@async
+---@param directory string
+---@param parse_state_template ParseStateTemplate
+---@return List|nil
+---@return Opts
+local function run_parse(directory, parse_state_template)
     msg.verbose(("scanning files in %q"):format(directory))
-    parse_state.directory = directory
+
+    ---@type ParseStateFields
+    local parse_state = {
+        source = parse_state_template.source,
+        directory = directory,
+        properties = parse_state_template.properties or {}
+    }
 
     local co = coroutine.running()
-    g.parse_states[co] = setmetatable(parse_state, { __index = parse_state_API })
+    g.parse_states[co] = fb_utils.set_prototype(parse_state, parse_state_API) --[[@as ParseState]]
 
     local list, opts = choose_and_parse(directory, 1)
 
-    if list == nil then return msg.debug("no successful parsers found") end
+    if list == nil then return msg.debug("no successful parsers found"), {} end
+    opts = opts or {}
     opts.parser = g.parsers[opts.id]
 
     if not opts.filtered then fb_utils.filter(list) end
@@ -54,15 +70,21 @@ local function run_parse(directory, parse_state)
     return list, opts
 end
 
---returns the contents of the given directory using the given parse state
---if a coroutine has already been used for a parse then create a new coroutine so that
---the every parse operation has a unique thread ID
+---Returns the contents of the given directory using the given parse state.
+---If a coroutine has already been used for a parse then create a new coroutine so that
+---the every parse operation has a unique thread ID.
+---@async
+---@param directory string
+---@param parse_state ParseStateTemplate
+---@return List|nil
+---@return Opts
 local function parse_directory(directory, parse_state)
     local co = fb_utils.coroutine.assert("scan_directory must be executed from within a coroutine - aborting scan "..utils.to_string(parse_state))
     if not g.parse_states[co] then return run_parse(directory, parse_state) end
 
     --if this coroutine is already is use by another parse operation then we create a new
     --one and hand execution over to that
+    ---@async
     local new_co = coroutine.create(function()
         fb_utils.coroutine.resume_err(co, run_parse(directory, parse_state))
     end)
@@ -78,25 +100,19 @@ local function parse_directory(directory, parse_state)
     return g.parse_states[co]:yield()
 end
 
---sends update requests to the different parsers
-local function update_list(moving_adjacent)
+---Sends update requests to the different parsers.
+---@async
+---@param moving_adjacent? number|boolean
+---@param parse_properties? ParseProperties
+local function update_list(moving_adjacent, parse_properties)
     msg.verbose('opening directory: ' .. g.state.directory)
 
     g.state.selected = 1
     g.state.scroll_offset = 0
     g.state.selection = {}
 
-    --loads the current directry from the cache to save loading time
-    --there will be a way to forcibly reload the current directory at some point
-    --the cache is in the form of a stack, items are taken off the stack when the dir moves up
-    if cache[1] and cache[#cache].directory == g.state.directory then
-        msg.verbose('found directory in cache')
-        cache:apply()
-        g.state.prev_directory = g.state.directory
-        return
-    end
     local directory = g.state.directory
-    local list, opts = parse_directory(g.state.directory, { source = "browser" })
+    local list, opts = parse_directory(g.state.directory, { source = "browser", properties = parse_properties })
 
     --if the running coroutine isn't the one stored in the state variable, then the user
     --changed directories while the coroutine was paused, and this operation should be aborted
@@ -107,16 +123,12 @@ local function update_list(moving_adjacent)
     end
 
     --apply fallbacks if the scan failed
-    if not list and cache[1] then
-        --switches settings back to the previously opened directory
-        --to the user it will be like the directory never changed
-        msg.warn("could not read directory", g.state.directory)
-        cache:apply()
-        return
-    elseif not list then
+    if not list then
         --opens the root instead
         msg.warn("could not read directory", g.state.directory, "redirecting to root")
-        list, opts = parse_directory("", { source = "browser" })
+        list, opts = parse_directory("", { source = "browser", properties = parse_properties })
+
+        if not list then error(('fatal error - failed to read the root directory')) end
 
         -- sets the directory redirect flag
         opts.directory = ''
@@ -124,13 +136,6 @@ local function update_list(moving_adjacent)
 
     g.state.list = list
     g.state.parser = opts.parser
-
-    --this only matters when displaying the list on the screen, so it doesn't need to be in the scan function
-    if not opts.escaped then
-        for i = 1, #list do
-            list[i].ass = list[i].ass or fb_utils.ass_escape(list[i].label or list[i].name, true)
-        end
-    end
 
     --setting custom options from parsers
     g.state.directory_label = opts.directory_label
@@ -155,8 +160,14 @@ local function update_list(moving_adjacent)
     g.state.prev_directory = g.state.directory
 end
 
---rescans the folder and updates the list
-local function update(moving_adjacent)
+---rescans the folder and updates the list.
+---@param moving_adjacent? number|boolean
+---@param cb? function
+---@param parse_properties? ParseProperties
+---@return thread # The coroutine for the triggered parse operation. May be aborted early if directory is in the cache.
+local function rescan(moving_adjacent, cb, parse_properties)
+    if moving_adjacent == nil then moving_adjacent = 0 end
+
     --we can only make assumptions about the directory label when moving from adjacent directories
     if not moving_adjacent then clear_non_adjacent_state() end
 
@@ -167,16 +178,22 @@ local function update(moving_adjacent)
 
     --the directory is always handled within a coroutine to allow addons to
     --pause execution for asynchronous operations
-    fb_utils.coroutine.run(function()
-        g.state.co = coroutine.running()
-        update_list(moving_adjacent)
+    ---@async
+    local co = fb_utils.coroutine.queue(function()
+        update_list(moving_adjacent, parse_properties)
         if g.state.empty_text == "~" then g.state.empty_text = "empty directory" end
+
         ass.update_ass()
+        if cb then fb_utils.coroutine.run(cb) end
     end)
+
+    g.state.co = co
+    return co
 end
 
+---@class scanning
 return {
-    rescan = update,
+    rescan = rescan,
     scan_directory = parse_directory,
     choose_and_parse = choose_and_parse,
 }

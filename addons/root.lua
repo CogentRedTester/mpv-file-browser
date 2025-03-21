@@ -27,7 +27,7 @@ local utils = require 'mp.utils'
 local fb = require 'file-browser'
 
 -- loads the root json file
-local config_path = mp.command_native({'expand-path', '~~/script-opts/file-browser-root.json'})
+local config_path = mp.command_native({'expand-path', '~~/script-opts/file-browser-root.json'}) --[[@as string]]
 
 local file = io.open(config_path, 'r')
 if not file then
@@ -35,7 +35,10 @@ if not file then
     return
 end
 
-local root_config = utils.parse_json(file:read("*a"))
+---@class RootConfigItem: Item
+---@field priority number?
+
+local root_config = utils.parse_json(file:read("*a")) --[=[@as RootConfigItem[]]=]
 if not root_config then
     msg.error('failed to parse contents of', config_path, '- Check the syntax is correct.')
     return
@@ -43,12 +46,15 @@ end
 
 local function setup()
     for i, item in ipairs(root_config) do
-        fb.register_root_item(item, item.priority)
+        local priority = item.priority
+        item.priority = nil
+        fb.register_root_item(item, priority)
     end
 end
 
+---@type ParserConfig
 return {
-    version = '1.4.0',
+    api_version = '1.4.0',
     setup = setup,
     priority = -1000,
 }

@@ -9,6 +9,7 @@ local fb = require "file-browser"
 
 --decodes a URL address
 --this piece of code was taken from: https://stackoverflow.com/questions/20405985/lua-decodeuri-luvit/20406960#20406960
+---@type fun(s: string): string
 local decodeURI
 do
     local char, gsub, tonumber = string.char, string.gsub, tonumber
@@ -20,22 +21,32 @@ do
     end
 end
 
+---@type ParserConfig
 local apache = {
     priority = 80,
-    version = "1.1.0"
+    api_version = "1.1.0"
 }
 
+---@param name string
+---@return boolean
 function apache:can_parse(name)
-    return name:find("^https?://")
+    return name:find("^https?://") ~= nil
 end
 
---send curl errors through the browser empty_text
-function apache:send_error(str)
+---Send curl errors through the browser empty_text.
+---@param str string
+---@return List
+---@return Opts
+local function send_error(str)
     return {}, {empty_text = "curl error: "..str}
 end
 
+---@async
+---@param args string[]
+---@return MPVSubprocessResult
 local function execute(args)
     msg.trace(utils.to_string(args))
+    ---@type boolean, MPVSubprocessResult
     local _, cmd = fb.get_parse_state():yield(
         mp.command_native_async({
             name = "subprocess",
@@ -48,21 +59,22 @@ local function execute(args)
     return cmd
 end
 
+---@async
 function apache:parse(directory)
     msg.verbose(directory)
 
     local test = execute({"curl", "-k", "-l", "-I", directory})
     local response = test.stdout:match("(%d%d%d [^\n\r]+)")
     if test.stdout:match("Content%-Type: ([^\r\n/]+)") ~= "text" then return nil end
-    if response ~= "200 OK" then return self:send_error(response) end
+    if response ~= "200 OK" then return send_error(response) end
 
     local html = execute({"curl", "-k", "-l", directory})
-    if html.status ~= 0 then return self:send_error(tostring(html.status))
+    if html.status ~= 0 then return send_error(tostring(html.status))
     elseif not html.stdout:find("%[PARENTDIR%]") then return nil end
 
-    html = html.stdout
+    local html_body = html.stdout
     local list = {}
-    for str in string.gmatch(html, "[^\r\n]+") do
+    for str in string.gmatch(html_body, "[^\r\n]+") do
         local valid = true
         if str:sub(1,4) ~= "<tr>" then valid = false end
 

@@ -1,0 +1,97 @@
+name: Lint
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  Build_LuaLS:
+    runs-on: ubuntu-latest
+    outputs:
+      luals_version: ${{ steps.get-luaLS-version.outputs.version }}
+    steps:
+      - name: Get LuaLS version
+        id: get-luaLS-version
+        run: |
+          version=$(curl https://api.github.com/repos/LuaLS/lua-language-server/releases/latest | jq -r '.tag_name')
+          echo $version
+          echo "version=$version" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Cache Lua Language Server
+        uses: actions/cache@v4
+        id: cache
+        with:
+          key: ${{ steps.get-luaLS-version.outputs.version }}
+          path: ./luals
+
+      - name: Download LuaLS
+        uses: robinraju/release-downloader@v1
+        if: steps.cache.outputs.cache-hit != 'true'
+        with:
+          repository: LuaLS/lua-language-server
+          tag: ${{ steps.get-luaLS-version.outputs.version }}
+          fileName: '*-linux-x64.tar.gz'
+          extract: true
+          out-file-path: ./luals
+  
+  Lint_LuaJit:
+    needs: Build_LuaLS
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: ./file-browser
+      - name: Cache Lua Language Server
+        uses: actions/cache@v4
+        id: cache
+        with:
+          key: ${{ needs.Build_LuaLS.outputs.luals_version }}
+          path: ./luals
+      - name: Run LuaLS
+        run: |
+          jq '."runtime.version" = "LuaJIT"' ./file-browser/.luarc.json > tmp.json
+          mv tmp.json ./file-browser/.luarc.json
+          ./luals/bin/lua-language-server --check=./file-browser
+
+  Lint_Lua51:
+    needs: Build_LuaLS
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: ./file-browser
+      - name: Cache Lua Language Server
+        uses: actions/cache@v4
+        id: cache
+        with:
+          key: ${{ needs.Build_LuaLS.outputs.luals_version }}
+          path: ./luals
+      - name: Run LuaLS
+        run: |
+          jq '."runtime.version" = "Lua 5.1"' ./file-browser/.luarc.json > tmp.json
+          mv tmp.json ./file-browser/.luarc.json
+          ./luals/bin/lua-language-server --check=./file-browser
+
+  Lint_Lua52:
+    needs: Build_LuaLS
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: ./file-browser
+      - name: Cache Lua Language Server
+        uses: actions/cache@v4
+        id: cache
+        with:
+          key: ${{ needs.Build_LuaLS.outputs.luals_version }}
+          path: ./luals
+      - name: Run LuaLS
+        run: |
+          jq '."runtime.version" = "Lua 5.2"' ./file-browser/.luarc.json > tmp.json
+          mv tmp.json ./file-browser/.luarc.json
+          ./luals/bin/lua-language-server --check=./file-browser

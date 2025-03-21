@@ -9,34 +9,49 @@ local mp = require "mp"
 local msg = require "mp.msg"
 local fb = require "file-browser"
 
+local PLATFORM = fb.get_platform()
+
+---@type ParserConfig
 local ls = {
     priority = 109,
-    version = "1.1.0",
+    api_version = "1.9.0",
     name = "ls",
     keybind_name = "file"
 }
 
+---@async
+---@param args string[]
+---@param parse_state ParseState
+---@return string|nil
 local function command(args, parse_state)
-    local _, cmd = parse_state:yield(
-        mp.command_native_async({
+    local async = mp.command_native_async({
             name = "subprocess",
             playback_only = false,
             capture_stdout = true,
             capture_stderr = true,
             args = args
-        }, fb.coroutine.callback())
-    )
+        }, fb.coroutine.callback(30))
+
+    ---@type boolean, boolean, MPVSubprocessResult
+    local completed, _, cmd = parse_state:yield()
+    if not completed then
+        msg.warn('read timed out for:', table.unpack(args))
+        mp.abort_async_command(async)
+        return nil
+    end
 
     return cmd.status == 0 and cmd.stdout or nil
 end
 
 function ls:can_parse(directory)
-    return not fb.get_protocol(directory)
+    if not fb.get_opt('ls_parser') then return false end
+    return PLATFORM ~= 'windows' and directory ~= '' and not fb.get_protocol(directory)
 end
 
+---@async
 function ls:parse(directory, parse_state)
     local list = {}
-    local files = command({"ls", "-1", "-p", "-A", "-N", "--zero", directory}, parse_state)
+    local files = command({"ls", "-1", "-p", "-A", "-N", "--zero", "-L", directory}, parse_state)
 
     if not files then return nil end
 
@@ -44,14 +59,10 @@ function ls:parse(directory, parse_state)
         local is_dir = str:sub(-1) == "/"
         msg.trace(str)
 
-        if is_dir and fb.valid_dir(str) then
-            table.insert(list, {name = str, type = "dir"})
-        elseif fb.valid_file(str) then
-            table.insert(list, {name = str, type = "file"})
-        end
+        table.insert(list, {name = str, type = is_dir and "dir" or "file"})
     end
 
-    return list, {filtered = true}
+    return list
 end
 
 return ls
