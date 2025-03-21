@@ -160,6 +160,24 @@ local function load_addons(directory)
     for _, file in ipairs(files) do
         setup_addon(file, directory..file)
     end
+end
+
+local function load_internal_addons()
+    local script_dir = mp.get_script_directory()
+    if not script_dir then return msg.error('script is not being run as a directory script!') end
+    local internal_addon_dir = script_dir..'/modules/addons/'
+    load_addons(internal_addon_dir)
+end
+
+local function load_external_addons()
+    local addon_dir = mp.command_native({"expand-path", o.addon_directory..'/'}) --[[@as string|nil]]
+    if not addon_dir then return msg.verbose('not loading external addons - could not resolve', o.addon_directory) end
+    load_addons(addon_dir)
+end
+
+---Orders the addons by priority, sets the parser index values,
+---and runs the setup methods of the addons.
+local function setup_addons()
     table.sort(g.parsers, function(a, b) return a.priority < b.priority end)
 
     --we want to store the indexes of the parsers
@@ -177,22 +195,10 @@ local function load_addons(directory)
     end
 end
 
-local function load_internal_parsers()
-    local script_dir = mp.get_script_directory()
-    if not script_dir then return msg.error('script is not being run as a directory script!') end
-    local internal_addon_dir = script_dir..'/modules/addons/'
-    load_addons(internal_addon_dir)
-end
-
-local function load_external_addons()
-    local addon_dir = mp.command_native({"expand-path", o.addon_directory..'/'}) --[[@as string|nil]]
-    if not addon_dir then return msg.verbose('not loading external addons - could not resolve', o.addon_directory) end
-    load_addons(addon_dir)
-end
-
 ---@class addons
 return {
     check_api_version = check_api_version,
-    load_internal_parsers = load_internal_parsers,
-    load_external_addons = load_external_addons
+    load_internal_addons = load_internal_addons,
+    load_external_addons = load_external_addons,
+    setup_addons = setup_addons,
 }
