@@ -47,6 +47,7 @@ globals.style = {
     selected = ([[{\c&H%s&}]]):format(o.font_colour_selected),
     playing = ([[{\c&H%s&}]]):format(o.font_colour_playing),
     playing_selected = ([[{\c&H%s&}]]):format(o.font_colour_playing_multiselected),
+    warning = ([[{\c&H%s&}]]):format(o.font_colour_escape_chars),
 
     --icon styles
     indent = ([[{\alpha&H%s}]]):format('ff'),

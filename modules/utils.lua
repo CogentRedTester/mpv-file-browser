@@ -333,14 +333,18 @@ end
 ---@param dir string
 ---@return boolean
 function fb_utils.valid_dir(dir)
-    if o.filter_dot_dirs and string.sub(dir, 1, 1) == "." then return false end
+    if o.filter_dot_dirs == 'yes' or o.filter_dot_dirs == 'auto' and g.PLATFORM ~= 'windows' then
+        return string.sub(dir, 1, 1) ~= "."
+    end
     return true
 end
 
 ---@param file string
 ---@return boolean
 function fb_utils.valid_file(file)
-    if o.filter_dot_files and (string.sub(file, 1, 1) == ".") then return false end
+    if o.filter_dot_files == 'yes' or o.filter_dot_files == 'auto' and g.PLATFORM ~= 'windows' then
+        if string.sub(file, 1, 1) == "." then return false end
+    end
     if o.filter_files and not g.extensions[ fb_utils.get_extension(file, "") ] then return false end
     return true
 end
@@ -594,16 +598,13 @@ function fb_utils.get_code_pattern(codes)
     return('%%%%([%s])'):format(fb_utils.pattern_escape(CUSTOM_KEYBIND_CODES))
 end
 
--- substitutes codes in the given string for other substrings
--- overrides is a map of characters->strings|functions that determines the replacement string is
--- item and state are values passed to functions in the map
--- modifier_fn is given the replacement substrings before they are placed in the main string (the return value is the new replacement string)
----comment
+---Substitutes codes in the given string for other substrings.
 ---@param str string
----@param overrides? ReplacerTable
----@param item? Item
----@param state? State
----@param modifier_fn? fun(new_str: string): string
+---@param overrides? ReplacerTable Replacer functions for additional characters to match to after `%` characters.
+---@param item? Item Uses the currently selected item if nil.
+---@param state? State Uses the global state if nil.
+---@param modifier_fn? fun(new_str: string, code: string): string given the replacement substrings before they are placed in the main string
+---                                                 (the return value is the new replacement string).
 ---@return string
 function fb_utils.substitute_codes(str, overrides, item, state, modifier_fn)
     local replacers = overrides and setmetatable(fb_utils.copy_table(overrides), {__index = fb_utils.code_fns}) or fb_utils.code_fns
@@ -626,7 +627,7 @@ function fb_utils.substitute_codes(str, overrides, item, state, modifier_fn)
             result = replacer(item, state)
         end
 
-        if result and modifier_fn then return modifier_fn(tostring(result)) end
+        if result and modifier_fn then return modifier_fn(tostring(result), code) end
         return result
     end))
 end

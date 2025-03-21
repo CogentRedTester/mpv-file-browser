@@ -59,18 +59,15 @@ local function highlight_entry(v)
     end
 end
 
----@type table<string,string>
-local ass_cache = setmetatable({}, {__mode = 'k'})
-
 ---escape ass values and replace newlines
 ---@param str string
+---@param style_reset string?
 ---@return string
-local function ass_escape(str)
-    if ass_cache[str] then return ass_cache[str] end
-    local escaped = fb_utils.ass_escape(str, true)
-    ass_cache[str] = escaped
-    return escaped
+local function ass_escape(str, style_reset)
+    return fb_utils.ass_escape(str, style_reset and style.warning..'␊'..style_reset or true)
 end
+
+local header_overrides = {['^'] = style.header}
 
 --refreshes the ass text using the contents of the list
 local function update_ass()
@@ -78,10 +75,11 @@ local function update_ass()
 
     append(style.global)
 
-    local dir_name = state.directory_label or state.directory
-    if dir_name == "" then dir_name = "ROOT" end
     append(style.header)
-    append(fb_utils.substitute_codes(o.format_string_header, nil, nil, nil, ass_escape))
+    append(fb_utils.substitute_codes(o.format_string_header, header_overrides, nil, nil, function(str, code)
+        if code == '^' then return str end
+        return ass_escape(str, style.header)
+    end))
     newline()
 
     if #state.list < 1 then
@@ -122,7 +120,9 @@ local function update_ass()
 
     --adding a header to show there are items above in the list
     if o.format_string_topwrapper ~= '' and start > 1 then
-        append(style.footer_header, fb_utils.substitute_codes(o.format_string_topwrapper, wrapper_overrides, nil, nil, ass_escape))
+        append(style.footer_header, fb_utils.substitute_codes(o.format_string_topwrapper, wrapper_overrides, nil, nil, function(str)
+            return ass_escape(str)
+        end))
         newline()
     end
 
@@ -149,22 +149,24 @@ local function update_ass()
         local multiselected = state.selection[i]
 
         --sets the colour for the item
-        local function set_colour()
-            if multiselected then append(style.multiselect)
-            elseif i == state.selected then append(style.selected) end
+        local item_style = style.body
+        -- local function set_colour()
+        if multiselected then item_style = item_style..style.multiselect
+        elseif i == state.selected then item_style = item_style..style.selected end
 
-            if playing_file then append( multiselected and style.playing_selected or style.playing) end
-        end
-        set_colour()
+        if playing_file then item_style = item_style..(multiselected and style.playing_selected or style.playing) end
+        -- end
+        -- set_colour()
+        append(item_style)
 
         --sets the folder icon
         if v.type == 'dir' then
             append(style.folder, o.folder_icon, "\\h", style.body)
-            set_colour()
+            append(item_style)
         end
 
         --adds the actual name of the item
-        append(v.ass or ass_escape(v.label or v.name))
+        append(v.ass or ass_escape(v.label or v.name, item_style))
         newline()
     end
 

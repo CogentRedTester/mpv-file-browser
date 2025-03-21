@@ -10,17 +10,19 @@ local msg = require 'mp.msg'
 
 local fb = require 'file-browser'
 
-local state_file = mp.command_native({'expand-path', '~~state/last_opened_directory'}) --[[@as string]]
+local state_file = mp.command_native({'expand-path', fb.get_opt('last_opened_directory_file')}) --[[@as string]]
 msg.verbose('using', state_file)
 
 ---@param directory? string
 ---@return nil
 local function write_directory(directory)
+    if not fb.get_opt('save_last_opened_directory') then return end
+
     local file = io.open(state_file, 'w+')
 
     if not file then return msg.error('could not open', state_file, 'for writing') end
 
-    directory = directory or fb.get_directory()
+    directory = directory or fb.get_directory() or ''
     msg.verbose('writing', directory, 'to', state_file)
     file:write(directory)
     file:close()
@@ -33,9 +35,11 @@ local addon = {
 }
 
 function addon:setup()
+    if not fb.get_opt('default_to_last_opened_directory') then return end
+
     local file = io.open(state_file, "r")
     if not file then
-        return msg.error('failed to open', state_file, 'for reading')
+        return msg.info('failed to open', state_file, 'for reading (may be due to first load)')
     end
 
     local dir = file:read("*a")

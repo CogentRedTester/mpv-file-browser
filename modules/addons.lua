@@ -150,11 +150,12 @@ end
 
 ---loading external addons
 ---@param directory string
+---@return nil
 local function load_addons(directory)
     directory = fb_utils.fix_path(directory, true)
 
     local files = utils.readdir(directory)
-    if not files then error("could not read addon directory") end
+    if not files then return msg.verbose('not loading external addons - could not read', o.addon_directory) end
 
     for _, file in ipairs(files) do
         setup_addon(file, directory..file)
@@ -164,7 +165,7 @@ end
 local function load_internal_addons()
     local script_dir = mp.get_script_directory()
     if not script_dir then return msg.error('script is not being run as a directory script!') end
-    local internal_addon_dir = script_dir..'/modules/parsers/'
+    local internal_addon_dir = script_dir..'/modules/addons/'
     load_addons(internal_addon_dir)
 end
 

@@ -1,3 +1,11 @@
+--[[
+    This file is an internal file-browser addon.
+    It should not be imported like a normal module.
+
+    Maintains a cache of the accessed directories to improve
+    parsing speed. Disabled by default.
+]]
+
 local mp = require 'mp'
 local msg = require 'mp.msg'
 local utils = require 'mp.utils'
@@ -8,7 +16,7 @@ local fb = require 'file-browser'
 local cacheParser = {
     name = 'cache',
     priority = 0,
-    api_version = '1.6',
+    api_version = '1.9',
 }
 
 ---@class CacheEntry
