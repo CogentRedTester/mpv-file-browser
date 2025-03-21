@@ -28,6 +28,11 @@ local mp = {}
 ---@field error_string ''|'killed'|'init'
 ---@field killed_by_us boolean
 
+---@class MPVMousePos
+---@field x number
+---@field y number
+---@field hover boolean
+
 ---@param key string
 ---@param name_or_fn string|function
 ---@param fn? async fun()
@@ -144,5 +149,8 @@ function mp.set_property_number(name, value) end
 ---@return true? success # nil if error
 ---@return string? err
 function mp.set_property_native(name, value) end
+
+---@param fn function
+function mp.unobserve_property(fn) end
 
 return mp

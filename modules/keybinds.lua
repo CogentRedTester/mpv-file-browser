@@ -44,6 +44,7 @@ g.state.keybinds = {
 ---@type KeybindList
 local top_level_keys = {}
 
+---@param key KeybindTupleStrict
 local function add_key(key)
     table.insert(g.state.keybinds, key)
 end

@@ -80,11 +80,14 @@ globals.state = {
     selection = {}
 }
 
+---@type 'top'|'center'|'bottom'
+globals.osd_alignment = "top"
+
 --if the alignment isn't automated then we'll store a static value
 --numbers defined here: https://aegi.vmoe.info/docs/3.0/ASS_Tags/#index23h3
-if o.alignment >= 7 then globals.state.osd_alignment = "top"
-elseif o.alignment >= 4 then globals.state.osd_alignment = "center"
-elseif o.alignment >= 1 then globals.state.osd_alignment = "bottom" end
+if o.alignment >= 7 then globals.osd_alignment = "top"
+elseif o.alignment >= 4 then globals.osd_alignment = "center"
+elseif o.alignment >= 1 then globals.osd_alignment = "bottom" end
 
 ---@class ParserRef
 ---@field id string

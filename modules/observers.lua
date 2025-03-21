@@ -41,8 +41,10 @@ function observers.osd_align_x()
     ass.update_ass()
 end
 
+---@param _ string
+---@param alignment string
 function observers.osd_align_y(_, alignment)
-    g.state.osd_alignment = alignment
+    g.osd_alignment = alignment
     cursor.update_mouse_pos()           -- calls ass.update_ass() internally
 end
 

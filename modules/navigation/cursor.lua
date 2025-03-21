@@ -131,6 +131,9 @@ function cursor.toggle_select_mode()
     end
 end
 
+---@param str string
+---@param substring string
+---@return number
 local function count_substrings(str, substring)
     local count = 0
     for match in string.gmatch(str, substring) do
@@ -147,7 +150,9 @@ local num_header_lines = count_substrings(o.format_string_header, '\\N') + 1
 local num_twrapper_lines = count_substrings(o.format_string_topwrapper, '\\N') + 1
 local num_bwrapper_lines = count_substrings(o.format_string_bottomwrapper, '\\N') + 1
 
---update the selected item based on the mouse position
+---update the selected item based on the mouse position
+---@param _? string
+---@param mouse_pos? MPVMousePos
 function cursor.update_mouse_pos(_, mouse_pos)
     if not o.mouse_mode or g.state.hidden or #g.state.list == 0 then return end
 
@@ -158,10 +163,10 @@ function cursor.update_mouse_pos(_, mouse_pos)
     local scale = mp.get_property_number("osd-height", 0) / g.ass.res_y
     local osd_offset = scale * mp.get_property("osd-margin-y", 22)
 
-    msg.trace('calculating mouse pos for', g.state.osd_alignment, 'alignment')
+    msg.trace('calculating mouse pos for', g.osd_alignment, 'alignment')
 
     --calculate position when browser is aligned to the top of the screen
-    if g.state.osd_alignment == "top" then
+    if g.osd_alignment == "top" then
         local header_offset = osd_offset + (num_header_lines * scale * font_size_header)
         if g.state.scroll_offset > 0 then header_offset = header_offset + (num_twrapper_lines * scale * font_size_wrappers) end
         msg.trace('calculated header offset', header_offset)
@@ -171,7 +176,7 @@ function cursor.update_mouse_pos(_, mouse_pos)
     --calculate position when browser is aligned to the bottom of the screen
     --this calculation is slightly off when a bottom wrapper exists,
     --I do not know what causes this.
-    elseif g.state.osd_alignment == "bottom" then
+    elseif g.osd_alignment == "bottom" then
         mouse_pos.y = (mp.get_property_number("osd-height", 0)) - mouse_pos.y
 
         local bottom = math.min(#g.state.list, g.state.scroll_offset + o.num_entries)
@@ -184,7 +189,8 @@ function cursor.update_mouse_pos(_, mouse_pos)
     ass.update_ass()
 end
 
--- scrolls the view window when using mouse mode
+---scrolls the view window when using mouse mode
+---@param direction number
 function cursor.wheel(direction)
     g.state.scroll_offset = g.state.scroll_offset + direction
     if (g.state.scroll_offset + o.num_entries) > #g.state.list then
