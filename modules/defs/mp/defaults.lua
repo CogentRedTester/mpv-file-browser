@@ -87,8 +87,8 @@ function mp.get_property_bool(name, def) end
 ---@generic T
 ---@param name string
 ---@param def? T
----@return string|T
----@overload fun(name: string): string|nil
+---@return number|T
+---@overload fun(name: string): number|nil
 function mp.get_property_number(name, def) end
 
 ---@generic T
