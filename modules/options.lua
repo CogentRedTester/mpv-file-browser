@@ -171,6 +171,7 @@ local o = {
     font_colour_body = "ffffff",
     font_colour_wrappers = "00ccff",
     font_colour_cursor = "00ccff",
+    font_colour_escape_chars = "413eff",
 
     font_colour_multiselect = "fcad88",
     font_colour_selected = "fce788",
