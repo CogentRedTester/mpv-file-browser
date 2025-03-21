@@ -8,13 +8,13 @@ local fb = require 'modules.apis.fb'
 --sets up the compatible extensions list
 local function setup_extensions_list()
     --setting up subtitle extensions
-    for ext in fb_utils.iterate_opt(o.subtitle_extensions:lower()) do
+    for ext in fb_utils.iterate_opt(o.subtitle_extensions:lower(), ',') do
         g.sub_extensions[ext] = true
         g.extensions[ext] = true
     end
 
     --setting up audio extensions
-    for ext in fb_utils.iterate_opt(o.audio_extensions:lower()) do
+    for ext in fb_utils.iterate_opt(o.audio_extensions:lower(), ',') do
         g.audio_extensions[ext] = true
         g.extensions[ext] = true
     end
@@ -25,12 +25,12 @@ local function setup_extensions_list()
     end
 
     --adding extra extensions on the whitelist
-    for str in fb_utils.iterate_opt(o.extension_whitelist:lower()) do
+    for str in fb_utils.iterate_opt(o.extension_whitelist:lower(), ',') do
         g.extensions[str] = true
     end
 
     --removing extensions that are in the blacklist
-    for str in fb_utils.iterate_opt(o.extension_blacklist:lower()) do
+    for str in fb_utils.iterate_opt(o.extension_blacklist:lower(), ',') do
         g.extensions[str] = nil
     end
 end

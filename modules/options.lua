@@ -35,7 +35,7 @@ local o = {
     custom_keybinds_file = "~~/script-opts/file-browser-keybinds.json",
 
     --blacklist compatible files, it's recommended to use this rather than to edit the
-    --compatible list directly. A semicolon separated list of extensions without spaces
+    --compatible list directly. A comma separated list of extensions without spaces
     extension_blacklist = "",
 
     --add extra file extensions

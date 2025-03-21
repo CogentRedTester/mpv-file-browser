@@ -402,9 +402,10 @@ end
 
 ---Returns a string iterator that uses the root separators.
 ---@param str any
+---@param separators? string Override the root separators.
 ---@return fun():(string, ...)
-function fb_utils.iterate_opt(str)
-    return string.gmatch(str, "([^"..fb_utils.pattern_escape(o.root_separators).."]+)")
+function fb_utils.iterate_opt(str, separators)
+    return string.gmatch(str, "([^"..fb_utils.pattern_escape(separators or o.root_separators).."]+)")
 end
 
 ---Sorts a table into an array of selected items in the correct order.
