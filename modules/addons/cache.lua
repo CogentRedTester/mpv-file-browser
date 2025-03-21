@@ -16,7 +16,7 @@ local fb = require 'file-browser'
 local cacheParser = {
     name = 'cache',
     priority = 0,
-    api_version = '1.6',
+    api_version = '1.9',
 }
 
 ---@class CacheEntry
