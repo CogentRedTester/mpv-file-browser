@@ -28,8 +28,9 @@ local user_input_loaded, user_input = pcall(require, "user-input-module")
 
 -- root and addon setup
 setup.root()
-addons.load_internal_parsers()
+addons.load_internal_addons()
 if o.addons then addons.load_external_addons() end
+addons.setup_addons()
 
 --these need to be below the addon setup in case any parsers add custom entries
 setup.extensions_list()
