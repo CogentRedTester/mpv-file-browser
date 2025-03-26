@@ -82,14 +82,14 @@ end
 --or, otherwise, the item highlighted as currently playing
 function cursor.select_prev_directory()
     if g.state.prev_directory:find(g.state.directory, 1, true) == 1 then
-        ---@type number
-        local i = 1
-        while (g.state.list[i] and fb_utils.parseable_item(g.state.list[i])) do
-            if g.state.prev_directory:find(fb_utils.get_full_path(g.state.list[i]), 1, true) then
+        for i, item in ipairs(g.state.list) do
+            if
+                g.state.prev_directory:find(fb_utils.get_full_path(item), 1, true) or
+                (item.name and g.state.prev_directory:find(g.state.directory..item.name, 1, true))
+            then
                 g.state.selected = i
                 return
             end
-            i = i+1
         end
     end
 
