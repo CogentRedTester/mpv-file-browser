@@ -141,6 +141,14 @@ globals.history = {
     position = 0,
 }
 
+---@class (strict) DirectoryStack
+---@field stack string[]
+---@field position number
+globals.directory_stack = {
+    stack = {},
+    position = 0,
+}
+
 
 --default list of compatible file extensions
 --adding an item to this list is a valid request on github

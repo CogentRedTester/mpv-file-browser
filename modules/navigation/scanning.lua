@@ -9,8 +9,27 @@ local ass = require 'modules.ass'
 
 local parse_state_API = require 'modules.apis.parse-state'
 
-local function clear_non_adjacent_state()
+---@class scanning
+local scanning = {}
+
+---@enum NavigationType
+local NavType = {
+    DOWN = 1,
+    UP = -1,
+    REDIRECT = 2,
+    GOTO = 3,
+    RESCAN = 4,
+}
+
+scanning.NavType = NavType
+
+---@param directory_stack? boolean
+local function clear_non_adjacent_state(directory_stack)
     g.state.directory_label = nil
+    if directory_stack then
+        g.directory_stack.stack = {g.state.directory}
+        g.directory_stack.position = 1
+    end
 end
 
 ---parses the given directory or defers to the next parser if nil is returned
@@ -19,7 +38,7 @@ end
 ---@param index number
 ---@return List?
 ---@return Opts?
-local function choose_and_parse(directory, index)
+function scanning.choose_and_parse(directory, index)
     msg.debug(("finding parser for %q"):format(directory))
     ---@type Parser, List?, Opts?
     local parser, list, opts
@@ -59,7 +78,7 @@ local function run_parse(directory, parse_state_template)
     local co = coroutine.running()
     g.parse_states[co] = fb_utils.set_prototype(parse_state, parse_state_API) --[[@as ParseState]]
 
-    local list, opts = choose_and_parse(directory, 1)
+    local list, opts = scanning.choose_and_parse(directory, 1)
 
     if list == nil then return msg.debug("no successful parsers found"), {} end
     opts = opts or {}
@@ -78,7 +97,7 @@ end
 ---@param parse_state ParseStateTemplate
 ---@return List|nil
 ---@return Opts
-local function parse_directory(directory, parse_state)
+function scanning.scan_directory(directory, parse_state)
     local co = fb_utils.coroutine.assert("scan_directory must be executed from within a coroutine - aborting scan "..utils.to_string(parse_state))
     if not g.parse_states[co] then return run_parse(directory, parse_state) end
 
@@ -111,7 +130,7 @@ local function update_list(moving_adjacent, parse_properties)
     g.state.selection = {}
 
     local directory = g.state.directory
-    local list, opts = parse_directory(g.state.directory, { source = "browser", properties = parse_properties })
+    local list, opts = scanning.scan_directory(g.state.directory, { source = "browser", properties = parse_properties })
 
     --if the running coroutine isn't the one stored in the state variable, then the user
     --changed directories while the coroutine was paused, and this operation should be aborted
@@ -140,7 +159,7 @@ local function update_list(moving_adjacent, parse_properties)
     if opts.directory then
         g.state.directory = opts.directory
         moving_adjacent = false
-        clear_non_adjacent_state()
+        clear_non_adjacent_state(true)
     end
 
     if opts.selected_index then
@@ -155,15 +174,17 @@ local function update_list(moving_adjacent, parse_properties)
 end
 
 ---rescans the folder and updates the list.
----@param moving_adjacent? number|boolean
+---@param nav_type? NavigationType
 ---@param cb? function
 ---@param parse_properties? ParseProperties
 ---@return thread # The coroutine for the triggered parse operation. May be aborted early if directory is in the cache.
-local function rescan(moving_adjacent, cb, parse_properties)
-    if moving_adjacent == nil then moving_adjacent = 0 end
+function scanning.rescan(nav_type, cb, parse_properties)
+    if nav_type == nil then nav_type = NavType.RESCAN end
 
     --we can only make assumptions about the directory label when moving from adjacent directories
-    if not moving_adjacent then clear_non_adjacent_state() end
+    if nav_type == NavType.GOTO or nav_type == NavType.REDIRECT then
+        clear_non_adjacent_state(nav_type == NavType.GOTO)
+    end
 
     g.state.empty_text = "~"
     g.state.list = {}
@@ -174,7 +195,7 @@ local function rescan(moving_adjacent, cb, parse_properties)
     --pause execution for asynchronous operations
     ---@async
     local co = fb_utils.coroutine.queue(function()
-        update_list(moving_adjacent, parse_properties)
+        update_list(nav_type, parse_properties)
         if g.state.empty_text == "~" then g.state.empty_text = "empty directory" end
 
         ass.update_ass()
@@ -185,9 +206,5 @@ local function rescan(moving_adjacent, cb, parse_properties)
     return co
 end
 
----@class scanning
-return {
-    rescan = rescan,
-    scan_directory = parse_directory,
-    choose_and_parse = choose_and_parse,
-}
+
+return scanning

@@ -11,6 +11,31 @@ local fb_utils = require 'modules.utils'
 
 ---@class directory_movement
 local directory_movement = {}
+local NavType = scanning.NavType
+
+---Appends an item to the directory stack, wiping any
+---directories further ahead than the current position.
+---@param dir string
+local function directory_stack_append(dir)
+    -- don't clear the stack if we're re-entering the same directory
+    if g.directory_stack.stack[g.directory_stack.position + 1] == dir then
+        g.directory_stack.position = g.directory_stack.position + 1
+        return
+    end
+
+    local j = #g.directory_stack.stack
+    while g.directory_stack.position < j do
+        g.directory_stack.stack[j] = nil
+        j = j - 1
+    end
+    table.insert(g.directory_stack.stack, dir)
+    g.directory_stack.position = g.directory_stack.position + 1
+end
+
+local function directory_stack_prepend(dir)
+    table.insert(g.directory_stack.stack, 1, dir)
+    g.directory_stack.position = 1
+end
 
 ---Clears directories from the history
 ---@param from? number All entries >= this index are cleared.
@@ -81,18 +106,18 @@ end
 
 --the base function for moving to a directory
 ---@param directory string
----@param moving_adjacent? number|false
+---@param nav_type? NavigationType
 ---@param store_history? boolean default `true`
 ---@param parse_properties? ParseProperties
 ---@return thread
-function directory_movement.goto_directory(directory, moving_adjacent, store_history, parse_properties)
+function directory_movement.goto_directory(directory, nav_type, store_history, parse_properties)
     local current = g.state.list[g.state.selected]
     g.state.directory = directory
 
     if g.state.directory_label then
-        if moving_adjacent == 1 then
+        if nav_type == 1 then
             g.state.directory_label = g.state.directory_label..(current.label or current.name)
-        elseif moving_adjacent == -1 then
+        elseif nav_type == -1 then
             g.state.directory_label = string.match(g.state.directory_label, "^(.-/+)[^/]+/*$")
         end
     end
@@ -100,7 +125,8 @@ function directory_movement.goto_directory(directory, moving_adjacent, store_his
     if o.history_size > 0 and store_history == nil or store_history then
         directory_movement.append_history(directory)
     end
-    return scanning.rescan(moving_adjacent or false, nil, parse_properties)
+
+    return scanning.rescan(nav_type or NavType.GOTO, nil, parse_properties)
 end
 
 ---Move the browser to a particular point in the browser history.
@@ -135,13 +161,22 @@ end
 
 --moves up a directory
 function directory_movement.up_dir()
+    if g.state.directory == '' then return end
+
+    local cached_parent_dir = g.directory_stack.stack[g.directory_stack.position - 1]
+    if cached_parent_dir then
+        g.directory_stack.position = g.directory_stack.position - 1
+        return directory_movement.goto_directory(cached_parent_dir, NavType.UP)
+    end
+
     local parent_dir = g.state.directory:match("^(.-/+)[^/]+/*$") or ""
 
     if o.skip_protocol_schemes and parent_dir:find("^(%a[%w+-.]*)://$") then
         return directory_movement.goto_root()
     end
 
-    return directory_movement.goto_directory(parent_dir, -1)
+    directory_stack_prepend(parent_dir)
+    return directory_movement.goto_directory(parent_dir, NavType.UP)
 end
 
 --moves down a directory
@@ -150,7 +185,8 @@ function directory_movement.down_dir()
     if not current or not fb_utils.parseable_item(current) then return end
 
     local directory, redirected = fb_utils.get_new_directory(current, g.state.directory)
-    return directory_movement.goto_directory(directory, not redirected and 1)
+    directory_stack_append(directory)
+    return directory_movement.goto_directory(directory, redirected and NavType.REDIRECT or NavType.DOWN)
 end
 
 --moves backwards through the directory history
