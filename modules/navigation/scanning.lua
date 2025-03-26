@@ -123,14 +123,9 @@ local function update_list(moving_adjacent, parse_properties)
 
     --apply fallbacks if the scan failed
     if not list then
-        --opens the root instead
-        msg.warn("could not read directory", g.state.directory, "redirecting to root")
-        list, opts = parse_directory("", { source = "browser", properties = parse_properties })
-
-        if not list then error(('fatal error - failed to read the root directory')) end
-
-        -- sets the directory redirect flag
-        opts.directory = ''
+        msg.warn("could not read directory", g.state.directory)
+        list, opts = {}, {}
+        opts.empty_text = g.style.warning..'Error: could not parse directory'
     end
 
     g.state.list = list
