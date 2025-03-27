@@ -115,9 +115,9 @@ function directory_movement.goto_directory(directory, nav_type, store_history, p
     g.state.directory = directory
 
     if g.state.directory_label then
-        if nav_type == 1 then
+        if nav_type == NavType.DOWN then
             g.state.directory_label = g.state.directory_label..(current.label or current.name)
-        elseif nav_type == -1 then
+        elseif nav_type == NavType.UP then
             g.state.directory_label = string.match(g.state.directory_label, "^(.-/+)[^/]+/*$")
         end
     end
