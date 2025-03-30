@@ -32,6 +32,7 @@ local function directory_stack_append(dir)
     g.directory_stack.position = g.directory_stack.position + 1
 end
 
+---@param dir string
 local function directory_stack_prepend(dir)
     table.insert(g.directory_stack.stack, 1, dir)
     g.directory_stack.position = 1
@@ -90,6 +91,7 @@ function directory_movement.set_current_file(filepath)
         g.current_file.directory = fb_utils.fix_path( mp.get_property("working-directory", ""), true)
         g.current_file.name = nil
         g.current_file.path = nil
+        g.current_file.original_path = nil
         return
     end
 
