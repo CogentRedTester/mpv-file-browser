@@ -8,6 +8,7 @@ local g = require 'modules.globals'
 local ass = require 'modules.ass'
 local scanning = require 'modules.navigation.scanning'
 local fb_utils = require 'modules.utils'
+local cursor = require 'modules.navigation.cursor'
 
 ---@class directory_movement
 local directory_movement = {}
@@ -102,8 +103,8 @@ function directory_movement.set_current_file(filepath)
     g.current_file.original_path = absolute_path
     g.current_file.path = resolved_path
 
-    if not g.state.hidden then ass.update_ass()
-    else g.state.flag_update = true end
+    if o.cursor_follows_playing_item then cursor.select_playing_item() end
+    ass.update_ass()
 end
 
 --the base function for moving to a directory
