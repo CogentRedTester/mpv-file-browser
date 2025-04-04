@@ -148,10 +148,10 @@ local o = {
     --This property is deprecated. When it is removed in mpv v0.37 file-browser will automatically ignore this option.
     set_shared_script_properties = false,
 
-    --force file-browser to use a specific text alignment (default: top-left)
-    --uses ass tag alignment numbers: https://aegi.vmoe.info/docs/3.0/ASS_Tags/#index23h3
-    --set to 0 to use the default mpv osd-align options
-    alignment = 7,
+    ---@type 'auto'|'left'|'center'|'right'
+    align_x = 'left',
+    ---@type 'auto'|'top'|'center'|'bottom'
+    align_y = 'top',
 
     --style settings
     format_string_header = [[{\fnMonospace}[%i/%x]%^ %q\N------------------------------------------------------------------]],
