@@ -149,7 +149,8 @@ local function draw_bottom_wrapper(wrapper_overrides)
 end
 
 ---@param i number index
-local function draw_cursor(i)
+---@param cursor string
+local function draw_cursor(i, cursor)
     --handles custom styles for different entries
     if i == state.selected or i == state.multiselect_start then
         if not (i == state.selected) then append(style.selection_marker) end
@@ -162,7 +163,7 @@ local function draw_cursor(i)
     else
         append(g.style.indent)
     end
-    append(o.cursor_icon, '\\h', style.body)
+    append(cursor, '\\h', style.body)
 end
 
 --refreshes the ass text using the contents of the list
@@ -190,7 +191,7 @@ local function update_ass()
     for i=start, finish do
         local v = state.list[i]
         append(style.body)
-        draw_cursor(i)
+        if g.ALIGN_X ~= 'right' then draw_cursor(i, o.cursor_icon) end
 
         local item_style = calculate_item_style(i)
         append(item_style)
@@ -202,7 +203,8 @@ local function update_ass()
         end
 
         --adds the actual name of the item
-        append(v.ass or ass_escape(v.label or v.name, item_style))
+        append(v.ass or ass_escape(v.label or v.name, item_style), '\\h')
+        if g.ALIGN_X == 'right' then draw_cursor(i, o.cursor_icon_flipped) end
         newline()
     end
 
