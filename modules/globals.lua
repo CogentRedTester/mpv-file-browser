@@ -42,11 +42,11 @@ globals.ASS_ALIGNMENT_MATRIX = {
     bottom =    {left = 1, center = 2, right = 3},
 }
 
-globals.ALIGN_X = o.align_x == 'auto' and mp.get_property('osd-align-x') or o.align_x
-globals.ALIGN_Y = o.align_y == 'auto' and mp.get_property('osd-align-y') or o.align_y
+globals.ALIGN_X = o.align_x == 'auto' and mp.get_property('osd-align-x', 'left') or o.align_x
+globals.ALIGN_Y = o.align_y == 'auto' and mp.get_property('osd-align-y', 'top') or o.align_y
 
 globals.style = {
-    global = '',
+    global = ([[{\an%d}]]):format(globals.ASS_ALIGNMENT_MATRIX[globals.ALIGN_Y][globals.ALIGN_X]),
 
     -- full line styles
     header = ([[{\r\q2\b%s\fs%d\fn%s\c&H%s&}]]):format((o.font_bold_header and "1" or "0"), o.scaling_factor_header*BASE_FONT_SIZE, o.font_name_header, o.font_colour_header),
@@ -68,10 +68,6 @@ globals.style = {
     folder = ([[{\fn%s}]]):format(o.font_name_folder),
     selection_marker = ([[{\alpha&H%s}]]):format(o.font_opacity_selection_marker),
 }
-
-if globals.ASS_ALIGNMENT_MATRIX[o.align_y] and globals.ASS_ALIGNMENT_MATRIX[o.align_y][o.align_x] then
-    globals.style.global = ([[{\an%d}]]):format(globals.ASS_ALIGNMENT_MATRIX[o.align_y][o.align_x])
-end
 
 ---@type State
 globals.state = {
