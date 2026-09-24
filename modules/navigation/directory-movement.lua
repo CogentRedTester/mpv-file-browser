@@ -85,6 +85,26 @@ function directory_movement.append_history(directory)
     end
 end
 
+---Returns the local archive file represented by an mpv archive URL.
+---@param path string
+---@return string?
+local function get_archive_path(path)
+    if fb_utils.get_protocol(path) ~= 'archive' then return nil end
+
+    local archive_path = path:match('^[^:]+://(.*)|/.*$')
+    if not archive_path then return nil end
+
+    ---@param hex string
+    ---@return string
+    local function decode_uri_component(hex)
+        local code = tonumber(hex, 16)
+        return string.char(code)
+    end
+
+    archive_path = string.gsub(archive_path, '%%(%x%x)', decode_uri_component)
+    return fb_utils.absolute_path(archive_path)
+end
+
 ---@param filepath string
 function directory_movement.set_current_file(filepath)
     --if we're in idle mode then we want to open the working directory
@@ -96,11 +116,11 @@ function directory_movement.set_current_file(filepath)
         return
     end
 
-    local absolute_path = fb_utils.absolute_path(filepath)
+    local absolute_path = get_archive_path(filepath) or fb_utils.absolute_path(filepath)
     local resolved_path = fb_utils.resolve_directory_mapping(absolute_path)
 
     g.current_file.directory, g.current_file.name = utils.split_path(resolved_path)
-    g.current_file.original_path = absolute_path
+    g.current_file.original_path = filepath
     g.current_file.path = resolved_path
 
     if o.cursor_follows_playing_item then cursor.select_playing_item() end
