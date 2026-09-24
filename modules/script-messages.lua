@@ -23,7 +23,7 @@ function script_messages.get_directory_contents(directory, response_str)
         if directory ~= "" then directory = fb_utils.fix_path(directory, true) end
         msg.verbose(("recieved %q from 'get-directory-contents' script message - returning result to %q"):format(directory, response_str))
 
-        directory = fb_utils.resolve_directory_mapping(directory)
+        directory = fb_utils.resolve_path_substitution(directory)
 
         ---@class OptsWithVersion: Opts
         ---@field API_VERSION string?

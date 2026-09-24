@@ -53,8 +53,31 @@ local function setup_root()
     end
 end
 
+---@param hex string
+---@return string
+local function decode_uri_component(hex)
+    local code = tonumber(hex, 16)
+    return string.char(code)
+end
+
+--registers path substitutions for external paths
+local function setup_substitutions()
+    fb.register_path_substitution('^dvd://.*', function()
+        return fb_utils.absolute_path(mp.get_property('dvd-device','/dev/dvd'))
+    end)
+
+    fb.register_path_substitution('^bd://.*', function()
+        return fb_utils.absolute_path(mp.get_property('bd-device','/dev/bd'))
+    end)
+
+    fb.register_path_substitution('^cdda://.*', function()
+        return fb_utils.absolute_path(mp.get_property('cdda-device','/dev/cdrom'))
+    end)
+end
+
 ---@class setup
 return {
     extensions_list = setup_extensions_list,
     root = setup_root,
+    substitutions = setup_substitutions
 }

@@ -97,10 +97,10 @@ function directory_movement.set_current_file(filepath)
     end
 
     local absolute_path = fb_utils.absolute_path(filepath)
-    local resolved_path = fb_utils.resolve_directory_mapping(absolute_path)
+    local resolved_path = fb_utils.resolve_path_substitution(absolute_path)
 
     g.current_file.directory, g.current_file.name = utils.split_path(resolved_path)
-    g.current_file.original_path = absolute_path
+    g.current_file.original_path = filepath
     g.current_file.path = resolved_path
 
     if o.cursor_follows_playing_item then cursor.select_playing_item() end
