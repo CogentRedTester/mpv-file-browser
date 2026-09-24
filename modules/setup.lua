@@ -73,6 +73,11 @@ local function setup_substitutions()
     fb.register_path_substitution('^cdda://.*', function()
         return fb_utils.absolute_path(mp.get_property('cdda-device','/dev/cdrom'))
     end)
+
+    fb.register_path_substitution('^archive://(.*)|/.*$', function(archive_path)
+        archive_path = string.gsub(archive_path, '%%(%x%x)', decode_uri_component)
+        return fb_utils.absolute_path(archive_path)
+    end)
 end
 
 ---@class setup
