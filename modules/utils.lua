@@ -356,28 +356,27 @@ function fb_utils.parseable_item(item)
     return item.type == "dir" or g.parseable_extensions[fb_utils.get_extension(item.name, "")]
 end
 
----Takes a directory string and resolves any directory mappings,
+---Takes a directory string and resolves any path substitutions,
 ---returning the resolved directory.
 ---@param path string
 ---@return string
-function fb_utils.resolve_directory_mapping(path)
+function fb_utils.resolve_path_substitution(path)
     if not path then return path end
 
-    for mapping, target in pairs(g.directory_mappings) do
-        local start, finish = string.find(path, mapping)
-        if start then
-            msg.debug('mapping', mapping, 'found for', path, 'changing to', target)
-
-            -- if the mapping is an exact match then return the target as is
-            if finish == #path then return target end
-
-            -- else make sure the path is correctly formatted
-            target = fb_utils.fix_path(target, true)
-            return (string.gsub(path, mapping, target))
+    for pattern, substitution in pairs(g.path_substitutions) do
+        if string.find(path, pattern) then
+            return fb_utils.fix_path((string.gsub(path, pattern, substitution)))
         end
     end
 
     return path
+end
+
+---@deprecated Use resolve_path_substitution instead.
+---@param path string
+---@return string
+function fb_utils.resolve_directory_mapping(path)
+    return fb_utils.resolve_path_substitution(path)
 end
 
 ---Removes items and folders from the list that fail the configured filters.
