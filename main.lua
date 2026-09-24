@@ -34,13 +34,11 @@ addons.setup_addons()
 
 --these need to be below the addon setup in case any parsers add custom entries
 setup.extensions_list()
+setup.substitutions()
 keybinds.setup_keybinds()
 
 -- property observers
 mp.observe_property('path', 'string', observers.current_directory)
-if o.map_dvd_device then mp.observe_property('dvd-device', 'string', observers.dvd_device) end
-if o.map_bd_device then mp.observe_property('bluray-device', 'string', observers.bd_device) end
-if o.map_cdda_device then mp.observe_property('cdda-device', 'string', observers.cd_device) end
 if o.align_x == 'auto' then mp.observe_property('osd-align-x', 'string', observers.osd_align) end
 if o.align_y == 'auto' then mp.observe_property('osd-align-y', 'string', observers.osd_align) end
 
