@@ -10,7 +10,8 @@
 ## Before Changing Behavior
 
 - First check whether the requested behavior is already available through [configuration](docs/file_browser.conf), [custom keybinds](docs/custom-keybinds.md), or [addons](docs/addons.md). If one fits, guide the user to it instead of implementing duplicate functionality. Ask a concise clarifying question when the intended behavior or preferred approach is unclear.
-- Inspect existing file-browser and mpv APIs before adding a feature or changing behavior. Reuse an API when it already meets the need. Do not rely on memory of mpv's API: confirm new or changed usage against the current upstream [Lua scripting documentation](https://github.com/mpv-player/mpv/blob/master/DOCS/man/lua.rst) and relevant [mpv manual pages](https://github.com/mpv-player/mpv/tree/master/DOCS/man).
+- Before starting an implementation, inspect `modules/apis/fb.lua` and `modules/utils.lua` for existing project-specific APIs. Read relevant implementations, definitions, documentation, and call sites in other files as needed to understand their actual behavior and contracts; do not infer semantics from function names alone. Reuse an API when it already meets the need.
+- Do not rely on memory of mpv's API. Confirm new or changed mpv API usage against the current upstream [Lua scripting documentation](https://github.com/mpv-player/mpv/blob/master/DOCS/man/lua.rst) and relevant [mpv manual pages](https://github.com/mpv-player/mpv/tree/master/DOCS/man).
 - Follow existing module boundaries, shared utilities, type definitions, and import names. Check neighboring files before adding a `require`.
 - Keep addon/parser changes compatible with the API contract and versioning rules in [docs/addons.md](docs/addons.md), and keep implementation, definitions, and documentation in sync when the contract changes.
 
