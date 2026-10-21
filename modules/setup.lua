@@ -80,10 +80,12 @@ local function setup_substitutions()
         end)
     end
 
-    fb.register_path_substitution('^archive://(.*)|/.*$', function(archive_path)
-        archive_path = string.gsub(archive_path, '%%(%x%x)', decode_uri_component)
-        return fb_utils.absolute_path(archive_path)
-    end)
+    if o.map_archive_paths then
+        fb.register_path_substitution('^archive://(.*)|/.*$', function(archive_path)
+            archive_path = string.gsub(archive_path, '%%(%x%x)', decode_uri_component)
+            return fb_utils.absolute_path(archive_path)
+        end)
+    end
 end
 
 ---@class setup
