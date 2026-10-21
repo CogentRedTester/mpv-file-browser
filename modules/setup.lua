@@ -62,17 +62,23 @@ end
 
 --registers path substitutions for external paths
 local function setup_substitutions()
-    fb.register_path_substitution('^dvd://.*', function()
-        return fb_utils.absolute_path(mp.get_property('dvd-device','/dev/dvd'))
-    end)
+    if o.map_dvd_device then
+        fb.register_path_substitution('^dvd://.*', function()
+            return fb_utils.absolute_path(mp.get_property('dvd-device','/dev/dvd') .. '/')
+        end)
+    end
 
-    fb.register_path_substitution('^bd://.*', function()
-        return fb_utils.absolute_path(mp.get_property('bd-device','/dev/bd'))
-    end)
+    if o.map_bd_device then
+        fb.register_path_substitution('^bd://.*', function()
+            return fb_utils.absolute_path(mp.get_property('bd-device','/dev/bd') .. '/')
+        end)
+    end
 
-    fb.register_path_substitution('^cdda://.*', function()
-        return fb_utils.absolute_path(mp.get_property('cdda-device','/dev/cdrom'))
-    end)
+    if o.map_cdda_device then
+        fb.register_path_substitution('^cdda://.*', function()
+            return fb_utils.absolute_path(mp.get_property('cdda-device','/dev/cdrom') .. '/')
+        end)
+    end
 
     fb.register_path_substitution('^archive://(.*)|/.*$', function(archive_path)
         archive_path = string.gsub(archive_path, '%%(%x%x)', decode_uri_component)
