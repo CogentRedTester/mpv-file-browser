@@ -358,6 +358,7 @@ end
 
 ---Takes a directory string and resolves any path substitutions,
 ---returning the resolved directory.
+---If a substitution occurs then utils.fix_path is run on the result.
 ---@param path string
 ---@return string
 function fb_utils.resolve_path_substitution(path)
