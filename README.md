@@ -30,6 +30,7 @@ Alternatively, you can download the zip and extract the contents to `~~/scripts/
 Create a `file_browser.conf` file in the `~~/script-opts/` directory to configure the script.
 See [docs/file_browser.conf](docs/file_browser.conf) for the full list of options and their default values.
 The [`root` option](#root-directory) may be worth tweaking for your system.
+Archive browsing is enabled by default and requires `bsdtar`; playback also requires mpv's libarchive support.
 
 ### Addons
 

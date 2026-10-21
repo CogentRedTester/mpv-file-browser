@@ -138,6 +138,9 @@ local o = {
     --Automatically disables itself on non-Windows systems.
     windir_parser = true,
 
+    --Enables browsing archive files with bsdtar.
+    archive_parser = true,
+
     --directory to load external modules - currently just user-input-module
     module_directory = "~~/script-modules",
 
