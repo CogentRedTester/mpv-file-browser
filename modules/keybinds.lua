@@ -313,12 +313,12 @@ local function setup_keybinds()
     for i = #g.parsers, 1, -1 do
         local parser = g.parsers[i]
         if parser.keybinds then
-            for i, keybind in ipairs(parser.keybinds) do
+            for j, keybind in ipairs(parser.keybinds) do
                 --if addons use the native array command format, then we need to convert them over to the custom command format
                 if not keybind.key then keybind = { key = keybind[1], name = keybind[2], command = keybind[3], flags = keybind[4] }
                 else keybind = fb_utils.copy_table(keybind) end
 
-                keybind.name = g.parsers[parser].id.."/"..(keybind.name or tostring(i))
+                keybind.name = g.parsers[parser].id.."/"..(keybind.name or tostring(j))
                 keybind.addon = true
                 insert_custom_keybind(keybind)
             end
@@ -338,10 +338,10 @@ local function setup_keybinds()
         local json = custom_keybinds:read("*a")
         custom_keybinds:close()
 
-        json = utils.parse_json(json)
-        if not json then return error("invalid json syntax for "..path) end
+        local keybinds = utils.parse_json(json) --[[@as KeybindList]]
+        if not keybinds then return error("invalid json syntax for "..path) end
 
-        for i, keybind in ipairs(json --[[@as KeybindList]]) do
+        for i, keybind in ipairs(keybinds) do
             keybind.name = "custom/"..(keybind.name or tostring(i))
             insert_custom_keybind(keybind)
         end
