@@ -82,10 +82,12 @@ function controls.browse_directory(directory, open_browser)
     directory = mp.command_native({"expand-path", directory}, '') --[[@as string]]
     -- directory = join_path( mp.get_property("working-directory", ""), directory )
 
-    if directory ~= "" then directory = fb_utils.fix_path(directory, true) end
+    if directory ~= "" then
+        directory = fb_utils.resolve_path_substitution(fb_utils.fix_path(directory, true))
+    end
+
     msg.verbose('recieved directory from script message: '..directory)
 
-    directory = fb_utils.resolve_directory_mapping(directory)
     local co = movement.goto_directory(directory, nil, nil, {cache={use=false}})
     if open_browser then controls.open() end
     return co

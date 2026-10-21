@@ -81,32 +81,31 @@ function fb.insert_root_item(item, pos)
     table.insert(g.root, pos or (#g.root + 1), item)
 end
 
+---Add a path substitution.
+---@param pattern string
+---@param replacement PathSubstitution|nil
+---@return string
+function fb.register_path_substitution(pattern, replacement)
+    if not replacement then
+        g.path_substitutions[pattern] = nil
+        return pattern
+    end
+
+    g.path_substitutions[pattern] = replacement
+    msg.verbose('registering path substitution', pattern, replacement)
+
+    directory_movement.set_current_file(g.current_file.original_path)
+    return pattern
+end
+
 ---Add a new mapping to the given directory.
----@param directory string
+---@param directory string|nil
 ---@param mapping string
 ---@param pattern? boolean
 ---@return string
 function fb.register_directory_mapping(directory, mapping, pattern)
     if not pattern then mapping = '^'..fb_utils.pattern_escape(mapping) end
-    g.directory_mappings[mapping] = directory
-    msg.verbose('registering directory alias', mapping, directory)
-
-    directory_movement.set_current_file(g.current_file.original_path)
-    return mapping
-end
-
----Remove all directory mappings that map to the given directory.
----@param directory string
----@return string[]
-function fb.remove_all_mappings(directory)
-    local removed = {}
-    for mapping, target in pairs(g.directory_mappings) do
-        if target == directory then
-            g.directory_mappings[mapping] = nil
-            table.insert(removed, mapping)
-        end
-    end
-    return removed
+    return fb.register_path_substitution(mapping, directory)
 end
 
 ---A newer API for adding items to the root.
