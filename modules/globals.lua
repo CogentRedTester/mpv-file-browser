@@ -22,8 +22,9 @@ if not globals.PLATFORM then
         globals.PLATFORM = 'windows'
     elseif mp.get_property_native('options/macos-force-dedicated-gpu', _) ~= _ then
         globals.PLATFORM = 'darwin'
+    else
+        globals.PLATFORM = 'other'
     end
-    return 'other'
 end
 
 --the osd_overlay API was not added until v0.31. The expand-path command was not added until 0.30
