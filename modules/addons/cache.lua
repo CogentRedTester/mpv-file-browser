@@ -87,30 +87,48 @@ function cacheParser:parse(directory)
     ---@type List?, Opts?
     local list, opts
 
-    -- if another parse is already running on the same directory, then wait and use the same result
+    -- If there are no pending parses for this directory, then we start one.
+    -- If any new parses are requested during this time, then they will be added to the pending list and resumed once the parse is complete.
     if not pending_parses[directory] then
         pending_parses[directory] = {}
         list, opts = self:defer(directory)
+
+        local pending = pending_parses[directory]
+
+        pending_parses[directory] = nil
+        if pending and #pending > 0 then
+            msg.debug('resuming', #pending, 'pending parses for', directory)
+            for _, cb in ipairs(pending) do
+                cb(list, opts)
+            end
+        end
+
     else
         msg.debug('parse for', directory, 'already running - waiting for other parse to finish...')
-        table.insert(pending_parses[directory], fb.coroutine.callback(30))
-        list, opts = coroutine.yield()
-    end
+        local callback = fb.coroutine.callback(50)
+        table.insert(pending_parses[directory], callback)
 
-    local pending = pending_parses[directory]
-    -- need to clear the pending parses before resuming them or they will also attempt to resume the parses
-    pending_parses[directory] = nil
-    if pending and #pending > 0 then
-        msg.debug('resuming', #pending, 'pending parses for', directory)
-        for _, cb in ipairs(pending) do
-            cb(list, opts)
+        local completed
+        completed, list, opts = coroutine.yield()
+
+        -- If the timeout expires, then we must remove the callback from the pending list to prevent it being resumed again ay another yield.
+        if not completed then
+            if pending_parses[directory] then
+                for i, cb in ipairs(pending_parses[directory]) do
+                    if cb == callback then
+                        table.remove(pending_parses[directory], i)
+                        break
+                    end
+                end
+            end
+
+            return
         end
     end
 
     if not list then return end
 
-    -- pending will be truthy for the original parse and falsy for any parses that were pending
-    if pending then
+    if not cache[directory] then
         msg.debug('storing', directory, 'contents in cache')
         cache[directory] = {
             list = list,
