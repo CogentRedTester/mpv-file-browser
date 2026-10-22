@@ -36,7 +36,7 @@ end
 
 -- adds windows drives to the root if they are not already present
 local function import_drives()
-    if fb.get_opt('auto_detect_windows_drives') and PLATFORM ~= 'windows' then return end
+    if not fb.get_opt('auto_detect_windows_drives') or PLATFORM ~= 'windows' then return end
 
     local drives = get_drives()
     if not drives then return end
