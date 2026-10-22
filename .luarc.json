@@ -8,20 +8,26 @@
     "diagnostics.workspaceDelay": 1000,
     "diagnostics.groupFileStatus": {
         "await": "Any",
+        "conventions": "Any",
+        "duplicate": "Any",
         "luadoc": "Any",
+        "redefined": "Any",
+        "strict": "Any",
+        "strong": "Any",
         "type-check": "Any",
         "unbalanced": "Any",
-        "strong": "Any"
+        "unused": "Opened"
     },
     "diagnostics.groupSeverity": {
         "await": "Warning",
-        "strong": "Warning"
-    },
-    "diagnostics.severity": {
-        "missing-return": "Error!",
-        "missing-return-value": "Error!",
-        "cast-type-mismatch": "Error!",
-        "assign-type-mismatch": "Error!",
-        "global-element": "Warning!"
+        "conventions": "Information",
+        "duplicate": "Warning",
+        "luadoc": "Warning",
+        "redefined": "Warning",
+        "strict": "Error",
+        "strong": "Error",
+        "type-check": "Error",
+        "unbalanced": "Error",
+        "unused": "Hint"
     }
 }

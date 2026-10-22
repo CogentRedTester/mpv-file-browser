@@ -180,6 +180,7 @@ Additionally, in mpv v0.38+ the `mp.input` module is available as `input`.
 
 The file-browser [addon API](addons/addons.md#the-api) is available as `fb` and if [mpv-user-input](https://github.com/CogentRedTester/mpv-user-input)
 is installed then user-input API will be available in `user_input`.
+It is recommended for keybinds that use the file-browser API to specify the `api_version` the keybind was written against.
 
 This example only runs the keybind if the browser is in the Windows C drive or if
 the selected item is a matroska file:
@@ -194,7 +195,8 @@ the selected item is a matroska file:
     {
         "key": "KP2",
         "command": ["print-text", "Matroska File!"],
-        "condition": "fb.get_extension(%N) == 'mkv'"
+        "condition": "fb.get_extension(%N) == 'mkv'",
+        "api_version": "1.9.0"
     }
 ]
 ```
@@ -246,6 +248,7 @@ This example only runs if the currently selected item in the browser has a `.mkv
 {
     "key": "KP1",
     "command": ["script-message", "conditional-command", "fb.get_extension(%N) == 'mkv'", "print-text", "a matroska file"],
+    "api_version": "1.9.0"
 }
 ```
 
@@ -321,7 +324,8 @@ rename items in file-browser:
                     "fb.rescan()"
                 ],
     "parser": "file",
-    "multiselect": true
+    "multiselect": true,
+    "api_version": "1.9.0"
 }
 ```
 
