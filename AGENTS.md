@@ -17,12 +17,33 @@
 
 ## Before Changing Behavior
 
-- First check whether the requested behavior is already available through [configuration](docs/file_browser.conf), [custom keybinds](docs/custom-keybinds.md), or [addons](docs/addons.md).
-- Prefer implementations in this order: custom keybind (including `run-statement` with `fb` and `mp`), standalone addon, then core changes. Move to the next option only when the previous one cannot meet the request or the user asks for it; for addons, verify the documented APIs and keybind contracts. Also consider mpv Lua APIs, which can be used directly by keybinds and addons.
+### Stop-Go Gates
+
+Use these stop-go gates in order. Do not move to the next gate until the current one cannot meet the exact request, or the user explicitly asks for a later implementation level. Explicitly state when moving between gates. If a user clarification changes the requested behavior, repeat these gates before continuing.
+
+#### Gate 1: Configuration and custom keybinds
+
+- Inspect relevant script options and [custom keybinds](docs/custom-keybinds.md), including `run-statement` with `fb` and `mp`; consider whether mpv Lua APIs can provide the behavior without repository code changes.
+- Compare the exact effects and side effects with the request. A similar keybind name or partial behavior is not sufficient.
+- If configuration can meet the request, stop and provide the configuration snippet. Do not edit addon or core code unless the user asks for that.
+- Any changes made in this gate should be provided as instructions or a config snippet to the user, no files in the repository should be changed.
+
+#### Gate 2: Standalone addon
+
+- If configuration cannot meet the request, check whether a standalone addon can. Read the relevant [addon APIs and contracts](docs/addons.md) and neighboring addon patterns; verify that the documented API supports the required behavior.
+- If an addon can meet the request, implement or describe that addon and stop before changing core code. Keep addon API versions and keybind contracts compatible.
+- Keep addon/parser changes compatible with the API contract and versioning rules in [docs/addons.md](docs/addons.md), and keep implementation, definitions, and documentation in sync when the contract changes.
+
+#### Gate 3: Core changes
+
+- Change core behavior only if neither configuration nor a standalone addon can meet the request, or the user explicitly asks for a built-in core feature.
+- Before editing, state briefly why the earlier gates do not work and identify the module that directly owns the behavior.
+
+### Before Implementing
+
 - Before starting an implementation, inspect `modules/apis/fb.lua` and `modules/utils.lua` for existing project-specific APIs. Read relevant implementations, definitions, documentation, and call sites in other files as needed to understand their actual behavior and contracts; do not infer semantics from function names alone. Reuse an API when it already meets the need.
 - Do not rely on memory of mpv's API. Confirm new or changed mpv API usage against the current upstream [Lua scripting documentation](https://github.com/mpv-player/mpv/blob/master/DOCS/man/lua.rst) and relevant [mpv manual pages](https://github.com/mpv-player/mpv/tree/master/DOCS/man).
 - Follow existing module boundaries, shared utilities, type definitions, import names, and other code conventions. Check neighboring files before adding a `require`.
-- Keep addon/parser changes compatible with the API contract and versioning rules in [docs/addons.md](docs/addons.md), and keep implementation, definitions, and documentation in sync when the contract changes.
 
 ## Validation and Review
 
